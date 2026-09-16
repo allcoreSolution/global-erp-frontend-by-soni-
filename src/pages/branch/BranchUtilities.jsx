@@ -1,27 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Download, Upload, Printer, CheckCircle } from 'lucide-react';
+import api from '../../api';
 
 const BranchUtilities = () => {
-  const [branches, setBranches] = useState([
-    { id: 'BR-001', name: 'Jaipur HQ Office', code: 'JPHQ', type: 'Headquarters', active: true },
-    { id: 'BR-002', name: 'Kota Regional Center', code: 'KT01', type: 'Regional Branch', active: true }
-  ]);
-
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
+
+  useEffect(() => {
+    fetchBranches();
+  }, []);
+
+  const fetchBranches = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/branches');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(b => ({
+        ...b,
+        _id: b._id,
+        id: b.id || b._id,
+        name: b.name || '',
+        code: b.code || '',
+        type: b.type || 'Branch',
+        active: b.status === 'Active'
+      }));
+      setBranches(mapped);
+      addLog("Successfully loaded branches from server.");
+    } catch (error) {
+      console.error('Failed to fetch branches', error);
+      addLog("Error: Failed to fetch branches from server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addLog = (msg) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleToggle = (id) => {
-    setBranches(prev => prev.map(b => {
-      if (b.id === id) {
-        addLog(`Toggled active status of branch ${b.name} to ${!b.active ? 'Active' : 'Inactive'}`);
-        return { ...b, active: !b.active };
-      }
-      return b;
-    }));
+  const handleToggle = async (id, currentActive) => {
+    try {
+      const newStatus = currentActive ? 'Inactive' : 'Active';
+      await api.patch(`/branches/${id}`, { status: newStatus });
+      setBranches(prev => prev.map(b => {
+        if (b._id === id) {
+          addLog(`Toggled active status of branch ${b.name} to ${newStatus}`);
+          return { ...b, active: !b.active };
+        }
+        return b;
+      }));
+    } catch (error) {
+      console.error('Error toggling branch status:', error);
+      addLog("Error: Failed to toggle branch status.");
+    }
   };
 
   const filtered = branches.filter(b =>
@@ -58,27 +91,34 @@ const BranchUtilities = () => {
     if (!file) return;
     addLog(`Reading file "${file.name}"...`);
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const text = event.target.result;
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const newBranches = [];
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-          if (cols.length >= 5) {
+          if (cols.length >= 2) {
             newBranches.push({
               id: cols[0] || `BR-NEW-${Date.now()}-${i}`,
               name: cols[1] || 'Imported Branch',
               code: cols[2] || 'IMPT',
               type: cols[3] || 'Retail Store',
-              active: cols[4] === 'Yes' ? true : false
+              status: cols[4] === 'Yes' ? 'Active' : 'Inactive'
             });
           }
         }
         if (newBranches.length > 0) {
-          setBranches(prev => [...prev, ...newBranches]);
-          addLog(`Success: Parsed ${newBranches.length} new branches!`);
-          alert(`Successfully imported ${newBranches.length} branches!`);
+          addLog(`Uploading ${newBranches.length} branches to server...`);
+          try {
+            await api.post('/branches/bulk', { branches: newBranches });
+            addLog(`Success: Inserted ${newBranches.length} new branches!`);
+            alert(`Successfully imported ${newBranches.length} branches!`);
+            fetchBranches(); // reload
+          } catch(err) {
+             addLog(`Error uploading branches: ${err.response?.data?.message || err.message}`);
+             alert(`Import API failed: ${err.response?.data?.message || err.message}`);
+          }
         } else {
           addLog("Warning: No valid rows parsed from CSV file.");
           alert("Import failed. Headers should match: Branch ID, Branch Name, Branch Code, Branch Type, Active Status");
@@ -170,14 +210,18 @@ const BranchUtilities = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(b => (
-                <tr key={b.id} className="hover:bg-slate-50">
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="p-4 text-center text-gray-500">Loading registry...</td>
+                </tr>
+              ) : filtered.map(b => (
+                <tr key={b._id} className="hover:bg-slate-50">
                   <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{b.id}</td>
                   <td className="p-2 font-medium text-gray-900">{b.name}</td>
                   <td className="p-2 font-mono text-gray-650">{b.code}</td>
                   <td className="p-2 text-center no-print">
                     <button
-                      onClick={() => handleToggle(b.id)}
+                      onClick={() => handleToggle(b._id, b.active)}
                       className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${b.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
                     >
                       {b.active ? 'Active' : 'Inactive'}
