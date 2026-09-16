@@ -16,15 +16,15 @@ const DriverList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Form State for Add Driver
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    licenseNo: '',
-    vehicleNo: '',
-    status: 'Active'
-  });
+  const initialFormState = {
+    driverName: '', driverCode: '', mobile: '', email: '', dob: '', gender: 'Select', bloodGroup: '', profilePhoto: '',
+    address: '', city: '', district: '', state: '', pincode: '',
+    licenceNo: '', licenceType: 'Commercial', issueDate: '', expiryDate: '', issuingAuthority: '', licenseDocument: '',
+    joiningDate: '', driverType: 'Permanent', department: '', branch: 'Select', salaryWage: '', paymentMode: 'Bank Transfer',
+    vehicleNo: '', vehicleType: '', assignmentDate: '', isPrimary: false,
+    emergencyName: '', emergencyRelation: '', emergencyMobile: '', emergencyAddress: '', status: 'Active'
+  };
+  const [form, setForm] = useState(initialFormState);
 
   const [editingId, setEditingId] = useState(null);
 
@@ -53,20 +53,15 @@ const DriverList = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.phone) {
-      alert("Name and Phone fields are required.");
+    if (!form.driverName || !form.mobile) {
+      alert("Driver Name and Mobile Number are required.");
       return;
     }
     
     try {
       const payload = {
-        driverName: form.name,
-        mobile: form.phone,
-        email: form.email,
-        licenceNo: form.licenseNo,
-        vehicleNo: form.vehicleNo,
-        status: form.status,
-        driverCode: `DRV-${Date.now()}` // auto generate to prevent validation error
+        ...form,
+        driverCode: form.driverCode || `DRV-${Date.now()}` // auto generate if empty
       };
 
       if (editingId) {
@@ -80,7 +75,7 @@ const DriverList = () => {
       fetchDrivers();
       setIsAddModalOpen(false);
       setEditingId(null);
-      setForm({ name: '', phone: '', email: '', licenseNo: '', vehicleNo: '', status: 'Active' });
+      setForm(initialFormState);
     } catch (err) {
       console.error(err);
       alert('Failed to save driver: ' + (err.response?.data?.message || err.message));
@@ -92,12 +87,8 @@ const DriverList = () => {
       const res = await api.get(`/drivers/${driver.id}`);
       const full = res.data?.data || res.data;
       setForm({
-        name: full.driverName || '',
-        phone: full.mobile || '',
-        email: full.email || '',
-        licenseNo: full.licenceNo || '',
-        vehicleNo: full.vehicleNo || '',
-        status: full.status || 'Active'
+        ...initialFormState,
+        ...full
       });
       setEditingId(driver.id);
       setIsAddModalOpen(true);
@@ -178,7 +169,7 @@ const DriverList = () => {
           <button 
             onClick={() => {
               setEditingId(null);
-              setForm({ name: '', phone: '', email: '', licenseNo: '', vehicleNo: '', status: 'Active' });
+              setForm(initialFormState);
               setIsAddModalOpen(true);
             }}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
@@ -351,93 +342,309 @@ const DriverList = () => {
               Register New Driver
             </h3>
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-6 h-[75vh] overflow-y-auto px-1 pb-4 custom-scrollbar">
+              
+              {/* --- ADD NEW DRIVER (Basic Info) --- */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Driver Name *</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="e.g. Ramesh Kumar"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                />
+                <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Basic Details</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Driver Name *</label>
+                    <input type="text" required placeholder="e.g. Ramesh Kumar"
+                      value={form.driverName} onChange={(e) => setForm({ ...form, driverName: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Driver Code</label>
+                    <input type="text" placeholder="Auto-generated if empty"
+                      value={form.driverCode} onChange={(e) => setForm({ ...form, driverCode: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Mobile Number *</label>
+                    <input type="text" required placeholder="e.g. +91 98765..."
+                      value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Email Address</label>
+                    <input type="email" placeholder="e.g. email@..."
+                      value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">DOB</label>
+                    <input type="date"
+                      value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Gender</label>
+                    <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    >
+                      <option value="Select">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Blood Group</label>
+                    <input type="text" placeholder="e.g. O+"
+                      value={form.bloodGroup} onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Profile Photo</label>
+                    <input type="file"
+                      className="w-full border border-blue-500 rounded px-3 py-1.5 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Phone *</label>
-                  <input 
-                    type="text"
-                    required
-                    placeholder="e.g. +91 98765..."
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Email Address</label>
-                  <input 
-                    type="email"
-                    placeholder="e.g. ramesh@..."
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">License Number</label>
-                  <input 
-                    type="text"
-                    placeholder="e.g. DL-IND1293..."
-                    value={form.licenseNo}
-                    onChange={(e) => setForm({ ...form, licenseNo: e.target.value })}
-                    className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Vehicle Number</label>
-                  <input 
-                    type="text"
-                    placeholder="e.g. DL 3C AM 1204"
-                    value={form.vehicleNo}
-                    onChange={(e) => setForm({ ...form, vehicleNo: e.target.value })}
-                    className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                  />
-                </div>
-              </div>
-
+              {/* --- ADDRESS DETAILS --- */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Driver Status *</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
+                <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Address Details</h4>
+                <div className="grid grid-cols-1 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Address</label>
+                    <input type="text" placeholder="e.g. 123 Main St..."
+                      value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">City</label>
+                    <input type="text"
+                      value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">District</label>
+                    <input type="text"
+                      value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">State</label>
+                    <input type="text"
+                      value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">PIN Code</label>
+                    <input type="text"
+                      value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-blue-500">
+              {/* --- DRIVING LICENSE DETAILS --- */}
+              <div>
+                <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Driving License Details</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">License Number *</label>
+                    <input type="text" required placeholder="e.g. DL-IND1293..."
+                      value={form.licenceNo} onChange={(e) => setForm({ ...form, licenceNo: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">License Type</label>
+                    <input type="text" placeholder="e.g. Commercial"
+                      value={form.licenceType} onChange={(e) => setForm({ ...form, licenceType: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Issue Date</label>
+                    <input type="date"
+                      value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Expiry Date *</label>
+                    <input type="date" required
+                      value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Issuing Authority</label>
+                    <input type="text"
+                      value={form.issuingAuthority} onChange={(e) => setForm({ ...form, issuingAuthority: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">License Document</label>
+                    <input type="file"
+                      className="w-full border border-blue-500 rounded px-3 py-1.5 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* --- EMPLOYMENT DETAILS --- */}
+              <div>
+                <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Employment Details</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Joining Date</label>
+                    <input type="date"
+                      value={form.joiningDate} onChange={(e) => setForm({ ...form, joiningDate: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Driver Type</label>
+                    <select value={form.driverType} onChange={(e) => setForm({ ...form, driverType: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    >
+                      <option value="Permanent">Permanent</option>
+                      <option value="Contract">Contract</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Department</label>
+                    <input type="text"
+                      value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Branch</label>
+                    <input type="text"
+                      value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Salary/Wage</label>
+                    <input type="number" placeholder="0.00"
+                      value={form.salaryWage} onChange={(e) => setForm({ ...form, salaryWage: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Payment Type</label>
+                    <select value={form.paymentMode} onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    >
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Cash">Cash</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* --- VEHICLE ASSIGNMENT --- */}
+              <div>
+                <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Vehicle Assignment</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Vehicle Number</label>
+                    <input type="text" placeholder="e.g. DL 3C AM 1204"
+                      value={form.vehicleNo} onChange={(e) => setForm({ ...form, vehicleNo: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Vehicle Type</label>
+                    <input type="text"
+                      value={form.vehicleType} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Assignment Date</label>
+                    <input type="date"
+                      value={form.assignmentDate} onChange={(e) => setForm({ ...form, assignmentDate: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div className="flex items-end pb-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-gray-700">
+                      <input type="checkbox"
+                        checked={form.isPrimary} onChange={(e) => setForm({ ...form, isPrimary: e.target.checked })}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      />
+                      Primary Driver
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* --- EMERGENCY CONTACT --- */}
+              <div>
+                <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Emergency Contact</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Contact Name</label>
+                    <input type="text"
+                      value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Relationship</label>
+                    <input type="text"
+                      value={form.emergencyRelation} onChange={(e) => setForm({ ...form, emergencyRelation: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Mobile Number</label>
+                    <input type="text"
+                      value={form.emergencyMobile} onChange={(e) => setForm({ ...form, emergencyMobile: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Address</label>
+                    <input type="text"
+                      value={form.emergencyAddress} onChange={(e) => setForm({ ...form, emergencyAddress: e.target.value })}
+                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* --- FOOTER --- */}
+              <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-blue-500 sticky bottom-0 bg-white shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 border border-blue-500 rounded text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="px-6 py-2 border border-blue-500 rounded text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-slate-800 rounded text-sm font-semibold shadow transition-colors"
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-slate-800 rounded text-sm font-semibold shadow transition-colors"
                 >
-                  Register
+                  Save Driver
                 </button>
               </div>
+
             </form>
           </div>
         </div>
