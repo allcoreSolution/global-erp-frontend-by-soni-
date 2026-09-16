@@ -11,13 +11,30 @@ const AddSale = () => {
   const [productsCatalog, setProductsCatalog] = useState([]);
   const [customers, setCustomers] = useState(['Walk-in Customer']);
   
+  const [warehousesList, setWarehousesList] = useState([]);
+  const [billersList, setBillersList] = useState([]);
+  const [currenciesList, setCurrenciesList] = useState([]);
+
+  // Modals state
+  const [isBillerModalOpen, setIsBillerModalOpen] = useState(false);
+  const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
+  const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+
+  // New Item states
+  const [newBiller, setNewBiller] = useState({ name: '', companyName: '', email: '' });
+  const [newWarehouse, setNewWarehouse] = useState({ name: '', location: '' });
+  const [newCurrency, setNewCurrency] = useState({ code: '', name: '', symbol: '' });
+
   // Real data fetch on mount
   useEffect(() => {
     const fetchCatalogs = async () => {
       try {
-        const [prodRes, custRes] = await Promise.all([
+        const [prodRes, custRes, whRes, bilRes, curRes] = await Promise.all([
           api.get('/products'),
-          api.get('/customers').catch(() => ({ data: { data: [] } }))
+          api.get('/customers').catch(() => ({ data: { data: [] } })),
+          api.get('/catalogs/warehouses').catch(() => ({ data: { data: [] } })),
+          api.get('/catalogs/billers').catch(() => ({ data: { data: [] } })),
+          api.get('/catalogs/currencies').catch(() => ({ data: { data: [] } }))
         ]);
         const pData = prodRes.data?.data || prodRes.data || [];
         setProductsCatalog(pData.map(p => ({
@@ -33,6 +50,19 @@ const AddSale = () => {
         if (cData.length > 0) {
           setCustomers(cData.map(c => c.name || c.customerName));
         }
+
+        const wData = whRes.data?.data || [];
+        setWarehousesList(wData.length > 0 ? wData.map(w => w.name) : ['Test Shop', 'Main Warehouse']);
+        if (!warehouse && wData.length > 0) setWarehouse(wData[0].name);
+
+        const bData = bilRes.data?.data || [];
+        setBillersList(bData.length > 0 ? bData.map(b => b.name) : ['Admin Biller']);
+        if (!biller && bData.length > 0) setBiller(bData[0].name);
+
+        const curData = curRes.data?.data || [];
+        setCurrenciesList(curData.length > 0 ? curData.map(c => c.code) : ['INR', 'USD']);
+        if (!currency && curData.length > 0) setCurrency(curData[0].code);
+
       } catch (err) {
         console.error('Failed to load catalogs', err);
       }
@@ -40,16 +70,46 @@ const AddSale = () => {
     fetchCatalogs();
   }, []);
 
-  const warehouses = ['Test Shop', 'Central Warehouse', 'East Side Storage'];
-  const billers = ['Test Biller (Test Company)', 'Admin Biller', 'HQ Biller'];
-  const currencies = ['INR', 'USD', 'EUR'];
+  // Modal Handlers
+  const handleAddBiller = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/catalogs/billers', newBiller);
+      setBillersList([...billersList, res.data.data.name]);
+      setBiller(res.data.data.name);
+      setIsBillerModalOpen(false);
+      setNewBiller({ name: '', companyName: '', email: '' });
+    } catch(err) { alert("Failed to add Biller"); }
+  };
+
+  const handleAddWarehouse = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/catalogs/warehouses', newWarehouse);
+      setWarehousesList([...warehousesList, res.data.data.name]);
+      setWarehouse(res.data.data.name);
+      setIsWarehouseModalOpen(false);
+      setNewWarehouse({ name: '', location: '' });
+    } catch(err) { alert("Failed to add Warehouse"); }
+  };
+
+  const handleAddCurrency = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/catalogs/currencies', newCurrency);
+      setCurrenciesList([...currenciesList, res.data.data.code]);
+      setCurrency(res.data.data.code);
+      setIsCurrencyModalOpen(false);
+      setNewCurrency({ code: '', name: '', symbol: '' });
+    } catch(err) { alert("Failed to add Currency"); }
+  };
 
   // Form States
   const [saleDate, setSaleDate] = useState('2026-08-13');
   const [referenceNo, setReferenceNo] = useState('');
   const [customer, setCustomer] = useState('John Doe');
   const [warehouse, setWarehouse] = useState('Test Shop');
-  const [biller, setBiller] = useState('Test Biller (Test Company)');
+  const [biller, setBiller] = useState('Admin Biller');
   const [currency, setCurrency] = useState('INR');
   const [exchangeRate, setExchangeRate] = useState('1');
   
@@ -278,42 +338,69 @@ const AddSale = () => {
           {/* Warehouse */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Warehouse *</label>
-            <select
-              value={warehouse}
-              onChange={(e) => setWarehouse(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-              required
-            >
-              <option value="">Select warehouse...</option>
-              {warehouses.map((w, i) => <option key={i} value={w}>{w}</option>)}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={warehouse}
+                onChange={(e) => setWarehouse(e.target.value)}
+                className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
+                required
+              >
+                <option value="">Select warehouse...</option>
+                {warehousesList.map((w, i) => <option key={i} value={w}>{w}</option>)}
+              </select>
+              <button 
+                type="button" 
+                onClick={() => setIsWarehouseModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded p-2 text-sm font-bold"
+              >
+                +
+              </button>
+            </div>
           </div>
 
           {/* Biller */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Biller *</label>
-            <select
-              value={biller}
-              onChange={(e) => setBiller(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-              required
-            >
-              <option value="">Select biller...</option>
-              {billers.map((b, i) => <option key={i} value={b}>{b}</option>)}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={biller}
+                onChange={(e) => setBiller(e.target.value)}
+                className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
+                required
+              >
+                <option value="">Select biller...</option>
+                {billersList.map((b, i) => <option key={i} value={b}>{b}</option>)}
+              </select>
+              <button 
+                type="button" 
+                onClick={() => setIsBillerModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded p-2 text-sm font-bold"
+              >
+                +
+              </button>
+            </div>
           </div>
 
           {/* Currency */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Currency *</label>
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-              required
-            >
-              {currencies.map((c, i) => <option key={i} value={c}>{c}</option>)}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
+                required
+              >
+                {currenciesList.map((c, i) => <option key={i} value={c}>{c}</option>)}
+              </select>
+              <button 
+                type="button" 
+                onClick={() => setIsCurrencyModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded p-2 text-sm font-bold"
+              >
+                +
+              </button>
+            </div>
           </div>
 
           {/* Exchange Rate */}
@@ -660,6 +747,78 @@ const AddSale = () => {
         </div>
 
       </form>
+
+      {/* MODALS */}
+      
+      {/* Biller Modal */}
+      {isBillerModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md border border-blue-500">
+            <h2 className="text-xl font-bold mb-4">Add Biller</h2>
+            <form onSubmit={handleAddBiller} className="space-y-4">
+              <div>
+                <label className="block text-sm mb-1">Name *</label>
+                <input required type="text" value={newBiller.name} onChange={e => setNewBiller({...newBiller, name: e.target.value})} className="w-full border border-blue-400 p-2 rounded" />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Company</label>
+                <input type="text" value={newBiller.companyName} onChange={e => setNewBiller({...newBiller, companyName: e.target.value})} className="w-full border border-blue-400 p-2 rounded" />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" onClick={() => setIsBillerModalOpen(false)} className="px-4 py-2 border rounded">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Warehouse Modal */}
+      {isWarehouseModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md border border-blue-500">
+            <h2 className="text-xl font-bold mb-4">Add Warehouse</h2>
+            <form onSubmit={handleAddWarehouse} className="space-y-4">
+              <div>
+                <label className="block text-sm mb-1">Name *</label>
+                <input required type="text" value={newWarehouse.name} onChange={e => setNewWarehouse({...newWarehouse, name: e.target.value})} className="w-full border border-blue-400 p-2 rounded" />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Location</label>
+                <input type="text" value={newWarehouse.location} onChange={e => setNewWarehouse({...newWarehouse, location: e.target.value})} className="w-full border border-blue-400 p-2 rounded" />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" onClick={() => setIsWarehouseModalOpen(false)} className="px-4 py-2 border rounded">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Currency Modal */}
+      {isCurrencyModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md border border-blue-500">
+            <h2 className="text-xl font-bold mb-4">Add Currency</h2>
+            <form onSubmit={handleAddCurrency} className="space-y-4">
+              <div>
+                <label className="block text-sm mb-1">Code (e.g. EUR) *</label>
+                <input required type="text" value={newCurrency.code} onChange={e => setNewCurrency({...newCurrency, code: e.target.value})} className="w-full border border-blue-400 p-2 rounded" />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Name</label>
+                <input type="text" value={newCurrency.name} onChange={e => setNewCurrency({...newCurrency, name: e.target.value})} className="w-full border border-blue-400 p-2 rounded" />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" onClick={() => setIsCurrencyModalOpen(false)} className="px-4 py-2 border rounded">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
