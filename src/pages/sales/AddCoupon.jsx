@@ -92,7 +92,8 @@ const AddCoupon = () => {
         amount: Number(form.discountValue) || 0,
         minAmount: Number(form.minOrder) || 0,
         qty: Number(form.totalUsageLimit) || 0,
-        expiredDate: form.endDate
+        expiredDate: form.endDate,
+        code: form.couponCode // Send code to satisfy old MongoDB index
       };
 
       if (isEdit) {
