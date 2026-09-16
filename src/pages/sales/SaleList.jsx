@@ -1,24 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
   ChevronLeft, ChevronRight, AlertCircle, X, Calendar, Filter, DollarSign 
 } from 'lucide-react';
+import api from '../../api';
 
 const SaleList = () => {
   const navigate = useNavigate();
 
-  // Mock Sales Database matching requested table data logs exactly
-  const [sales, setSales] = useState([
-    { id: 1, date: '13/08/2026 12:08:11 pm', reference: 'ITrovePOS20260813-120811', createdBy: 'mummakidz', customer: 'John Doe231312', warehouse: 'Test Shop', status: 'Completed', paymentStatus: 'Paid', paymentMethod: 'Cash(50.00)', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 50.00, returnedAmount: 0.00, paid: 50.00, due: 0.00 },
-    { id: 2, date: '12/08/2026 02:06:46 pm', reference: 'fcfc', createdBy: 'mummakidz', customer: 'John Doe231312', warehouse: 'Test Shop', status: 'Completed', paymentStatus: 'Pending', paymentMethod: '-', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 25.00, returnedAmount: 0.00, paid: 0.00, due: 25.00 },
-    { id: 3, date: '12/08/2026 01:49:16 pm', reference: 'ITrovePOS20260812-014916', createdBy: 'mummakidz', customer: 'John Doe231312', warehouse: 'Test Shop', status: 'Completed', paymentStatus: 'Paid', paymentMethod: 'Cash(22.00)', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 22.00, returnedAmount: 0.00, paid: 22.00, due: 0.00 },
-    { id: 4, date: '11/08/2026 10:21:54 pm', reference: 'gbbc', createdBy: 'mummakidz', customer: 'test1234567890', warehouse: 'Test Shop', status: 'Completed', paymentStatus: 'Paid', paymentMethod: 'Cash(26.13)', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 26.13, returnedAmount: 0.00, paid: 26.13, due: 0.00 },
-    { id: 5, date: '11/08/2026 10:17:39 pm', reference: 'ITrovePOS20260811-101739', createdBy: 'mummakidz', customer: 'John Doe231312', warehouse: 'Test Shop', status: 'Completed', paymentStatus: 'Paid', paymentMethod: 'Cash(55.00)', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 55.00, returnedAmount: 0.00, paid: 55.00, due: 0.00 },
-    { id: 6, date: '28/04/2026 04:49:55 pm', reference: 'ITrovePOS20260428-044955', createdBy: 'mummakidz', customer: 'John Doe231312', warehouse: 'Test Shop', status: 'Completed', paymentStatus: 'Paid', paymentMethod: 'Cash(46.95)', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 46.95, returnedAmount: 0.00, paid: 46.95, due: 0.00 },
-    { id: 7, date: '02/04/2026 04:05:44 pm', reference: 'ITrovePOS20260402-040544', createdBy: 'mummakidz', customer: 'John Doe231312', warehouse: 'Test Shop', status: 'Draft', paymentStatus: 'Due', paymentMethod: '-', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 30.00, returnedAmount: 0.00, paid: 0.00, due: 30.00 },
-    { id: 8, date: '02/04/2026 01:27:09 pm', reference: 'ITrovePOS20260402-012709', createdBy: 'mummakidz', customer: 'test1234567890', warehouse: 'Test Shop', status: 'Completed', paymentStatus: 'Paid', paymentMethod: 'Cash(7.50)', currencyRate: 'INR/1', deliveryStatus: 'N/A', grandTotal: 7.50, returnedAmount: 0.00, paid: 7.50, due: 0.00 }
-  ]);
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchSales();
+  }, []);
+
+  const fetchSales = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/sales');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(s => ({
+        ...s,
+        id: s._id,
+        reference: s.referenceNo || s.invoiceNo,
+        date: s.saleDate || new Date(s.createdAt).toLocaleDateString(),
+        createdBy: s.biller || 'Admin',
+        customer: s.customer,
+        warehouse: s.warehouse,
+        status: s.saleStatus || 'Completed',
+        paymentStatus: s.paymentStatus || 'Pending',
+        paymentMethod: s.paymentMode || 'Cash',
+        currencyRate: `${s.currency || 'INR'}/${s.exchangeRate || 1}`,
+        grandTotal: s.grandTotal || 0,
+        returnedAmount: 0,
+        paid: s.amountPaid || 0,
+        due: s.grandTotal - (s.amountPaid || 0)
+      }));
+      setSales(mapped);
+    } catch (err) {
+      console.error('Failed to load sales', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,9 +77,15 @@ const SaleList = () => {
   };
 
   // Delete invoice
-  const handleDeleteSale = (id) => {
+  const handleDeleteSale = async (id) => {
     if (window.confirm("Are you sure you want to delete this sales invoice?")) {
-      setSales(sales.filter(s => s.id !== id));
+      try {
+        await api.delete(`/sales/${id}`);
+        setSales(sales.filter(s => s.id !== id));
+      } catch (err) {
+        console.error(err);
+        alert(`Error deleting sale: ${err.response?.data?.message || err.message}`);
+      }
     }
   };
 
@@ -208,7 +240,13 @@ const SaleList = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
-            {currentRecords.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="15" className="px-4 py-10 text-center text-sm text-gray-500 bg-white">
+                  Loading sales records...
+                </td>
+              </tr>
+            ) : currentRecords.length > 0 ? (
               currentRecords.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
                   

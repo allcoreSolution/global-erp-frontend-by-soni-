@@ -1,20 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Search, Trash2, Upload, HelpCircle, Info 
 } from 'lucide-react';
+import api from '../../api';
 
 const AddSale = () => {
-  // Mock Catalogs
-  const customers = ['John Doe', 'Jane Smith', 'Walk-in Customer', 'Bob Johnson'];
+  const navigate = useNavigate();
+  // Fetch dynamic catalogs
+  const [productsCatalog, setProductsCatalog] = useState([]);
+  const [customers, setCustomers] = useState(['Walk-in Customer']);
+  
+  // Real data fetch on mount
+  useEffect(() => {
+    const fetchCatalogs = async () => {
+      try {
+        const [prodRes, custRes] = await Promise.all([
+          api.get('/products'),
+          api.get('/customers').catch(() => ({ data: { data: [] } }))
+        ]);
+        const pData = prodRes.data?.data || prodRes.data || [];
+        setProductsCatalog(pData.map(p => ({
+          id: p._id,
+          name: p.name,
+          code: p.code || p.sku,
+          price: p.salePrice || p.price || 0,
+          tax: p.taxRate || 0,
+          stock: p.currentStock || 0
+        })));
+        
+        const cData = custRes.data?.data || custRes.data || [];
+        if (cData.length > 0) {
+          setCustomers(cData.map(c => c.name || c.customerName));
+        }
+      } catch (err) {
+        console.error('Failed to load catalogs', err);
+      }
+    };
+    fetchCatalogs();
+  }, []);
+
   const warehouses = ['Test Shop', 'Central Warehouse', 'East Side Storage'];
   const billers = ['Test Biller (Test Company)', 'Admin Biller', 'HQ Biller'];
   const currencies = ['INR', 'USD', 'EUR'];
-  const productsCatalog = [
-    { name: 'iPhone 15 Pro', code: 'PRD001', price: 1200, tax: 18 },
-    { name: 'Dell XPS 15', code: 'PRD002', price: 1800, tax: 18 },
-    { name: 'MX Master 3S', code: 'PRD003', price: 100, tax: 18 },
-    { name: 'HP LaserJet Pro', code: 'PRD004', price: 320, tax: 12 },
-  ];
 
   // Form States
   const [saleDate, setSaleDate] = useState('2026-08-13');
@@ -67,6 +95,7 @@ const AddSale = () => {
       setOrderItems([...orderItems, {
         name: prod.name,
         code: prod.code,
+        productId: prod.id,
         quantity: 1,
         netUnitPrice: prod.price,
         discount: 0,
@@ -144,7 +173,7 @@ const AddSale = () => {
 
   const grandTotal = calculatedItemsSubtotal + calculatedGlobalTax + Number(shippingCost) - calculatedGlobalDiscount;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!customer) {
       alert("Customer field is required.");
@@ -158,7 +187,38 @@ const AddSale = () => {
       alert("Biller field is required.");
       return;
     }
-    alert(`Sale Created Successfully!\nGrand Total: INR ${grandTotal.toFixed(2)}`);
+    if (orderItems.length === 0) {
+      alert("Please add at least one product to the sale.");
+      return;
+    }
+    
+    try {
+      const payload = {
+        saleDate,
+        referenceNo,
+        customer,
+        warehouse,
+        biller,
+        currency,
+        exchangeRate,
+        orderItems,
+        orderTax,
+        discountType,
+        discountValue,
+        discountTotal: calculatedGlobalDiscount,
+        shippingCost,
+        saleStatus,
+        paymentStatus,
+        saleNote,
+        staffNote
+      };
+      const res = await api.post('/sales', payload);
+      alert(`Sale Created Successfully!\nInvoice: ${res.data?.data?.invoiceNo || ''}`);
+      navigate('/sales/sale-list');
+    } catch (err) {
+      console.error(err);
+      alert(`Error creating sale: ${err.response?.data?.message || err.message}`);
+    }
   };
 
   return (
