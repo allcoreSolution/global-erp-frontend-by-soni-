@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Tag } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../../api';
 
 const AddCoupon = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData || null;
+  const isEdit = Boolean(editData);
 
   const [form, setForm] = useState({
-    couponCode: 'WELCOME10',
+    couponCode: `CP-${Math.floor(10000 + Math.random() * 90000)}`,
     couponName: 'Welcome Offer',
     couponType: 'Percentage',
     company: 'Select',
@@ -46,6 +50,21 @@ const AddCoupon = () => {
     termsConditions: ''
   });
 
+  useEffect(() => {
+    if (isEdit && editData) {
+      setForm(prev => ({
+        ...prev,
+        ...editData,
+        couponCode: editData.couponCode || prev.couponCode,
+        couponType: editData.type || editData.couponType || prev.couponType,
+        discountValue: editData.amount || editData.discountValue || prev.discountValue,
+        minOrder: editData.minAmount || editData.minOrder || prev.minOrder,
+        totalUsageLimit: editData.qty || editData.totalUsageLimit || prev.totalUsageLimit,
+        endDate: editData.expiredDate || editData.endDate || prev.endDate
+      }));
+    }
+  }, [isEdit, editData]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -64,10 +83,30 @@ const AddCoupon = () => {
     }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Coupon created successfully!');
-    navigate('/sales/coupon-list');
+    try {
+      const payload = {
+        ...form,
+        type: form.couponType,
+        amount: Number(form.discountValue) || 0,
+        minAmount: Number(form.minOrder) || 0,
+        qty: Number(form.totalUsageLimit) || 0,
+        expiredDate: form.endDate
+      };
+
+      if (isEdit) {
+        await api.put(`/coupons/${editData.id || editData._id}`, payload);
+        alert('Coupon updated successfully!');
+      } else {
+        await api.post('/coupons', payload);
+        alert('Coupon created successfully!');
+      }
+      navigate('/sales/coupon-list');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save coupon: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   return (
@@ -88,8 +127,8 @@ const AddCoupon = () => {
         
         {/* Card Header */}
         <div className="bg-gradient-to-r from-indigo-50 to-white px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-indigo-900 uppercase tracking-wide">Create New Coupon</h2>
-          <p className="text-sm text-slate-500 font-medium">Create discount coupon</p>
+          <h2 className="text-xl font-bold text-indigo-900 uppercase tracking-wide">{isEdit ? 'Update Coupon' : 'Create New Coupon'}</h2>
+          <p className="text-sm text-slate-500 font-medium">{isEdit ? 'Update existing discount coupon details' : 'Create discount coupon'}</p>
         </div>
 
         <form onSubmit={handleSave} className="p-6 space-y-8">

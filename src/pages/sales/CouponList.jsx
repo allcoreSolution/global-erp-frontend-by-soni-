@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Download, FileText, Eye, Edit, Trash2,
   ChevronLeft, ChevronRight, AlertCircle, X, CheckCircle
 } from 'lucide-react';
+import api from '../../api';
 
 const CouponList = () => {
   const navigate = useNavigate();
@@ -18,53 +19,41 @@ const CouponList = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
 
-  // Form State for Add Coupon
-  const [form, setForm] = useState({
-    couponCode: '',
-    type: 'Percentage',
-    amount: '',
-    minAmount: '',
-    qty: '',
-    available: '',
-    expiredDate: '2026-12-31',
-    createdBy: 'mummakidz'
-  });
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    if (!form.couponCode || !form.amount || !form.qty) {
-      alert("Coupon Code, Amount and Quantity are required.");
-      return;
+  const fetchCoupons = async () => {
+    try {
+      const res = await api.get('/coupons');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(item => ({
+        ...item, // keep all other fields for editing
+        id: item._id,
+        couponCode: item.couponCode || '-',
+        type: item.type || 'Percentage',
+        amount: Number(item.amount) || 0,
+        minAmount: Number(item.minAmount) || 0,
+        qty: Number(item.qty) || 0,
+        available: Number(item.available) || Number(item.qty) || 0,
+        expiredDate: item.expiredDate || '-',
+        createdBy: item.createdBy || '-'
+      }));
+      setCoupons(mapped);
+    } catch (error) {
+      console.error("Failed to fetch coupons", error);
     }
-    const newRecord = {
-      id: coupons.length + 1,
-      couponCode: form.couponCode,
-      type: form.type,
-      amount: Number(form.amount) || 0.00,
-      minAmount: Number(form.minAmount) || 0.00,
-      qty: Number(form.qty) || 0,
-      available: Number(form.available) || Number(form.qty) || 0,
-      expiredDate: form.expiredDate,
-      createdBy: form.createdBy
-    };
-    setCoupons([...coupons, newRecord]);
-    setIsAddModalOpen(false);
-    // Reset Form
-    setForm({
-      couponCode: '',
-      type: 'Percentage',
-      amount: '',
-      minAmount: '',
-      qty: '',
-      available: '',
-      expiredDate: '2026-12-31',
-      createdBy: 'mummakidz'
-    });
   };
 
-  const handleDelete = (id) => {
+  useEffect(() => {
+    fetchCoupons();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this Coupon?")) {
-      setCoupons(coupons.filter(c => c.id !== id));
+      try {
+        await api.delete(`/coupons/${id}`);
+        setCoupons(coupons.filter(c => c.id !== id));
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete coupon');
+      }
     }
   };
 
@@ -203,9 +192,7 @@ const CouponList = () => {
                         <Eye size={15} />
                       </button>
                       <button
-                        onClick={() => {
-                          alert(`Edit Coupon: ${c.couponCode}`);
-                        }}
+                        onClick={() => navigate('/sales/add-coupon', { state: { editData: c } })}
                         className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
                         title="Edit details"
                       >
