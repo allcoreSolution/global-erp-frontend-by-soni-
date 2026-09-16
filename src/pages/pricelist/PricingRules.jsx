@@ -1,12 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tag, ShieldAlert, BarChart, Percent, Plus, X, Edit } from 'lucide-react';
+import api from '../../api';
 
 const PricingRules = () => {
-  const [rules, setRules] = useState([
-    { id: 'RULE-001', product: 'TMT Steel Bar 12mm', type: 'Fixed', price: 450, discountPct: 5, discountAmt: 22.5, minQty: 100, maxQty: 1000, start: '2024-04-01', end: '2024-08-31' },
-    { id: 'RULE-002', product: 'GI Pipe 2 Inches', type: 'Percentage', price: 1200, discountPct: 10, discountAmt: 120, minQty: 50, maxQty: 500, start: '2024-05-01', end: '2024-12-31' }
-  ]);
-
+  const [rules, setRules] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState({
     id: '', name: '', type: 'Discount', description: '', status: 'Active',
@@ -16,6 +13,19 @@ const PricingRules = () => {
     start: '', end: '', priority: 1, stackDiscount: false
   });
   const [isEdit, setIsEdit] = useState(false);
+
+  const fetchRules = async () => {
+    try {
+      const res = await api.get('/price-rules');
+      setRules(res.data?.data || res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch pricing rules', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchRules();
+  }, []);
 
   const handleOpenAdd = () => {
     setIsEdit(false);
@@ -36,19 +46,48 @@ const PricingRules = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEdit) {
-      setRules(rules.map(r => r.id === currentRule.id ? { ...currentRule } : r));
-    } else {
-      setRules([...rules, { ...currentRule }]);
+    try {
+      const payload = { ...currentRule };
+      
+      // Deep Check: prevent Mongoose cast errors or unwanted empty strings
+      if (payload.company === '') delete payload.company;
+      if (payload.branch === '') delete payload.branch;
+      if (payload.priceList === '') delete payload.priceList;
+      if (payload.category === '') delete payload.category;
+      if (payload.brand === '') delete payload.brand;
+      if (payload.product === '') delete payload.product;
+      if (payload.maxDiscount === '') delete payload.maxDiscount;
+      
+      // Ensure numeric types
+      payload.conditionValue = Number(payload.conditionValue) || 0;
+      payload.discountValue = Number(payload.discountValue) || 0;
+      payload.priority = Number(payload.priority) || 1;
+
+      if (isEdit) {
+        const idToUpdate = payload._id || payload.id;
+        await api.put(`/price-rules/${idToUpdate}`, payload);
+      } else {
+        await api.post('/price-rules', payload);
+      }
+      fetchRules();
+      setIsModalOpen(false);
+    } catch (error) {
+      alert('Failed to save pricing rule. ' + (error.response?.data?.message || ''));
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm(`Are you sure you want to delete rule ${id}?`)) {
-      setRules(rules.filter(r => r.id !== id));
+      try {
+        const rule = rules.find(r => r.id === id);
+        const idToDelete = rule?._id || id;
+        await api.delete(`/price-rules/${idToDelete}`);
+        fetchRules();
+      } catch (error) {
+        alert('Failed to delete pricing rule. ' + (error.response?.data?.message || ''));
+      }
     }
   };
 
@@ -92,24 +131,22 @@ const PricingRules = () => {
                 <p className="font-semibold text-gray-800">{rule.type}</p>
               </div>
               <div>
-                <span className="text-gray-500">Base Price:</span>
-                <p className="font-semibold text-gray-800">₹ {rule.price.toLocaleString()}</p>
+                <span className="text-gray-500">Value:</span>
+                <p className="font-bold text-emerald-600">
+                  {rule.discountType === 'Percentage' ? `${rule.discountValue}%` : `₹ ${rule.discountValue}`}
+                </p>
               </div>
               <div>
-                <span className="text-gray-500">Discount Pct:</span>
-                <p className="font-bold text-emerald-600">{rule.discountPct}%</p>
+                <span className="text-gray-500">Condition:</span>
+                <p className="font-semibold text-gray-800">{rule.condition} {rule.operator}</p>
               </div>
               <div>
-                <span className="text-gray-500">Discount Amount:</span>
-                <p className="font-semibold text-gray-800">₹ {rule.discountAmt.toLocaleString()}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Quantity Range:</span>
-                <p className="font-semibold text-gray-800">{rule.minQty} - {rule.maxQty} Units</p>
+                <span className="text-gray-500">Condition Val:</span>
+                <p className="font-semibold text-gray-800">{rule.conditionValue}</p>
               </div>
               <div>
                 <span className="text-gray-500">Schedule:</span>
-                <p className="font-semibold text-gray-800 text-[10px]">{rule.start} to {rule.end}</p>
+                <p className="font-semibold text-gray-800 text-[10px]">{rule.start || 'N/A'} to {rule.end || 'N/A'}</p>
               </div>
             </div>
           </div>

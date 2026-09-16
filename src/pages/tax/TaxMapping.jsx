@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tag, ShieldAlert, Edit, Trash2, Search, Plus, X } from 'lucide-react';
+import api from '../../api';
 
 const TaxMapping = () => {
-  const [mappings, setMappings] = useState([
-    { id: 'TM-001', hsn: '7214', category: 'Steel Items', salesTax: 'Standard GST 18%', purchaseTax: 'Standard GST 18%', exemption: 'No Exemption' },
-    { id: 'TM-002', hsn: '7306', category: 'Pipes & Fittings', salesTax: 'Standard GST 18%', purchaseTax: 'Standard GST 18%', exemption: 'No Exemption' }
-  ]);
+  const [mappings, setMappings] = useState([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentMap, setCurrentMap] = useState({
@@ -15,6 +13,19 @@ const TaxMapping = () => {
     effectiveFrom: '', effectiveTo: '', isActive: true
   });
   const [isEdit, setIsEdit] = useState(false);
+
+  const fetchMappings = async () => {
+    try {
+      const res = await api.get('/hsn-mappings');
+      setMappings(res.data?.data || res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch HSN mappings', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMappings();
+  }, []);
 
   const handleOpenAdd = () => {
     setIsEdit(false);
@@ -34,19 +45,48 @@ const TaxMapping = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEdit) {
-      setMappings(mappings.map(m => m.id === currentMap.id ? { ...currentMap } : m));
-    } else {
-      setMappings([...mappings, { ...currentMap }]);
+    try {
+      const payload = { ...currentMap };
+
+      // Deep Checks
+      if (payload.company === '') delete payload.company;
+      if (payload.category === '') delete payload.category;
+      if (payload.product === '') delete payload.product;
+      if (payload.unit === '') delete payload.unit;
+      if (payload.effectiveFrom === '') delete payload.effectiveFrom;
+      if (payload.effectiveTo === '') delete payload.effectiveTo;
+
+      payload.gstRate = Number(payload.gstRate) || 0;
+      payload.cgst = Number(payload.cgst) || 0;
+      payload.sgst = Number(payload.sgst) || 0;
+      payload.igst = Number(payload.igst) || 0;
+      payload.cess = Number(payload.cess) || 0;
+
+      if (isEdit) {
+        const idToUpdate = payload._id || payload.id;
+        await api.put(`/hsn-mappings/${idToUpdate}`, payload);
+      } else {
+        await api.post('/hsn-mappings', payload);
+      }
+      fetchMappings();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save HSN mapping. ' + (err.response?.data?.message || ''));
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm(`Are you sure you want to delete tax mapping ${id}?`)) {
-      setMappings(mappings.filter(m => m.id !== id));
+      try {
+        const mapping = mappings.find(m => m.id === id);
+        const idToDelete = mapping?._id || id;
+        await api.delete(`/hsn-mappings/${idToDelete}`);
+        fetchMappings();
+      } catch (err) {
+        alert('Failed to delete mapping. ' + (err.response?.data?.message || ''));
+      }
     }
   };
 
@@ -70,7 +110,7 @@ const TaxMapping = () => {
         {mappings.map(m => (
           <div key={m.id} className="bg-slate-50 border rounded-lg p-4 space-y-2 relative">
             <div className="flex justify-between items-center border-b pb-2">
-              <span className="font-bold text-indigo-600 font-mono">HSN Code: {m.hsn}</span>
+              <span className="font-bold text-indigo-600 font-mono">{m.hsnType} Code: {m.hsnCode}</span>
               <div className="flex gap-1.5">
                 <button onClick={() => handleOpenEdit(m)} className="p-1 hover:bg-slate-200 rounded text-amber-600">
                   <Edit size={13} />
@@ -82,10 +122,10 @@ const TaxMapping = () => {
             </div>
             <div className="space-y-1 text-[11px] sm:text-xs">
               <p><span className="text-gray-500">Mapping Code:</span> <strong className="text-gray-800">{m.id}</strong></p>
-              <p><span className="text-gray-500">Tax Category:</span> <strong className="text-gray-800">{m.category}</strong></p>
-              <p><span className="text-gray-500">Sales Tax:</span> <strong className="text-gray-900 text-indigo-600">{m.salesTax}</strong></p>
-              <p><span className="text-gray-500">Purchase Tax:</span> <strong className="text-gray-900 text-emerald-600">{m.purchaseTax}</strong></p>
-              <p><span className="text-gray-500">Exemption:</span> <strong className="text-gray-800">{m.exemption}</strong></p>
+              <p><span className="text-gray-500">Tax Category:</span> <strong className="text-gray-800">{m.category || 'N/A'}</strong></p>
+              <p><span className="text-gray-500">Tax Config:</span> <strong className="text-gray-900 text-indigo-600">{m.taxConfig}</strong></p>
+              <p><span className="text-gray-500">GST Rate:</span> <strong className="text-gray-900 text-emerald-600">{m.gstRate}%</strong></p>
+              <p><span className="text-gray-500">Status:</span> <strong className="text-gray-800">{m.isActive ? 'Active' : 'Inactive'}</strong></p>
             </div>
           </div>
         ))}

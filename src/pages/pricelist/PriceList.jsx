@@ -1,34 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Eye, Edit, Trash2, Search, X, Download, Upload, Printer } from 'lucide-react';
+import api from '../../api';
 
 const PriceList = () => {
-  const [priceLists, setPriceLists] = useState([
-    { id: 'PL-001', name: 'VIP Customer Pricing', customerType: 'Wholesaler', status: true },
-    { id: 'PL-002', name: 'Regular Retail Slab', customerType: 'Retailer', status: true },
-    { id: 'PL-003', name: 'Corporate Special Tier', customerType: 'Distributor', status: false }
-  ]);
+  const [priceLists, setPriceLists] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [currentPL, setCurrentPL] = useState({ id: '', name: '', customerType: 'Retailer', status: true });
+  const [currentPL, setCurrentPL] = useState({ id: '', name: '', customerType: 'Retailer', status: true, productPricing: [], quantityPricing: [] });
+
+  useEffect(() => {
+    fetchPriceLists();
+  }, []);
+
+  const fetchPriceLists = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/price-lists');
+      setPriceLists(res.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch price lists', error);
+      alert('Failed to load price lists');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = priceLists.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.customerType.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.customerType || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id, _id) => {
     if (window.confirm(`Are you sure you want to delete price list ${id}?`)) {
-      setPriceLists(priceLists.filter(p => p.id !== id));
+      try {
+        await api.delete(`/price-lists/${_id}`);
+        setPriceLists(priceLists.filter(p => p._id !== _id));
+      } catch (error) {
+        console.error('Failed to delete price list', error);
+        alert('Failed to delete price list');
+      }
     }
   };
 
   const handleOpenAdd = () => {
     setIsEditMode(false);
     const nextId = `PL-${String(priceLists.length + 1).padStart(3, '0')}`;
-    setCurrentPL({ id: nextId, name: '', customerType: 'Retailer', status: true });
+    setCurrentPL({ id: nextId, name: '', customerType: 'Retailer', status: true, productPricing: [], quantityPricing: [] });
     setIsModalOpen(true);
   };
 
@@ -38,14 +59,26 @@ const PriceList = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditMode) {
-      setPriceLists(priceLists.map(p => p.id === currentPL.id ? { ...currentPL } : p));
-    } else {
-      setPriceLists([...priceLists, { ...currentPL }]);
+    try {
+      const payload = { ...currentPL };
+      // Remove empty string references to prevent mongoose casting issues if any, although here they are mostly strings.
+      if (payload.company === '') delete payload.company;
+      if (payload.branch === '') delete payload.branch;
+
+      if (isEditMode) {
+        const res = await api.put(`/price-lists/${currentPL._id}`, payload);
+        setPriceLists(priceLists.map(p => p._id === currentPL._id ? res.data.data : p));
+      } else {
+        const res = await api.post('/price-lists', payload);
+        setPriceLists([...priceLists, res.data.data]);
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to save price list', error);
+      alert('Failed to save price list. ' + (error.response?.data?.message || ''));
     }
-    setIsModalOpen(false);
   };
 
   // Real CSV Export
@@ -53,7 +86,7 @@ const PriceList = () => {
     const headers = ['Price List Code', 'Price List Name', 'Customer Type', 'Active'];
     const rows = priceLists.map(pl => [
       pl.id,
-      `"${pl.name.replace(/"/g, '""')}"`,
+      `"${(pl.name || '').replace(/"/g, '""')}"`,
       pl.customerType,
       pl.status ? 'Yes' : 'No'
     ]);
@@ -69,29 +102,35 @@ const PriceList = () => {
   };
 
   // Real CSV Import
-  const handleImportCSV = (e) => {
+  const handleImportCSV = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const text = event.target.result;
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        const newPLs = [];
+        let successCount = 0;
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
           if (cols.length >= 3) {
-            newPLs.push({
+            const payload = {
               id: cols[0] || `PL-NEW-${Date.now()}-${i}`,
               name: cols[1] || 'Imported Slab',
               customerType: cols[2] || 'Retailer',
-              status: cols[3] === 'Yes' ? true : false
-            });
+              status: cols[3] === 'Yes' ? true : false,
+              productPricing: [],
+              quantityPricing: []
+            };
+            try {
+              await api.post('/price-lists', payload);
+              successCount++;
+            } catch(e) { console.error('Failed to import row', i, e); }
           }
         }
-        if (newPLs.length > 0) {
-          setPriceLists(prev => [...prev, ...newPLs]);
-          alert(`Successfully imported ${newPLs.length} price lists!`);
+        if (successCount > 0) {
+          fetchPriceLists();
+          alert(`Successfully imported ${successCount} price lists!`);
         } else {
           alert("Import failed. Headers should match: Price List Code, Price List Name, Customer Type, Active");
         }
@@ -192,7 +231,7 @@ const PriceList = () => {
                     <button onClick={() => handleOpenEdit(pl)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
                       <Edit size={14} />
                     </button>
-                    <button onClick={() => handleDelete(pl.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                    <button onClick={() => handleDelete(pl.id, pl._id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -340,7 +379,7 @@ const PriceList = () => {
               <div>
                 <h4 className="text-sm font-bold text-indigo-600 mb-3 border-b pb-1">PRODUCT PRICING</h4>
                 <div className="mb-2">
-                  <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition-colors">
+                  <button type="button" onClick={() => setCurrentPL({ ...currentPL, productPricing: [...(currentPL.productPricing || []), { product: '', sku: '', unit: '', basePrice: '', discount: '', tax: '' }] })} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition-colors">
                     <Plus size={14} /> Add Product
                   </button>
                 </div>
@@ -354,25 +393,26 @@ const PriceList = () => {
                         <th className="p-2 font-semibold">Base Price</th>
                         <th className="p-2 font-semibold">Discount</th>
                         <th className="p-2 font-semibold">Tax</th>
+                        <th className="p-2 font-semibold text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-blue-500 bg-white">
-                      <tr>
-                        <td className="p-2">Milk</td>
-                        <td className="p-2">M01</td>
-                        <td className="p-2">Ltr</td>
-                        <td className="p-2">₹50</td>
-                        <td className="p-2">5%</td>
-                        <td className="p-2">5%</td>
-                      </tr>
-                      <tr>
-                        <td className="p-2">Butter</td>
-                        <td className="p-2">B01</td>
-                        <td className="p-2">Pcs</td>
-                        <td className="p-2">₹100</td>
-                        <td className="p-2">10%</td>
-                        <td className="p-2">12%</td>
-                      </tr>
+                      {(currentPL.productPricing || []).map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="p-1"><input type="text" value={item.product || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].product = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1"><input type="text" value={item.sku || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].sku = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1"><input type="text" value={item.unit || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].unit = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1"><input type="text" value={item.basePrice || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].basePrice = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1"><input type="text" value={item.discount || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].discount = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1"><input type="text" value={item.tax || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].tax = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1 text-center">
+                            <button type="button" onClick={() => { const newArr = currentPL.productPricing.filter((_, i) => i !== idx); setCurrentPL({...currentPL, productPricing: newArr}); }} className="text-red-500 hover:text-red-700 p-1"><X size={14}/></button>
+                          </td>
+                        </tr>
+                      ))}
+                      {(!currentPL.productPricing || currentPL.productPricing.length === 0) && (
+                        <tr><td colSpan="7" className="p-3 text-center text-gray-500 font-medium">No products added. Click 'Add Product' to start.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -380,7 +420,12 @@ const PriceList = () => {
 
               {/* Quantity Pricing */}
               <div>
-                <h4 className="text-sm font-bold text-indigo-600 mb-3 border-b pb-1">QUANTITY PRICING</h4>
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-indigo-600 mb-0 pb-0">QUANTITY PRICING</h4>
+                  <button type="button" onClick={() => setCurrentPL({ ...currentPL, quantityPricing: [...(currentPL.quantityPricing || []), { minQty: '', maxQty: '', price: '' }] })} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition-colors">
+                    <Plus size={14} /> Add Tier
+                  </button>
+                </div>
                 <div className="overflow-x-auto border border-blue-500 rounded max-w-lg">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-gray-50 border-b border-blue-500 text-gray-700">
@@ -388,12 +433,23 @@ const PriceList = () => {
                         <th className="p-2 font-semibold">Min Qty</th>
                         <th className="p-2 font-semibold">Max Qty</th>
                         <th className="p-2 font-semibold">Price</th>
+                        <th className="p-2 font-semibold text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-blue-500 bg-white">
-                      <tr><td className="p-2">1</td><td className="p-2">49</td><td className="p-2">₹100</td></tr>
-                      <tr><td className="p-2">50</td><td className="p-2">99</td><td className="p-2">₹95</td></tr>
-                      <tr><td className="p-2">100</td><td className="p-2">499</td><td className="p-2">₹90</td></tr>
+                      {(currentPL.quantityPricing || []).map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="p-1"><input type="number" value={item.minQty || ''} onChange={(e) => { const newArr = [...currentPL.quantityPricing]; newArr[idx].minQty = e.target.value; setCurrentPL({...currentPL, quantityPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1"><input type="number" value={item.maxQty || ''} onChange={(e) => { const newArr = [...currentPL.quantityPricing]; newArr[idx].maxQty = e.target.value; setCurrentPL({...currentPL, quantityPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1"><input type="text" value={item.price || ''} onChange={(e) => { const newArr = [...currentPL.quantityPricing]; newArr[idx].price = e.target.value; setCurrentPL({...currentPL, quantityPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
+                          <td className="p-1 text-center">
+                            <button type="button" onClick={() => { const newArr = currentPL.quantityPricing.filter((_, i) => i !== idx); setCurrentPL({...currentPL, quantityPricing: newArr}); }} className="text-red-500 hover:text-red-700 p-1"><X size={14}/></button>
+                          </td>
+                        </tr>
+                      ))}
+                      {(!currentPL.quantityPricing || currentPL.quantityPricing.length === 0) && (
+                        <tr><td colSpan="4" className="p-3 text-center text-gray-500 font-medium">No tiers added. Click 'Add Tier' to start.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

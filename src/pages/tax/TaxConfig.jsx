@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
+import api from '../../api';
 
 const TaxConfig = () => {
-  const [taxes, setTaxes] = useState([
-    { id: 'TX-001', name: 'Standard GST 18%', type: 'GST', rate: 18, cgst: 9, sgst: 9, igst: 18, cess: 0, inclusive: false },
-    { id: 'TX-002', name: 'Super Luxury Slab 28%', type: 'GST', rate: 28, cgst: 14, sgst: 14, igst: 28, cess: 12, inclusive: false }
-  ]);
+  const [taxes, setTaxes] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,9 +20,22 @@ const TaxConfig = () => {
     reverseCharge: false, taxExempt: false, zeroRated: false
   });
 
+  const fetchTaxes = async () => {
+    try {
+      const res = await api.get('/tax-slabs');
+      setTaxes(res.data?.data || res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch tax slabs:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTaxes();
+  }, []);
+
   const filtered = taxes.filter(t =>
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.id.toLowerCase().includes(searchTerm.toLowerCase())
+    (t.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (t.id || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenAdd = () => {
@@ -50,19 +61,49 @@ const TaxConfig = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEdit) {
-      setTaxes(taxes.map(t => t.id === currentTax.id ? { ...currentTax } : t));
-    } else {
-      setTaxes([...taxes, { ...currentTax }]);
+    try {
+      const payload = { ...currentTax };
+
+      // Deep Checks
+      if (payload.hsnSac === '') delete payload.hsnSac;
+      if (payload.category === '') delete payload.category;
+      if (payload.inputLedger === '') delete payload.inputLedger;
+      if (payload.outputLedger === '') delete payload.outputLedger;
+      if (payload.effectiveFrom === '') delete payload.effectiveFrom;
+      if (payload.effectiveTo === '') delete payload.effectiveTo;
+      if (payload.company === '') delete payload.company;
+
+      payload.rate = Number(payload.rate) || 0;
+      payload.cgst = Number(payload.cgst) || 0;
+      payload.sgst = Number(payload.sgst) || 0;
+      payload.igst = Number(payload.igst) || 0;
+      payload.cess = Number(payload.cess) || 0;
+
+      if (isEdit) {
+        const idToUpdate = payload._id || payload.id;
+        await api.put(`/tax-slabs/${idToUpdate}`, payload);
+      } else {
+        await api.post('/tax-slabs', payload);
+      }
+      fetchTaxes();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save tax slab. ' + (err.response?.data?.message || ''));
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm(`Are you sure you want to delete tax slab ${id}?`)) {
-      setTaxes(taxes.filter(t => t.id !== id));
+      try {
+        const tax = taxes.find(t => t.id === id);
+        const idToDelete = tax?._id || id;
+        await api.delete(`/tax-slabs/${idToDelete}`);
+        fetchTaxes();
+      } catch (err) {
+        alert('Failed to delete tax slab. ' + (err.response?.data?.message || ''));
+      }
     }
   };
 

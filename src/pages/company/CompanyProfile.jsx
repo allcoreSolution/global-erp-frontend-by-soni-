@@ -1,32 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building, Mail, Phone, Globe, MapPin, Edit, Plus, X } from 'lucide-react';
+import api from '../../api';
 
 const CompanyProfile = () => {
-  const [companies, setCompanies] = useState([
-    { id: 'CO-001', name: 'ERP Global Corporation', code: 'ERPGLB', logo: '🌐', address: 'IT Park, Phase 1, Jaipur, Rajasthan, 302022', phone: '0141-2233445', email: 'corporate@erpglobal.com', website: 'www.erpglobal.com' }
-  ]);
-
+  const [activeCo, setActiveCo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', code: '', address: '', phone: '', email: '', website: '' });
 
-  const activeCo = companies[0];
+  const fetchProfile = async () => {
+    try {
+      const res = await api.get('/companies/profile');
+      if (res.data) {
+        setActiveCo({
+          name: res.data.name || '',
+          code: res.data.code || '',
+          address: res.data.address || '',
+          phone: res.data.phone || '',
+          email: res.data.email || '',
+          website: res.data.website || '',
+          logo: '🌐'
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch company profile', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const handleEditClick = () => {
     setEditForm({
-      name: activeCo.name,
-      code: activeCo.code,
-      address: activeCo.address,
-      phone: activeCo.phone,
-      email: activeCo.email,
-      website: activeCo.website
+      name: activeCo.name || '',
+      code: activeCo.code || '',
+      address: activeCo.address || '',
+      phone: activeCo.phone || '',
+      email: activeCo.email || '',
+      website: activeCo.website || ''
     });
     setIsEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setCompanies([{ ...activeCo, ...editForm }]);
-    setIsEditing(false);
+    try {
+      await api.put('/companies/profile', editForm);
+      await fetchProfile();
+      setIsEditing(false);
+    } catch (err) {
+      alert('Failed to save profile. ' + (err.response?.data?.message || ''));
+    }
   };
 
   return (
