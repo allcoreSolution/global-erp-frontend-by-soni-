@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, Search, Download, FileText, Printer, Eye, Trash2, 
+  Calendar, Search, Download, FileText, Printer, Eye, Trash2, Edit,
   ChevronLeft, ChevronRight, AlertCircle, LayoutGrid, X, Filter, Plus 
 } from 'lucide-react';
+import api from '../../api';
 
 const ChallanList = () => {
   // Empty data table setup as requested: "No data available in table"
@@ -16,6 +17,34 @@ const ChallanList = () => {
   const [recordsPerPage, setRecordsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  // Fetch Challans
+  const fetchChallans = async () => {
+    try {
+      const res = await api.get('/challans');
+      const data = res.data?.data || res.data || [];
+      const mappedData = data.map((item, index) => ({
+        id: item._id,
+        date: item.challanDate || '-',
+        referenceNo: item.challanNo || `CH-${index}`,
+        orderNo: item.salesOrder || '-',
+        courier: item.transporter || 'Self/Road',
+        status: item.deliveryStatus || 'Pending',
+        closingDate: item.deliveryDate || '-',
+        totalAmount: item.items?.reduce((acc, curr) => acc + ((Number(curr.qty) || 0) * (Number(curr.rate) || 0)), 0) || 0,
+        createdBy: item.preparedBy || 'System',
+        closedBy: item.approvedBy || '-'
+      }));
+      setChallans(mappedData);
+    } catch (err) {
+      console.error("Failed to fetch challans:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchChallans();
+  }, []);
 
   // Column Visibility state
   const [visibleColumns, setVisibleColumns] = useState({
@@ -44,33 +73,57 @@ const ChallanList = () => {
     preparedBy: '', approvedBy: '', notes: ''
   });
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    const newRecord = {
-      id: challans.length + 1,
-      date: form.challanDate,
-      referenceNo: form.challanNo || `CH-${Math.floor(100000 + Math.random() * 900000)}`,
-      orderNo: form.salesOrder || `ORD-${Math.floor(100000 + Math.random() * 900000)}`,
-      courier: form.transporter || 'Self/Road',
-      status: form.deliveryStatus,
-      closingDate: form.deliveryDate || '-',
-      totalAmount: form.items.reduce((acc, curr) => acc + ((Number(curr.qty) || 0) * (Number(curr.rate) || 0)), 0),
-      createdBy: form.preparedBy || 'System',
-      closedBy: '-'
-    };
-    setChallans([...challans, newRecord]);
-    setIsAddModalOpen(false);
-    // Reset Form
-    setForm({
-      challanNo: '', challanDate: '2026-09-10', challanType: 'Delivery',
-      company: '', branch: '', warehouse: '',
-      salesOrder: '', invoiceNo: '', packingSlip: '',
-      customer: '', contactPerson: '', mobileNo: '', billingAddress: '', shippingAddress: '', sameAsBilling: false,
-      items: [{ product: '', sku: '', batch: '', qty: '', unit: '', rate: '' }],
-      transportMode: 'Road', transporter: '', vehicleNo: '', driverName: '', driverMobile: '', lrGrNo: '', ewayBillNo: '', dispatchDate: '', expectedDate: '',
-      deliveryStatus: 'Pending', receivedBy: '', deliveryDate: '', deliveryRemarks: '',
-      preparedBy: '', approvedBy: '', notes: ''
-    });
+    try {
+      const payload = {
+        ...form,
+        challanNo: form.challanNo || `CH-${Math.floor(100000 + Math.random() * 900000)}`,
+        salesOrder: form.salesOrder || `ORD-${Math.floor(100000 + Math.random() * 900000)}`
+      };
+      
+      if (editingId) {
+        await api.put(`/challans/${editingId}`, payload);
+        alert('Challan updated successfully');
+      } else {
+        await api.post('/challans', payload);
+        alert('Challan created successfully');
+      }
+      
+      fetchChallans();
+      setIsAddModalOpen(false);
+      setEditingId(null);
+      // Reset Form
+      setForm({
+        challanNo: '', challanDate: '2026-09-10', challanType: 'Delivery',
+        company: '', branch: '', warehouse: '',
+        salesOrder: '', invoiceNo: '', packingSlip: '',
+        customer: '', contactPerson: '', mobileNo: '', billingAddress: '', shippingAddress: '', sameAsBilling: false,
+        items: [{ product: '', sku: '', batch: '', qty: '', unit: '', rate: '' }],
+        transportMode: 'Road', transporter: '', vehicleNo: '', driverName: '', driverMobile: '', lrGrNo: '', ewayBillNo: '', dispatchDate: '', expectedDate: '',
+        deliveryStatus: 'Pending', receivedBy: '', deliveryDate: '', deliveryRemarks: '',
+        preparedBy: '', approvedBy: '', notes: ''
+      });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save challan: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleEdit = async (challan) => {
+    try {
+      const res = await api.get(`/challans/${challan.id}`);
+      const fullChallan = res.data?.data || res.data;
+      setForm({
+        ...fullChallan,
+        items: fullChallan.items?.length > 0 ? fullChallan.items : [{ product: '', sku: '', batch: '', qty: '', unit: '', rate: '' }]
+      });
+      setEditingId(challan.id);
+      setIsAddModalOpen(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to fetch challan details for edit');
+    }
   };
 
   const handleAddItem = () => {
@@ -93,9 +146,16 @@ const ChallanList = () => {
   const totalQty = form.items.reduce((acc, curr) => acc + (Number(curr.qty) || 0), 0);
   const totalAmount = form.items.reduce((acc, curr) => acc + ((Number(curr.qty) || 0) * (Number(curr.rate) || 0)), 0);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this Challan record?")) {
-      setChallans(challans.filter(c => c.id !== id));
+      try {
+        await api.delete(`/challans/${id}`);
+        setChallans(challans.filter(c => c.id !== id));
+        alert('Deleted successfully');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete challan: ' + (err.response?.data?.message || err.message));
+      }
     }
   };
 
@@ -192,7 +252,20 @@ const ChallanList = () => {
             <Printer size={14} /> Print
           </button>
           <button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setEditingId(null);
+              setForm({
+                challanNo: '', challanDate: '2026-09-10', challanType: 'Delivery',
+                company: '', branch: '', warehouse: '',
+                salesOrder: '', invoiceNo: '', packingSlip: '',
+                customer: '', contactPerson: '', mobileNo: '', billingAddress: '', shippingAddress: '', sameAsBilling: false,
+                items: [{ product: '', sku: '', batch: '', qty: '', unit: '', rate: '' }],
+                transportMode: 'Road', transporter: '', vehicleNo: '', driverName: '', driverMobile: '', lrGrNo: '', ewayBillNo: '', dispatchDate: '', expectedDate: '',
+                deliveryStatus: 'Pending', receivedBy: '', deliveryDate: '', deliveryRemarks: '',
+                preparedBy: '', approvedBy: '', notes: ''
+              });
+              setIsAddModalOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
           >
             <Plus size={14} /> Create Challan
@@ -329,9 +402,16 @@ const ChallanList = () => {
                         <Eye size={15} />
                       </button>
                       <button
+                        onClick={() => handleEdit(c)}
+                        className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit Record"
+                      >
+                        <Edit size={15} />
+                      </button>
+                      <button
                         onClick={() => handleDelete(c.id)}
                         className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete record"
+                        title="Delete Record"
                       >
                         <Trash2 size={15} />
                       </button>
