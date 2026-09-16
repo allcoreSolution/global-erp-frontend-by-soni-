@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   ShoppingCart, 
@@ -18,40 +18,23 @@ import {
   X,
   FileText
 } from 'lucide-react';
+import api from '../../api';
 
 const POS = () => {
-  // Demo Products Data
-  const [products] = useState([
-    { id: 'P001', name: 'Premium Wireless Headphones', price: 2999, category: 'Electronics', stock: 12, code: '890123', hsn: '8518' },
-    { id: 'P002', name: 'Smart Fitness Band V4', price: 1999, category: 'Electronics', stock: 8, code: '890124', hsn: '8519' },
-    { id: 'P003', name: 'Classic Leather Wallet', price: 799, category: 'Accessories', stock: 15, code: '890125', hsn: '4202' },
-    { id: 'P004', name: 'Organic Green Tea (250g)', price: 349, category: 'Grocery', stock: 25, code: '890126', hsn: '0902' },
-    { id: 'P005', name: 'Stainless Steel Water Bottle', price: 599, category: 'Accessories', stock: 20, code: '890127', hsn: '7323' },
-    { id: 'P006', name: 'Bluetooth Mini Speaker', price: 1499, category: 'Electronics', stock: 5, code: '890128', hsn: '8518' },
-    { id: 'P007', name: 'Roasted Almonds (500g)', price: 499, category: 'Grocery', stock: 30, code: '890129', hsn: '0802' },
-    { id: 'P008', name: 'Wired Gaming Mouse', price: 899, category: 'Electronics', stock: 10, code: '890130', hsn: '8471' }
-  ]);
-
-  const categories = ['All', 'Electronics', 'Grocery', 'Accessories'];
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(['All']);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   
   // Cart & Customer State
-  const [cart, setCart] = useState([
-    { id: 'P001', name: 'Premium Wireless Headphones', price: 2999, category: 'Electronics', qty: 1, code: '890123', hsn: '8518' },
-    { id: 'P004', name: 'Organic Green Tea (250g)', price: 349, category: 'Grocery', qty: 2, code: '890126', hsn: '0902' }
-  ]);
-  const [discount, setDiscount] = useState(100);
-  const [gstPercentage, setGstPercentage] = useState(18); // Dynamic GST percentage
+  const [cart, setCart] = useState([]);
+  const [discount, setDiscount] = useState(0);
+  const [gstPercentage, setGstPercentage] = useState(0); 
   const [paymentMode, setPaymentMode] = useState('Cash'); 
   
   // Customers List State
-  const [customers, setCustomers] = useState([
-    { name: 'Walk-in Customer', phone: '', gstin: '' },
-    { name: 'Soni Tiwari', phone: '9876543210', gstin: '27AAAAA1111A1Z1' },
-    { name: 'Rahul Verma', phone: '9988776655', gstin: '27BBBBB2222B2Z2' }
-  ]);
-  const [selectedCustomerName, setSelectedCustomerName] = useState('Soni Tiwari');
+  const [customers, setCustomers] = useState([{ _id: 'walkin', name: 'Walk-in Customer' }]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('walkin');
 
   // Add Customer Modal State
   const [showCustModal, setShowCustModal] = useState(false);
@@ -59,6 +42,35 @@ const POS = () => {
 
   // Hold Queue State
   const [holdBills, setHoldBills] = useState([]);
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const prodRes = await api.get('/products');
+        const pData = prodRes.data?.data || prodRes.data || [];
+        const formattedProducts = pData.map(p => ({
+          id: p._id,
+          name: p.productName || p.name,
+          code: p.productCode || p.sku || p.code,
+          price: p.productPrice || p.salePrice || p.price || 0,
+          tax: p.productTax || p.taxRate || 0,
+          stock: p.currentStock || 0,
+          category: p.category?.name || 'Uncategorized'
+        }));
+        setProducts(formattedProducts);
+        
+        const uniqueCats = ['All', ...new Set(formattedProducts.map(p => p.category))];
+        setCategories(uniqueCats);
+
+        const custRes = await api.get('/customers');
+        const cData = custRes.data?.data || custRes.data || [];
+        setCustomers([{ _id: 'walkin', name: 'Walk-in Customer' }, ...cData]);
+      } catch (err) {
+        console.error("Error fetching POS data:", err);
+      }
+    };
+    fetchInitialData();
+  }, []);
 
   // Print Preview Modal States
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -76,16 +88,24 @@ const POS = () => {
   ];
 
   // Add Customer Submit
-  const handleSaveCustomer = (e) => {
+  const handleSaveCustomer = async (e) => {
     e.preventDefault();
     if (!newCust.name) {
       alert("Customer Name is required!");
       return;
     }
-    setCustomers(prev => [...prev, newCust]);
-    setSelectedCustomerName(newCust.name);
-    setShowCustModal(false);
-    setNewCust({ name: '', phone: '', gstin: '' });
+    try {
+      const res = await api.post('/customers', newCust);
+      const savedCust = res.data?.data || res.data;
+      setCustomers(prev => [...prev, savedCust]);
+      setSelectedCustomerId(savedCust._id);
+      setShowCustModal(false);
+      setNewCust({ name: '', phone: '', gstin: '' });
+      alert('Customer added successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add customer');
+    }
   };
 
   // Add Product to Cart
@@ -129,9 +149,9 @@ const POS = () => {
   const handleReset = () => {
     setCart([]);
     setDiscount(0);
-    setGstPercentage(18);
+    setGstPercentage(0);
     setPaymentMode('Cash');
-    setSelectedCustomerName('Walk-in Customer');
+    setSelectedCustomerId('walkin');
   };
 
   // Calculations
@@ -144,12 +164,53 @@ const POS = () => {
     window.print();
   };
 
+  // Checkout API Action
+  const handleCheckout = async () => {
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+    
+    const orderItems = cart.map(item => ({
+      name: item.name,
+      code: item.code,
+      productId: item.id,
+      quantity: item.qty,
+      netUnitPrice: item.price,
+      discount: 0,
+      taxPercent: item.tax || 0,
+    }));
+
+    const payload = {
+      customer: selectedCustomerId,
+      orderItems,
+      discountTotal: discount,
+      paymentMode,
+      amountPaid: getGrandTotal(),
+      saleDate: new Date().toISOString(),
+      referenceNo: `POS-${Date.now()}`,
+      orderTax: `${gstPercentage}%`,
+      discountType: 'Flat',
+      discountValue: discount,
+      saleStatus: 'Completed',
+      paymentStatus: 'Paid'
+    };
+
+    try {
+      await api.post('/sales', payload);
+      setShowPrintModal(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save POS Sale: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   // Hold Current Bill
   const handleHoldBill = () => {
     if (cart.length === 0) return;
     const bill = {
       id: `HOLD-${Date.now()}`,
-      customer: selectedCustomerName,
+      customer: selectedCustomerId,
       cart,
       discount,
       gstPercentage,
@@ -166,8 +227,8 @@ const POS = () => {
   const handleRecallBill = (bill) => {
     setCart(bill.cart);
     setDiscount(bill.discount);
-    setGstPercentage(bill.gstPercentage || 18);
-    setSelectedCustomerName(bill.customer);
+    setGstPercentage(bill.gstPercentage || 0);
+    setSelectedCustomerId(bill.customer);
     setHoldBills(holdBills.filter(b => b.id !== bill.id));
   };
 
@@ -178,7 +239,7 @@ const POS = () => {
     return matchesCat && matchesSearch;
   });
 
-  const activeCustomerObj = customers.find(c => c.name === selectedCustomerName) || { name: 'Walk-in Customer', phone: '', gstin: '' };
+  const activeCustomerObj = customers.find(c => c._id === selectedCustomerId) || { _id: 'walkin', name: 'Walk-in Customer' };
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 p-4 min-h-screen bg-slate-50 dark:bg-slate-950 font-sans relative">
@@ -258,12 +319,12 @@ const POS = () => {
             <div className="flex items-center gap-2">
               <User size={16} className="text-slate-500" />
               <select 
-                value={selectedCustomerName} 
-                onChange={(e) => setSelectedCustomerName(e.target.value)}
+                value={selectedCustomerId} 
+                onChange={(e) => setSelectedCustomerId(e.target.value)}
                 className="text-xs font-bold text-slate-855 dark:text-slate-200 focus:outline-none dark:bg-slate-800"
               >
                 {customers.map((c, i) => (
-                  <option key={i} value={c.name}>{c.name}</option>
+                  <option key={i} value={c._id}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -289,7 +350,7 @@ const POS = () => {
                     onClick={() => handleRecallBill(bill)}
                     className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 hover:bg-slate-100 border dark:border-slate-200 text-[10px] font-semibold px-2.5 py-1 rounded shadow-xs transition shrink-0 text-slate-700 dark:text-slate-300"
                   >
-                    Recall {bill.customer.split(' ')[0]} (₹{bill.total})
+                    Recall {customers.find(c => c._id === bill.customer)?.name?.split(' ')[0] || 'Hold'} (₹{bill.total})
                   </button>
                 ))}
               </div>
@@ -433,13 +494,7 @@ const POS = () => {
               <RotateCcw size={14} /> Reset
             </button>
             <button 
-              onClick={() => {
-                if (cart.length === 0) {
-                  alert("Cart is empty!");
-                  return;
-                }
-                setShowPrintModal(true);
-              }}
+              onClick={handleCheckout}
               className="col-span-2 flex items-center justify-center gap-1.5 py-3 bg-emerald-600 hover:bg-emerald-700 text-slate-800 rounded-lg shadow-sm text-sm transition"
             >
               <Printer size={16} /> Pay & Select Print Template
