@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X, MapPin, Phone, Mail } from 'lucide-react';
+import api from '../../api';
 
 const BranchInfo = () => {
-  const [branches, setBranches] = useState([
-    { id: 'BR-001', name: 'Jaipur HQ Office', code: 'JPHQ', type: 'Headquarters', address: 'IT Park, Phase 1, Jaipur, Rajasthan', phone: '0141-2233445', email: 'jaipur@company.com', gstin: '08AAAAA1111A1Z1' },
-    { id: 'BR-002', name: 'Kota Regional Center', code: 'KT01', type: 'Regional Branch', address: 'Station Road, Kota, Rajasthan', phone: '0744-2244668', email: 'kota@company.com', gstin: '08BBBBB2222B2Z2' }
-  ]);
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [companies, setCompanies] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [currentBranch, setCurrentBranch] = useState({
     id: '', code: '', name: '', type: 'Regional Office', company: '', manager: '', status: 'Active',
     contactPerson: '', mobile: '', email: '', phone: '',
@@ -19,9 +20,42 @@ const BranchInfo = () => {
     costCenter: '', profitCenter: '', ledger: ''
   });
 
+  useEffect(() => {
+    fetchBranches();
+    fetchCompanies();
+  }, []);
+
+  const fetchBranches = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/branches');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(b => ({
+        ...b,
+        _id: b._id,
+        id: b.id || b._id,
+        address: `${b.address1 || ''} ${b.city || ''} ${b.state || ''}`.trim()
+      }));
+      setBranches(mapped);
+    } catch (error) {
+      console.error('Failed to fetch branches', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const res = await api.get('/companies');
+      setCompanies(res.data?.data || res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch companies', error);
+    }
+  };
+
   const filtered = branches.filter(b =>
-    b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    b.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (b.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (b.code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenAdd = () => {
@@ -33,7 +67,7 @@ const BranchInfo = () => {
       address1: '', address2: '', country: 'India', state: 'Uttar Pradesh', city: 'Lucknow', district: '', pincode: '',
       gstStatus: 'Registered', gstin: '', pan: '', tan: '',
       warehouse: '', priceList: '', currency: 'INR', timezone: 'Asia/Kolkata',
-      costCenter: '', profitCenter: '', ledger: ''
+      costCenter: '', profitCenter: '', ledger: '', documentUrl: ''
     });
     setIsModalOpen(true);
   };
@@ -44,19 +78,56 @@ const BranchInfo = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isEdit) {
-      setBranches(branches.map(b => b.id === currentBranch.id ? { ...currentBranch } : b));
-    } else {
-      setBranches([...branches, { ...currentBranch }]);
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      setUploading(true);
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setCurrentBranch({ ...currentBranch, documentUrl: res.data.url });
+      alert('Document uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      alert('Failed to upload document.');
+    } finally {
+      setUploading(false);
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete branch ${id}?`)) {
-      setBranches(branches.filter(b => b.id !== id));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (isEdit) {
+        await api.put(`/branches/${currentBranch._id || currentBranch.id}`, currentBranch);
+        alert('Branch updated successfully');
+      } else {
+        await api.post('/branches', currentBranch);
+        alert('Branch added successfully');
+      }
+      fetchBranches();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error saving branch:', error);
+      alert('Failed to save branch: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDelete = async (id, _id) => {
+    if (window.confirm(`Are you sure you want to delete this branch?`)) {
+      try {
+        await api.delete(`/branches/${_id || id}`);
+        alert('Branch deleted successfully');
+        fetchBranches();
+      } catch (error) {
+        console.error('Error deleting branch:', error);
+        alert('Failed to delete branch: ' + (error.response?.data?.message || error.message));
+      }
     }
   };
 
@@ -100,8 +171,12 @@ const BranchInfo = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.map(b => (
-              <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="p-4 text-center text-gray-500">Loading branches...</td>
+              </tr>
+            ) : filtered.length > 0 ? filtered.map(b => (
+              <tr key={b._id || b.id} className="hover:bg-slate-50 transition-colors">
                 <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono">{b.code}</td>
                 <td className="p-2.5 sm:p-3">
                   <div className="font-medium text-gray-900">{b.name}</div>
@@ -118,13 +193,17 @@ const BranchInfo = () => {
                     <button onClick={() => handleOpenEdit(b)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
                       <Edit size={14} />
                     </button>
-                    <button onClick={() => handleDelete(b.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                    <button onClick={() => handleDelete(b.id, b._id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
                       <Trash2 size={14} />
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="6" className="p-4 text-center text-gray-500">No branches found</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -164,8 +243,9 @@ const BranchInfo = () => {
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Company *</label>
                     <select required value={currentBranch.company} onChange={(e) => setCurrentBranch({ ...currentBranch, company: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
                       <option value="">Select Company</option>
-                      <option value="Company A">Company A</option>
-                      <option value="Company B">Company B</option>
+                      {companies.map(c => (
+                        <option key={c._id} value={c._id}>{c.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -348,7 +428,20 @@ const BranchInfo = () => {
 
               {/* DOCUMENTS */}
               <div>
-                <button type="button" className="text-indigo-600 border border-indigo-600 rounded px-3 py-1.5 text-xs font-semibold hover:bg-indigo-50 transition-colors">+ Upload Document</button>
+                <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Documents</h4>
+                <div className="flex items-center gap-4">
+                  <label className={`cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <span className="inline-block text-indigo-600 border border-indigo-600 rounded px-3 py-1.5 text-xs font-semibold hover:bg-indigo-50 transition-colors">
+                      {uploading ? 'Uploading...' : '+ Upload Document'}
+                    </span>
+                    <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                  </label>
+                  {currentBranch.documentUrl && (
+                    <a href={api.defaults.baseURL.replace('/api', '') + currentBranch.documentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                      View Uploaded Document
+                    </a>
+                  )}
+                </div>
               </div>
 
               {/* ACTIONS */}

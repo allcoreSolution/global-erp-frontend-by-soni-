@@ -1,17 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Layers, Landmark, Shield, Edit } from 'lucide-react';
+import api from '../../api';
 
 const BranchManagement = () => {
-  const [branches, setBranches] = useState([
-    { id: 'BR-001', name: 'Jaipur HQ Office', manager: 'Amit Sharma', depts: 'HR, IT, Sales', warehouse: 'Warehouse A (HQ)', bank: 'ICICI A/C ...1199', financialSetting: 'GST Registered Class A' },
-    { id: 'BR-002', name: 'Kota Regional Center', manager: 'Sanjay Rathi', depts: 'Sales, Support', warehouse: 'Warehouse B (Kota)', bank: 'HDFC A/C ...0456', financialSetting: 'GST Registered Class B' }
-  ]);
-
-  const [selectedId, setSelectedId] = useState('BR-001');
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ manager: '', depts: '', warehouse: '', bank: '', financialSetting: '' });
 
-  const activeBranch = branches.find(b => b.id === selectedId) || branches[0];
+  useEffect(() => {
+    fetchBranches();
+  }, []);
+
+  const fetchBranches = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/branches');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(b => ({
+        ...b,
+        _id: b._id,
+        id: b.id || b._id,
+        manager: b.manager || '',
+        depts: b.depts || '',
+        warehouse: b.warehouse || '',
+        bank: b.bank || '',
+        financialSetting: b.financialSetting || ''
+      }));
+      setBranches(mapped);
+      if (mapped.length > 0 && !selectedId) {
+        setSelectedId(mapped[0]._id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch branches', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeBranch = branches.find(b => b._id === selectedId) || null;
 
   const handleEditClick = () => {
     setEditForm({
@@ -24,10 +52,18 @@ const BranchManagement = () => {
     setIsEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setBranches(branches.map(b => b.id === selectedId ? { ...b, ...editForm } : b));
-    setIsEditing(false);
+    try {
+      if (!activeBranch || !activeBranch._id) return;
+      await api.patch(`/branches/${activeBranch._id}`, editForm);
+      setBranches(branches.map(b => b._id === activeBranch._id ? { ...b, ...editForm } : b));
+      setIsEditing(false);
+      alert('Management mappings updated successfully!');
+    } catch (error) {
+      console.error('Error saving mappings:', error);
+      alert('Failed to update mappings: ' + (error.response?.data?.message || error.message));
+    }
   };
 
   return (
@@ -42,11 +78,13 @@ const BranchManagement = () => {
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Active Branches</div>
           <div className="divide-y overflow-y-auto flex-1 no-scrollbar text-[11px] sm:text-xs">
-            {branches.map(b => (
+            {loading ? (
+              <div className="p-4 text-gray-500 text-center">Loading...</div>
+            ) : branches.map(b => (
               <div
-                key={b.id}
-                onClick={() => { setSelectedId(b.id); setIsEditing(false); }}
-                className={`p-3 cursor-pointer transition-colors ${selectedId === b.id ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-semibold' : 'hover:bg-slate-50'}`}
+                key={b._id}
+                onClick={() => { setSelectedId(b._id); setIsEditing(false); }}
+                className={`p-3 cursor-pointer transition-colors ${selectedId === b._id ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-semibold' : 'hover:bg-slate-50'}`}
               >
                 <div>{b.name}</div>
                 <div className="text-[9px] sm:text-[10px] text-gray-400 font-mono mt-0.5">{b.id}</div>
