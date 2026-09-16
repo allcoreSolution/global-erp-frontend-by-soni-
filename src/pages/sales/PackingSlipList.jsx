@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Search, Download, FileText, Printer, Eye, Trash2, 
+  Plus, Search, Download, FileText, Printer, Eye, Trash2, Edit,
   ChevronLeft, ChevronRight, AlertCircle, CheckCircle, EyeOff, LayoutGrid, X
 } from 'lucide-react';
+import api from '../../api';
 
 const PackingSlipList = () => {
-  // Empty data table setup as requested: "No data available in table"
   const [packingSlips, setPackingSlips] = useState([]);
   
   // States
@@ -13,6 +13,31 @@ const PackingSlipList = () => {
   const [recordsPerPage, setRecordsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  // Fetch Packing Slips
+  const fetchPackingSlips = async () => {
+    try {
+      const res = await api.get('/packing-slips');
+      const data = res.data?.data || res.data || [];
+      const mappedData = data.map((item, index) => ({
+        id: item._id, 
+        reference: item.packingNo || `PS-${index}`,
+        saleReference: item.salesOrder || '-',
+        deliveryReference: item.deliveryChallan || '-',
+        productList: item.products?.[0]?.product || '-',
+        amount: 0.00, 
+        status: item.status || 'Pending'
+      }));
+      setPackingSlips(mappedData);
+    } catch (err) {
+      console.error("Failed to fetch packing slips:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPackingSlips();
+  }, []);
 
   // Column Visibility state
   const [visibleColumns, setVisibleColumns] = useState({
@@ -35,30 +60,58 @@ const PackingSlipList = () => {
     packedBy: '', verifiedBy: '', remarks: ''
   });
 
-  // Handle create challan/packing slip submit
-  const handleFormSubmit = (e) => {
+  // Handle create/update challan/packing slip submit
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    // Use the first product as a summary for the table or just generic
-    const firstProductName = form.products[0]?.product || 'Sample Product Name';
-    const newRecord = {
-      id: packingSlips.length + 1,
-      reference: form.packingNo || `PS-${Math.floor(100000 + Math.random() * 900000)}`,
-      saleReference: form.salesOrder || `SL-${Math.floor(100000 + Math.random() * 900000)}`,
-      deliveryReference: form.deliveryChallan || `DL-${Math.floor(100000 + Math.random() * 900000)}`,
-      productList: firstProductName,
-      amount: 0.00, // Assuming amount might be calculated elsewhere or omitted for packing slips
-      status: form.status
-    };
-    setPackingSlips([...packingSlips, newRecord]);
-    setIsAddModalOpen(false);
-    // Reset Form
-    setForm({
-      packingNo: '', packingDate: '', status: 'Pending', company: '', branch: '', warehouse: '',
-      salesOrder: '', deliveryChallan: '', invoice: '', customer: '', customerType: '', salesperson: '',
-      billingAddress: '', shippingAddress: '', contact: '', mobile: '', transporter: '', vehicleNo: '',
-      products: [{ product: '', batch: '', qty: '', package: '', weight: '' }],
-      packedBy: '', verifiedBy: '', remarks: ''
-    });
+    try {
+      const payload = {
+        ...form,
+        packingNo: form.packingNo || `PS-${Math.floor(100000 + Math.random() * 900000)}`,
+        salesOrder: form.salesOrder || `SL-${Math.floor(100000 + Math.random() * 900000)}`,
+        deliveryChallan: form.deliveryChallan || `DL-${Math.floor(100000 + Math.random() * 900000)}`
+      };
+      
+      if (editingId) {
+        await api.put(`/packing-slips/${editingId}`, payload);
+        alert('Packing slip updated successfully');
+      } else {
+        await api.post('/packing-slips', payload);
+        alert('Packing slip created successfully');
+      }
+      
+      // Refresh list
+      fetchPackingSlips();
+      
+      setIsAddModalOpen(false);
+      setEditingId(null);
+      // Reset Form
+      setForm({
+        packingNo: '', packingDate: '', status: 'Pending', company: '', branch: '', warehouse: '',
+        salesOrder: '', deliveryChallan: '', invoice: '', customer: '', customerType: '', salesperson: '',
+        billingAddress: '', shippingAddress: '', contact: '', mobile: '', transporter: '', vehicleNo: '',
+        products: [{ product: '', batch: '', qty: '', package: '', weight: '' }],
+        packedBy: '', verifiedBy: '', remarks: ''
+      });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save packing slip: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleEdit = async (slip) => {
+    try {
+      const res = await api.get(`/packing-slips/${slip.id}`);
+      const fullSlip = res.data?.data || res.data;
+      setForm({
+        ...fullSlip,
+        products: fullSlip.products?.length > 0 ? fullSlip.products : [{ product: '', batch: '', qty: '', package: '', weight: '' }]
+      });
+      setEditingId(slip.id);
+      setIsAddModalOpen(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to fetch packing slip details for edit');
+    }
   };
 
   const handleAddProduct = () => {
@@ -83,9 +136,16 @@ const PackingSlipList = () => {
   const totalPackages = form.products.reduce((acc, curr) => acc + (Number(curr.package) || 0), 0);
   const totalWeight = form.products.reduce((acc, curr) => acc + (Number(curr.weight) || 0), 0);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this packing slip?")) {
-      setPackingSlips(packingSlips.filter(p => p.id !== id));
+      try {
+        await api.delete(`/packing-slips/${id}`);
+        setPackingSlips(packingSlips.filter(p => p.id !== id));
+        alert('Deleted successfully');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete packing slip: ' + (err.response?.data?.message || err.message));
+      }
     }
   };
 
@@ -176,7 +236,17 @@ const PackingSlipList = () => {
             <Printer size={14} /> Print
           </button>
           <button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setEditingId(null);
+              setForm({
+                packingNo: '', packingDate: '', status: 'Pending', company: '', branch: '', warehouse: '',
+                salesOrder: '', deliveryChallan: '', invoice: '', customer: '', customerType: '', salesperson: '',
+                billingAddress: '', shippingAddress: '', contact: '', mobile: '', transporter: '', vehicleNo: '',
+                products: [{ product: '', batch: '', qty: '', package: '', weight: '' }],
+                packedBy: '', verifiedBy: '', remarks: ''
+              });
+              setIsAddModalOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
           >
             <Plus size={14} /> Create Challan
@@ -257,6 +327,13 @@ const PackingSlipList = () => {
                         title="View details"
                       >
                         <Eye size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleEdit(slip)}
+                        className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit Record"
+                      >
+                        <Edit size={15} />
                       </button>
                       <button
                         onClick={() => handleDelete(slip.id)}
