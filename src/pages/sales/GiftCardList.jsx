@@ -24,6 +24,7 @@ const GiftCardList = () => {
       const res = await api.get('/gift-cards');
       const data = res.data?.data || res.data || [];
       const mapped = data.map(item => ({
+        ...item, // keep all other fields for editing (spread first to avoid overwriting typed fields below)
         id: item._id,
         cardNo: item.cardNo || '-',
         customer: item.customer || 'Select',
@@ -31,8 +32,7 @@ const GiftCardList = () => {
         expense: Number(item.expense) || 0.00,
         balance: (Number(item.amount) || 0) - (Number(item.expense) || 0),
         createdBy: item.createdBy || '-',
-        expiredDate: item.expiredDate || '-',
-        ...item // keep all other fields for editing
+        expiredDate: item.expiredDate || '-'
       }));
       setGiftCards(mapped);
     } catch (error) {
