@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Download, Upload, Printer, CheckCircle } from 'lucide-react';
+import api from '../../api';
 
 const CompanyStatus = () => {
-  const [companies, setCompanies] = useState([
-    { id: 'CO-001', name: 'ERP Global Corporation', code: 'ERPGLB', active: true },
-    { id: 'CO-002', name: 'Rathi Steel Traders Ltd', code: 'RSL', active: true }
-  ]);
+  const [companies, setCompanies] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -14,14 +12,44 @@ const CompanyStatus = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleToggle = (id) => {
-    setCompanies(prev => prev.map(c => {
-      if (c.id === id) {
-        addLog(`Toggled status of company ${c.name} to ${!c.active ? 'Active' : 'Inactive'}`);
-        return { ...c, active: !c.active };
-      }
-      return c;
-    }));
+  const fetchCompanies = async () => {
+    try {
+      const res = await api.get('/companies');
+      const data = res.data?.data || res.data || [];
+      // Map _id to id and isActive to active for the UI
+      const mapped = data.map(c => ({
+        ...c,
+        id: c._id,
+        active: c.isActive,
+        code: c.code || 'N/A'
+      }));
+      setCompanies(mapped);
+    } catch (error) {
+      addLog('Error fetching companies: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const handleToggle = async (id) => {
+    try {
+      addLog(`Toggling status for company ID ${id}...`);
+      await api.put(`/companies/${id}/toggle-status`);
+      
+      setCompanies(prev => prev.map(c => {
+        if (c.id === id) {
+          const newStatus = !c.active;
+          addLog(`Success: Toggled status of company ${c.name} to ${newStatus ? 'Active' : 'Inactive'}`);
+          return { ...c, active: newStatus };
+        }
+        return c;
+      }));
+    } catch (error) {
+      addLog('Error toggling status: ' + (error.response?.data?.message || error.message));
+      alert('Failed to toggle company status. ' + (error.response?.data?.message || error.message));
+    }
   };
 
   const filtered = companies.filter(c =>

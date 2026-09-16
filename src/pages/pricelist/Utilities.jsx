@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Download, Upload, Printer, CheckCircle } from 'lucide-react';
+import api from '../../api';
 
 const Utilities = () => {
-  const [rules, setRules] = useState([
-    { id: 'RULE-001', product: 'TMT Steel Bar 12mm', type: 'Fixed', price: 450, discountPct: 5, active: true },
-    { id: 'RULE-002', product: 'GI Pipe 2 Inches', type: 'Percentage', price: 1200, discountPct: 10, active: true }
-  ]);
+  const [rules, setRules] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -14,14 +12,49 @@ const Utilities = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleToggle = (id) => {
-    setRules(prev => prev.map(r => {
-      if (r.id === id) {
-        addLog(`Toggled status of pricing rule ${id} to ${!r.active ? 'Active' : 'Inactive'}`);
-        return { ...r, active: !r.active };
-      }
-      return r;
-    }));
+  const fetchRules = async () => {
+    try {
+      const res = await api.get('/price-rules');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(r => ({
+        ...r,
+        _id: r._id,
+        id: r.id || r._id,
+        product: r.applyOnValue || r.product || 'Unknown Product',
+        type: r.discountType || r.type || 'Fixed',
+        price: r.minPrice || r.price || 0,
+        discountPct: r.discountValue || r.discountPct || 0,
+        active: r.status === 'Active'
+      }));
+      setRules(mapped);
+    } catch (error) {
+      addLog('Error fetching pricing rules: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  useEffect(() => {
+    fetchRules();
+  }, []);
+
+  const handleToggle = async (id, _id) => {
+    try {
+      addLog(`Toggling status for pricing rule ${id}...`);
+      const targetRule = rules.find(r => r._id === _id);
+      const newStatus = !targetRule.active ? 'Active' : 'Inactive';
+      
+      await api.patch(`/price-rules/${_id}`, { status: newStatus });
+      
+      setRules(prev => prev.map(r => {
+        if (r._id === _id) {
+          addLog(`Success: Toggled status of pricing rule ${id} to ${newStatus}`);
+          return { ...r, active: newStatus === 'Active', status: newStatus };
+        }
+        return r;
+      }));
+    } catch (error) {
+      addLog('Error toggling status: ' + (error.response?.data?.message || error.message));
+      alert('Failed to toggle pricing rule status. ' + (error.response?.data?.message || error.message));
+    }
   };
 
   const filtered = rules.filter(r =>
@@ -174,23 +207,27 @@ const Utilities = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(r => (
-                <tr key={r.id} className="hover:bg-slate-50">
+              {filtered.length > 0 ? filtered.map(r => (
+                <tr key={r._id} className="hover:bg-slate-50">
                   <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{r.id}</td>
                   <td className="p-2 font-medium text-gray-900">{r.product}</td>
                   <td className="p-2 text-gray-650">{r.type}</td>
-                  <td className="p-2 text-right font-medium text-gray-800">₹ {r.price.toLocaleString()}</td>
+                  <td className="p-2 text-right font-medium text-gray-800">₹ {(r.price || 0).toLocaleString()}</td>
                   <td className="p-2 text-right font-bold text-emerald-600">{r.discountPct}%</td>
                   <td className="p-2 text-center no-print">
                     <button
-                      onClick={() => handleToggle(r.id)}
+                      onClick={() => handleToggle(r.id, r._id)}
                       className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${r.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
                     >
                       {r.active ? 'Active' : 'Inactive'}
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="6" className="p-4 text-center text-gray-500">No pricing rules found</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -1,30 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, FileText, CheckCircle } from 'lucide-react';
+import api from '../../api';
 
 const BusinessSettings = () => {
   const [settings, setSettings] = useState({
-    financialYear: '2024-2025',
-    currency: 'INR (₹)',
-    dateFormat: 'YYYY-MM-DD',
+    financialYear: '',
+    currency: '',
+    dateFormat: '',
     taxSettings: 'GST Registered',
-    invoicePrefix: 'INV/',
+    invoicePrefix: '',
     invoiceNumbering: 'Auto Increment (001)',
-    terms: 'Payment is due within 30 days of receiving invoice.',
-    signature: 'Authorized Signatory - CEO'
+    terms: '',
+    signature: ''
   });
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ ...settings });
+
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get('/companies/profile');
+      if (res.data) {
+        setSettings({
+          financialYear: res.data.financialYear || '2024-2025',
+          currency: res.data.currency || 'INR (₹)',
+          dateFormat: res.data.dateFormat || 'YYYY-MM-DD',
+          taxSettings: 'GST Registered',
+          invoicePrefix: res.data.invoicePrefix || 'INV/',
+          invoiceNumbering: 'Auto Increment (001)',
+          terms: res.data.terms || 'Payment is due within 30 days of receiving invoice.',
+          signature: res.data.signature || 'Authorized Signatory - CEO'
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch business settings', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const handleEdit = () => {
     setForm({ ...settings });
     setIsEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setSettings({ ...form });
-    setIsEditing(false);
+    try {
+      const payload = {
+        financialYear: form.financialYear,
+        currency: form.currency,
+        dateFormat: form.dateFormat,
+        invoicePrefix: form.invoicePrefix,
+        terms: form.terms,
+        signature: form.signature
+      };
+      await api.put('/companies/profile', payload);
+      await fetchSettings();
+      setIsEditing(false);
+    } catch (err) {
+      alert('Failed to save business settings. ' + (err.response?.data?.message || ''));
+    }
   };
 
   return (

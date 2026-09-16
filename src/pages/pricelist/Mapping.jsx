@@ -1,23 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Package, Building, Edit, ChevronRight } from 'lucide-react';
+import api from '../../api';
 
 const Mapping = () => {
-  const [customerMappings] = useState([
-    { id: 'MAP-101', target: 'Ramesh Kumar & Sons', priceList: 'VIP Customer Pricing' },
-    { id: 'MAP-102', target: 'Apex Retailers', priceList: 'Regular Retail Slab' }
-  ]);
-
-  const [productMappings] = useState([
-    { id: 'MAP-201', target: 'TMT Steel Bar 12mm', priceList: 'VIP Customer Pricing' },
-    { id: 'MAP-202', target: 'GI Pipe 2 Inches', priceList: 'Regular Retail Slab' }
-  ]);
-
-  const [branchMappings] = useState([
-    { id: 'MAP-301', target: 'Jaipur HQ', priceList: 'VIP Customer Pricing' },
-    { id: 'MAP-302', target: 'Kota Branch Office', priceList: 'Regular Retail Slab' }
-  ]);
-
+  const [mappings, setMappings] = useState([]);
   const [activeTab, setActiveTab] = useState('customer');
+
+  useEffect(() => {
+    const fetchMappings = async () => {
+      try {
+        const res = await api.get('/price-mappings');
+        setMappings(res.data?.data || res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch price mappings', err);
+      }
+    };
+    fetchMappings();
+  }, []);
+
+  const customerMappings = mappings.filter(m => m.mappingType === 'Customer');
+  const productMappings = mappings.filter(m => m.mappingType === 'Product');
+  const branchMappings = mappings.filter(m => m.mappingType === 'Branch');
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200 shadow-sm min-h-screen">
@@ -59,13 +62,17 @@ const Mapping = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {customerMappings.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="p-2 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.id}</td>
-                      <td className="p-2 text-gray-800 whitespace-nowrap">{item.target}</td>
-                      <td className="p-2 text-gray-500 whitespace-nowrap">{item.priceList}</td>
+                  {customerMappings.length > 0 ? customerMappings.map(item => (
+                    <tr key={item._id} className="hover:bg-slate-50">
+                      <td className="p-2 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.mappingId || item._id.substring(0,8)}</td>
+                      <td className="p-2 text-gray-800 whitespace-nowrap">{item.targetName}</td>
+                      <td className="p-2 text-gray-500 whitespace-nowrap">{item.priceListName}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="3" className="p-4 text-center text-gray-500">No customer price mappings found</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -85,13 +92,17 @@ const Mapping = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {productMappings.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="p-2 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.id}</td>
-                      <td className="p-2 text-gray-800 whitespace-nowrap">{item.target}</td>
-                      <td className="p-2 text-gray-500 whitespace-nowrap">{item.priceList}</td>
+                  {productMappings.length > 0 ? productMappings.map(item => (
+                    <tr key={item._id} className="hover:bg-slate-50">
+                      <td className="p-2 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.mappingId || item._id.substring(0,8)}</td>
+                      <td className="p-2 text-gray-800 whitespace-nowrap">{item.targetName}</td>
+                      <td className="p-2 text-gray-500 whitespace-nowrap">{item.priceListName}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="3" className="p-4 text-center text-gray-500">No product price mappings found</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -111,13 +122,17 @@ const Mapping = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {branchMappings.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="p-2 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.id}</td>
-                      <td className="p-2 text-gray-800 whitespace-nowrap">{item.target}</td>
-                      <td className="p-2 text-gray-500 whitespace-nowrap">{item.priceList}</td>
+                  {branchMappings.length > 0 ? branchMappings.map(item => (
+                    <tr key={item._id} className="hover:bg-slate-50">
+                      <td className="p-2 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.mappingId || item._id.substring(0,8)}</td>
+                      <td className="p-2 text-gray-800 whitespace-nowrap">{item.targetName}</td>
+                      <td className="p-2 text-gray-500 whitespace-nowrap">{item.priceListName}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="3" className="p-4 text-center text-gray-500">No branch price mappings found</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

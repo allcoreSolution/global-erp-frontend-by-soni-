@@ -1,22 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building, Landmark, Users, BarChart3, ChevronRight } from 'lucide-react';
+import api from '../../api';
 
 const BankStructure = () => {
-  const [banks] = useState([
-    { id: 'CBK-01', name: 'ICICI Corporate Bank', account: '554400221199', ifsc: 'ICIC0000011', branch: 'Industrial Area Jaipur' }
-  ]);
-
-  const [branches] = useState([
-    { id: 'BR-01', name: 'Jaipur HQ Office', code: 'JPHQ', manager: 'Amit Sharma' },
-    { id: 'BR-02', name: 'Kota Regional Center', code: 'KT01', manager: 'Sanjay Rathi' }
-  ]);
-
-  const [users] = useState([
-    { id: 'USR-201', name: 'Vikram Malhotra', role: 'Super Admin', branch: 'Jaipur HQ Office' },
-    { id: 'USR-202', name: 'Anjali Desai', role: 'HR Manager', branch: 'Jaipur HQ Office' }
-  ]);
-
+  const [banks, setBanks] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('bank');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [banksRes, branchesRes, usersRes] = await Promise.all([
+          api.get('/banks'),
+          api.get('/branches'),
+          api.get('/users')
+        ]);
+        
+        setBanks(banksRes.data?.data || banksRes.data || []);
+        setBranches(branchesRes.data?.data || branchesRes.data || []);
+        setUsers(usersRes.data?.data || usersRes.data || []);
+      } catch (err) {
+        console.error('Failed to fetch data for Bank Structure', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200 shadow-sm min-h-screen">
@@ -59,14 +68,18 @@ const BankStructure = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {banks.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50">
+                  {banks.length > 0 ? banks.map(item => (
+                    <tr key={item._id} className="hover:bg-slate-50">
                       <td className="p-2.5 font-semibold text-gray-800 whitespace-nowrap">{item.name}</td>
-                      <td className="p-2.5 font-mono text-gray-900 whitespace-nowrap">{item.account}</td>
-                      <td className="p-2.5 font-mono text-gray-600 whitespace-nowrap">{item.ifsc}</td>
-                      <td className="p-2.5 text-gray-500 whitespace-nowrap">{item.branch}</td>
+                      <td className="p-2.5 font-mono text-gray-900 whitespace-nowrap">{item.accountNumber}</td>
+                      <td className="p-2.5 font-mono text-gray-600 whitespace-nowrap">{item.ifscCode}</td>
+                      <td className="p-2.5 text-gray-500 whitespace-nowrap">{item.branchName}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="4" className="p-4 text-center text-gray-500">No bank accounts found</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -86,13 +99,17 @@ const BankStructure = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {branches.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.code}</td>
+                  {branches.length > 0 ? branches.map(item => (
+                    <tr key={item._id} className="hover:bg-slate-50">
+                      <td className="p-2.5 font-semibold text-indigo-600 whitespace-nowrap font-mono">{item.code || item._id.substring(0,6)}</td>
                       <td className="p-2.5 text-gray-900 whitespace-nowrap">{item.name}</td>
-                      <td className="p-2.5 text-gray-500 whitespace-nowrap">{item.manager}</td>
+                      <td className="p-2.5 text-gray-500 whitespace-nowrap">{item.address || 'N/A'}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="3" className="p-4 text-center text-gray-500">No branches found</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -113,18 +130,22 @@ const BankStructure = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {users.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-semibold text-gray-800 font-mono whitespace-nowrap">{item.id}</td>
+                  {users.length > 0 ? users.map(item => (
+                    <tr key={item._id} className="hover:bg-slate-50">
+                      <td className="p-2.5 font-semibold text-gray-800 font-mono whitespace-nowrap">{item._id.substring(0,8)}</td>
                       <td className="p-2.5 text-gray-900 whitespace-nowrap">{item.name}</td>
                       <td className="p-2.5 text-gray-600 whitespace-nowrap">
                         <span className="bg-blue-50 text-indigo-600 font-semibold px-2 py-0.5 rounded text-[10px]">
-                          {item.role}
+                          {item.role?.name || item.role || 'User'}
                         </span>
                       </td>
-                      <td className="p-2.5 text-gray-500 whitespace-nowrap">{item.branch}</td>
+                      <td className="p-2.5 text-gray-500 whitespace-nowrap">{item.email}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="4" className="p-4 text-center text-gray-500">No users found</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

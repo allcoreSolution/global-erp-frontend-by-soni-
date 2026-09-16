@@ -1,26 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, FileCheck, Edit2 } from 'lucide-react';
+import api from '../../api';
 
 const TaxLegal = () => {
   const [taxDetails, setTaxDetails] = useState({
-    gstin: '08AAAAA1111A1Z1',
-    pan: 'AAAAA1111A',
-    cin: 'L72200RJ2015PLC048999',
-    tan: 'JPRT01234F'
+    gstin: '',
+    pan: '',
+    cin: '',
+    tan: ''
   });
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ gstin: '', pan: '', cin: '', tan: '' });
+
+  const fetchTaxDetails = async () => {
+    try {
+      const res = await api.get('/companies/profile');
+      if (res.data) {
+        setTaxDetails({
+          gstin: res.data.gstNumber || '',
+          pan: res.data.pan || '',
+          cin: res.data.cin || '',
+          tan: res.data.tan || ''
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch tax details', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTaxDetails();
+  }, []);
 
   const handleEdit = () => {
     setForm({ ...taxDetails });
     setIsEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setTaxDetails({ ...form });
-    setIsEditing(false);
+    try {
+      const payload = {
+        gstNumber: form.gstin,
+        pan: form.pan,
+        cin: form.cin,
+        tan: form.tan
+      };
+      await api.put('/companies/profile', payload);
+      await fetchTaxDetails();
+      setIsEditing(false);
+    } catch (err) {
+      alert('Failed to save tax credentials. ' + (err.response?.data?.message || ''));
+    }
   };
 
   return (

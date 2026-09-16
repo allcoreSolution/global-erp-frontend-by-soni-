@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Download, Upload, Printer, CheckCircle } from 'lucide-react';
+import api from '../../api';
 
 const TaxUtilities = () => {
-  const [taxes, setTaxes] = useState([
-    { id: 'TX-001', name: 'Standard GST 18%', rate: 18, active: true },
-    { id: 'TX-002', name: 'Super Luxury Slab 28%', rate: 28, active: true }
-  ]);
+  const [taxes, setTaxes] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -14,14 +12,45 @@ const TaxUtilities = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleToggle = (id) => {
-    setTaxes(prev => prev.map(t => {
-      if (t.id === id) {
-        addLog(`Toggled active state for tax slab ${id} to ${!t.active ? 'Active' : 'Inactive'}`);
-        return { ...t, active: !t.active };
-      }
-      return t;
-    }));
+  const fetchTaxes = async () => {
+    try {
+      const res = await api.get('/tax-slabs');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(t => ({
+        ...t,
+        _id: t._id,
+        id: t.id || t._id,
+        active: t.status === 'Active'
+      }));
+      setTaxes(mapped);
+    } catch (error) {
+      addLog('Error fetching tax slabs: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  useEffect(() => {
+    fetchTaxes();
+  }, []);
+
+  const handleToggle = async (id, _id) => {
+    try {
+      addLog(`Toggling status for tax slab ${id}...`);
+      const targetTax = taxes.find(t => t._id === _id);
+      const newStatus = !targetTax.active ? 'Active' : 'Inactive';
+      
+      await api.patch(`/tax-slabs/${_id}`, { status: newStatus });
+      
+      setTaxes(prev => prev.map(t => {
+        if (t._id === _id) {
+          addLog(`Success: Toggled active state for tax slab ${id} to ${newStatus}`);
+          return { ...t, active: newStatus === 'Active', status: newStatus };
+        }
+        return t;
+      }));
+    } catch (error) {
+      addLog('Error toggling status: ' + (error.response?.data?.message || error.message));
+      alert('Failed to toggle tax slab status. ' + (error.response?.data?.message || error.message));
+    }
   };
 
   const filtered = taxes.filter(t =>
@@ -168,21 +197,25 @@ const TaxUtilities = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(t => (
-                <tr key={t.id} className="hover:bg-slate-50">
+              {filtered.length > 0 ? filtered.map(t => (
+                <tr key={t._id} className="hover:bg-slate-50">
                   <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{t.id}</td>
                   <td className="p-2 font-medium text-gray-900">{t.name}</td>
                   <td className="p-2 text-right font-bold text-gray-800">{t.rate}%</td>
                   <td className="p-2 text-center no-print">
                     <button
-                      onClick={() => handleToggle(t.id)}
+                      onClick={() => handleToggle(t.id, t._id)}
                       className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${t.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
                     >
                       {t.active ? 'Active' : 'Inactive'}
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="4" className="p-4 text-center text-gray-500">No tax slabs found</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
