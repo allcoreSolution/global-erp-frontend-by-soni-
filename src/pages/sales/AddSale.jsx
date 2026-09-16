@@ -39,10 +39,10 @@ const AddSale = () => {
         const pData = prodRes.data?.data || prodRes.data || [];
         setProductsCatalog(pData.map(p => ({
           id: p._id,
-          name: p.name,
-          code: p.code || p.sku,
-          price: p.salePrice || p.price || 0,
-          tax: p.taxRate || 0,
+          name: p.productName || p.name,
+          code: p.productCode || p.sku || p.code,
+          price: p.productPrice || p.salePrice || p.price || 0,
+          tax: p.productTax || p.taxRate || 0,
           stock: p.currentStock || 0
         })));
         
