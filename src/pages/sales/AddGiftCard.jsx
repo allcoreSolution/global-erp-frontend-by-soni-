@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Gift } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../../api';
 
 const AddGiftCard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData || null;
+  const isEdit = Boolean(editData);
   
   const [form, setForm] = useState({
-    giftCardCode: 'GC-00001',
+    giftCardCode: `GC-${Math.floor(10000 + Math.random() * 90000)}`,
     giftCardName: '',
     giftCardType: 'Digital',
     company: 'Select',
@@ -41,6 +45,18 @@ const AddGiftCard = () => {
     internalNotes: ''
   });
 
+  useEffect(() => {
+    if (isEdit && editData) {
+      setForm(prev => ({
+        ...prev,
+        ...editData,
+        giftCardCode: editData.cardNo || editData.giftCardCode || prev.giftCardCode,
+        expiryDate: editData.expiredDate || editData.expiryDate || prev.expiryDate,
+        cardValue: editData.amount || editData.cardValue || prev.cardValue
+      }));
+    }
+  }, [isEdit, editData]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -49,10 +65,28 @@ const AddGiftCard = () => {
     }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Gift Card created successfully!');
-    navigate('/sales/gift-card-list');
+    try {
+      const payload = {
+        ...form,
+        cardNo: form.giftCardCode,
+        expiredDate: form.expiryDate,
+        amount: form.cardValue
+      };
+      
+      if (isEdit) {
+        await api.put(`/gift-cards/${editData.id || editData._id}`, payload);
+        alert('Gift Card updated successfully!');
+      } else {
+        await api.post('/gift-cards', payload);
+        alert('Gift Card created successfully!');
+      }
+      navigate('/sales/gift-card-list');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save gift card: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   return (
@@ -73,8 +107,8 @@ const AddGiftCard = () => {
         
         {/* Card Header */}
         <div className="bg-gradient-to-r from-indigo-50 to-white px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-indigo-900 uppercase tracking-wide">Create Gift Card</h2>
-          <p className="text-sm text-slate-500 font-medium">Create and manage gift card</p>
+          <h2 className="text-xl font-bold text-indigo-900 uppercase tracking-wide">{isEdit ? 'Update Gift Card' : 'Create Gift Card'}</h2>
+          <p className="text-sm text-slate-500 font-medium">{isEdit ? 'Update existing gift card details' : 'Create and manage gift card'}</p>
         </div>
 
         <form onSubmit={handleSave} className="p-6 space-y-8">

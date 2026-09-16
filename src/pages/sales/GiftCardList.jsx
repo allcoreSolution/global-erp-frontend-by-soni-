@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
   ChevronLeft, ChevronRight, AlertCircle, X, CheckCircle 
 } from 'lucide-react';
+import api from '../../api';
 
 const GiftCardList = () => {
   const navigate = useNavigate();
@@ -18,48 +19,40 @@ const GiftCardList = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState(null);
 
-  // Form State for Add Gift Card
-  const [form, setForm] = useState({
-    cardNo: '',
-    customer: 'Walk-in Customer',
-    amount: '',
-    expense: '0.00',
-    createdBy: 'mummakidz',
-    expiredDate: '2027-08-13'
-  });
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    if (!form.cardNo || !form.amount) {
-      alert("Card Number and Amount are required.");
-      return;
+  const fetchGiftCards = async () => {
+    try {
+      const res = await api.get('/gift-cards');
+      const data = res.data?.data || res.data || [];
+      const mapped = data.map(item => ({
+        id: item._id,
+        cardNo: item.cardNo || '-',
+        customer: item.customer || 'Select',
+        amount: Number(item.amount) || 0.00,
+        expense: Number(item.expense) || 0.00,
+        balance: (Number(item.amount) || 0) - (Number(item.expense) || 0),
+        createdBy: item.createdBy || '-',
+        expiredDate: item.expiredDate || '-',
+        ...item // keep all other fields for editing
+      }));
+      setGiftCards(mapped);
+    } catch (error) {
+      console.error("Failed to fetch gift cards", error);
     }
-    const newRecord = {
-      id: giftCards.length + 1,
-      cardNo: form.cardNo,
-      customer: form.customer,
-      amount: Number(form.amount) || 0.00,
-      expense: Number(form.expense) || 0.00,
-      balance: (Number(form.amount) || 0.00) - (Number(form.expense) || 0.00),
-      createdBy: form.createdBy,
-      expiredDate: form.expiredDate
-    };
-    setGiftCards([...giftCards, newRecord]);
-    setIsAddModalOpen(false);
-    // Reset Form
-    setForm({
-      cardNo: '',
-      customer: 'Walk-in Customer',
-      amount: '',
-      expense: '0.00',
-      createdBy: 'mummakidz',
-      expiredDate: '2027-08-13'
-    });
   };
 
-  const handleDelete = (id) => {
+  useEffect(() => {
+    fetchGiftCards();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this Gift Card?")) {
-      setGiftCards(giftCards.filter(c => c.id !== id));
+      try {
+        await api.delete(`/gift-cards/${id}`);
+        setGiftCards(giftCards.filter(c => c.id !== id));
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete gift card');
+      }
     }
   };
 
@@ -212,9 +205,7 @@ const GiftCardList = () => {
                         <Eye size={15} />
                       </button>
                       <button
-                        onClick={() => {
-                          alert(`Edit Gift Card details: ${c.cardNo}`);
-                        }}
+                        onClick={() => navigate('/sales/add-gift-card', { state: { editData: c } })}
                         className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
                         title="Edit details"
                       >
