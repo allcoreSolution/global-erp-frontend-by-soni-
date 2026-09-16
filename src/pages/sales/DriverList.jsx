@@ -1,19 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Download, FileText, User, Phone, MapPin, 
   Trash2, Edit, ChevronLeft, ChevronRight, AlertCircle, X, CheckCircle 
 } from 'lucide-react';
+import api from '../../api';
 
 const DriverList = () => {
   const navigate = useNavigate();
-  // Mock Driver Records Database
-  const [drivers, setDrivers] = useState([
-    { id: 1, name: 'Ramesh Kumar', phone: '+91 98765 43210', email: 'ramesh@allcore.com', licenseNo: 'DL-IND129302', vehicleNo: 'DL 3C AM 1204', status: 'Active' },
-    { id: 2, name: 'Sukhvinder Singh', phone: '+91 87654 32109', email: 'sukhvinder@allcore.com', licenseNo: 'DL-IND883921', vehicleNo: 'HR 26 AJ 8931', status: 'Active' },
-    { id: 3, name: 'Mohammad Farhan', phone: '+91 76543 21098', email: 'farhan@allcore.com', licenseNo: 'DL-IND493012', vehicleNo: 'UP 16 AT 4402', status: 'Inactive' },
-    { id: 4, name: 'Vikram Aditya', phone: '+91 65432 10987', email: 'vikram@allcore.com', licenseNo: 'DL-IND902148', vehicleNo: 'DL 1C Z 9934', status: 'Active' }
-  ]);
+  const [drivers, setDrivers] = useState([]);
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,44 +26,108 @@ const DriverList = () => {
     status: 'Active'
   });
 
-  const handleFormSubmit = (e) => {
+  const [editingId, setEditingId] = useState(null);
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await api.get('/drivers');
+      const data = res.data?.data || res.data || [];
+      const mappedData = data.map((item) => ({
+        id: item._id,
+        name: item.driverName || '-',
+        phone: item.mobile || '-',
+        email: item.email || '-',
+        licenseNo: item.licenceNo || '-',
+        vehicleNo: item.vehicleNo || '-',
+        status: item.status || 'Active'
+      }));
+      setDrivers(mappedData);
+    } catch (err) {
+      console.error("Failed to fetch drivers", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDrivers();
+  }, []);
+
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.phone) {
       alert("Name and Phone fields are required.");
       return;
     }
-    const newRecord = {
-      id: drivers.length + 1,
-      name: form.name,
-      phone: form.phone,
-      email: form.email || '-',
-      licenseNo: form.licenseNo || '-',
-      vehicleNo: form.vehicleNo || '-',
-      status: form.status
-    };
-    setDrivers([...drivers, newRecord]);
-    setIsAddModalOpen(false);
-    // Reset Form
-    setForm({
-      name: '',
-      phone: '',
-      email: '',
-      licenseNo: '',
-      vehicleNo: '',
-      status: 'Active'
-    });
-  };
+    
+    try {
+      const payload = {
+        driverName: form.name,
+        mobile: form.phone,
+        email: form.email,
+        licenceNo: form.licenseNo,
+        vehicleNo: form.vehicleNo,
+        status: form.status,
+        driverCode: `DRV-${Date.now()}` // auto generate to prevent validation error
+      };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this driver?")) {
-      setDrivers(drivers.filter(d => d.id !== id));
+      if (editingId) {
+        await api.put(`/drivers/${editingId}`, payload);
+        alert('Driver updated successfully');
+      } else {
+        await api.post('/drivers', payload);
+        alert('Driver added successfully');
+      }
+      
+      fetchDrivers();
+      setIsAddModalOpen(false);
+      setEditingId(null);
+      setForm({ name: '', phone: '', email: '', licenseNo: '', vehicleNo: '', status: 'Active' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save driver: ' + (err.response?.data?.message || err.message));
     }
   };
 
-  const handleToggleStatus = (id) => {
-    setDrivers(drivers.map(d => 
-      d.id === id ? { ...d, status: d.status === 'Active' ? 'Inactive' : 'Active' } : d
-    ));
+  const handleEdit = async (driver) => {
+    try {
+      const res = await api.get(`/drivers/${driver.id}`);
+      const full = res.data?.data || res.data;
+      setForm({
+        name: full.driverName || '',
+        phone: full.mobile || '',
+        email: full.email || '',
+        licenseNo: full.licenceNo || '',
+        vehicleNo: full.vehicleNo || '',
+        status: full.status || 'Active'
+      });
+      setEditingId(driver.id);
+      setIsAddModalOpen(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to fetch driver details');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this driver?")) {
+      try {
+        await api.delete(`/drivers/${id}`);
+        setDrivers(drivers.filter(d => d.id !== id));
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete driver');
+      }
+    }
+  };
+
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+      await api.put(`/drivers/${id}`, { status: newStatus });
+      setDrivers(drivers.map(d => d.id === id ? { ...d, status: newStatus } : d));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status');
+    }
   };
 
   const handleExportCSV = () => {
@@ -117,7 +176,11 @@ const DriverList = () => {
             <FileText size={14} /> Download PDF
           </button>
           <button 
-            onClick={() => navigate('/sales/add-driver')}
+            onClick={() => {
+              setEditingId(null);
+              setForm({ name: '', phone: '', email: '', licenseNo: '', vehicleNo: '', status: 'Active' });
+              setIsAddModalOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
           >
             <Plus size={14} /> Add Driver
@@ -190,7 +253,7 @@ const DriverList = () => {
                   {/* Status Toggle Toggle Option */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
-                      onClick={() => handleToggleStatus(driver.id)}
+                      onClick={() => handleToggleStatus(driver.id, driver.status)}
                       className={`inline-flex px-2.5 py-0.5 rounded text-xs font-extrabold transition-colors border ${
                         driver.status === 'Active' 
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
@@ -205,7 +268,7 @@ const DriverList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                     <div className="inline-flex items-center gap-1.5">
                       <button
-                        onClick={() => alert(`Edit Driver profiles details: ${driver.name}`)}
+                        onClick={() => handleEdit(driver)}
                         className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
                         title="Edit profile"
                       >
