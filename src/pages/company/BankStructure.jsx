@@ -58,7 +58,7 @@ const BankStructure = () => {
           <div className="space-y-3 text-[11px] sm:text-xs">
             <h4 className="font-bold text-slate-800">Company Standard Banking Clearing Accounts</h4>
             <div className="overflow-x-auto border rounded">
-              <table className="block w-full overflow-x-auto w-full text-left">
+              <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b font-bold text-gray-700">
                   <tr>
                     <th className="p-2.5">Bank Name</th>
@@ -90,7 +90,7 @@ const BankStructure = () => {
           <div className="space-y-3 text-[11px] sm:text-xs">
             <h4 className="font-bold text-slate-800">Corporate Branch Registries</h4>
             <div className="overflow-x-auto border rounded">
-              <table className="block w-full overflow-x-auto w-full text-left">
+              <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b font-bold text-gray-700">
                   <tr>
                     <th className="p-2.5">Branch Code</th>
@@ -120,7 +120,7 @@ const BankStructure = () => {
           <div className="space-y-3 text-[11px] sm:text-xs">
             <h4 className="font-bold text-slate-800">Active User Logins & Permissions Channels</h4>
             <div className="overflow-x-auto border rounded">
-              <table className="block w-full overflow-x-auto w-full text-left">
+              <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b font-bold text-gray-700">
                   <tr>
                     <th className="p-2.5">User ID</th>

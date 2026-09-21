@@ -40,7 +40,7 @@ const RoleMaster = () => {
           <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{title}</h3>
         </div>
         <div className="p-0 overflow-auto max-h-[300px]">
-          <table className="block w-full overflow-x-auto w-full text-left text-xs relative">
+          <table className="w-full text-left text-xs relative">
             <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
               <tr>
                 <th className="px-5 py-3 font-bold">Permission</th>

@@ -115,7 +115,7 @@ const PerformanceAnalysis = () => {
       </div>
 
       {/* Content Area */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* 1. SALES VS TARGET */}
         {(activeTab === 'All' || activeTab === 'Targets & Margins') && (
@@ -257,7 +257,7 @@ const PerformanceAnalysis = () => {
               <span className="text-[10px] text-gray-400">Commission incentive tracking active</span>
             </div>
             <div className="overflow-x-auto">
-              <table className="block w-full overflow-x-auto w-full text-left text-xs">
+              <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="text-gray-500 font-semibold border-b">
                     <th className="py-2">Salesperson Name</th>

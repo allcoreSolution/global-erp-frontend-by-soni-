@@ -36,7 +36,7 @@ const InventorySettings = () => {
       </div>
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold uppercase text-slate-700">Stock Rules</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Default Warehouse</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.defaultWarehouse || ''} onChange={e => handleChange('defaultWarehouse', e.target.value)} /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Low Stock Threshold</label><input type="number" className="w-full text-xs border rounded p-2" value={formData.lowStockThreshold || 0} onChange={e => handleChange('lowStockThreshold', e.target.value)} /></div>
         </div>

@@ -63,7 +63,7 @@ const TaxCollectedReport = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         {[
           { label: 'Total Invoices', val: '450', color: 'bg-slate-50 text-slate-700 border-slate-200' },
           { label: 'Total Taxable', val: '₹ 80 L', color: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -82,7 +82,7 @@ const TaxCollectedReport = () => {
 
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4">Date</th>

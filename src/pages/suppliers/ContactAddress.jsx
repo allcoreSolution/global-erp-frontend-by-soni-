@@ -60,7 +60,7 @@ const ContactAddress = () => {
       </div>
 
       {/* Grid of Business Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredSuppliers.map(s => {
           const initials = s.name.split(' ').map(n => n[0]).join('').slice(0, 2);
           return (
@@ -153,7 +153,7 @@ const ContactAddress = () => {
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Supplier Company</label>
                 <input type="text" disabled value={currentSupplier.name} className="w-full bg-slate-50 border p-2.5 rounded-xl text-gray-500 cursor-not-allowed text-xs font-bold" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Contact Person *</label>
                   <input

@@ -22,7 +22,7 @@ const RecentActivities = () => {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b">
               <th className="p-3 text-sm font-semibold text-gray-600">Date</th>

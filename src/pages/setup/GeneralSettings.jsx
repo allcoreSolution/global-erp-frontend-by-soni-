@@ -103,7 +103,7 @@ const GeneralSettings = () => {
                 className="w-full text-xs border rounded p-2 focus:ring-1 focus:ring-blue-500" 
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Base Currency</label>
                 <select 
@@ -138,7 +138,7 @@ const GeneralSettings = () => {
             <FileText size={16} className="text-blue-500" /> Invoicing Rules
           </h3>
           <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Invoice Prefix</label>
                 <input 

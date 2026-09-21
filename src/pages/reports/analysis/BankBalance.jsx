@@ -62,7 +62,7 @@ const BankBalance = () => {
       ) : data.bankBalances.length === 0 ? (
         <div className="text-center p-10 text-gray-500 border border-dashed rounded">No bank ledgers found.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {data.bankBalances.map((bank, idx) => {
             return (
               <div key={bank.accountId || idx} className="border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow bg-white flex flex-col justify-between">

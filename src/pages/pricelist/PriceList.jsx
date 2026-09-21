@@ -205,7 +205,7 @@ const PriceList = () => {
 
       {/* Table responsive */}
       <div className="overflow-x-auto rounded border border-slate-200">
-        <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
+        <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100 border-b font-semibold text-gray-700">
               <th className="p-2.5 sm:p-3">Price List Code</th>
@@ -384,7 +384,7 @@ const PriceList = () => {
                   </button>
                 </div>
                 <div className="overflow-x-auto border border-blue-500 rounded">
-                  <table className="block w-full overflow-x-auto w-full text-left text-xs border-collapse">
+                  <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-gray-50 border-b border-blue-500 text-gray-700">
                       <tr>
                         <th className="p-2 font-semibold">Product</th>
@@ -427,7 +427,7 @@ const PriceList = () => {
                   </button>
                 </div>
                 <div className="overflow-x-auto border border-blue-500 rounded max-w-lg">
-                  <table className="block w-full overflow-x-auto w-full text-left text-xs border-collapse">
+                  <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-gray-50 border-b border-blue-500 text-gray-700">
                       <tr>
                         <th className="p-2 font-semibold">Min Qty</th>

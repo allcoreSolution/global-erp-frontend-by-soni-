@@ -194,7 +194,7 @@ const EmployeeProfile = () => {
 
         <form onSubmit={handleSave} className="p-6 space-y-8">
           
-          <div className="grid grid-cols-1 xl:grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             
             {/* LEFT COLUMN: Personal, Employment, Address */}
             <div className="xl:col-span-2 space-y-6">
@@ -236,7 +236,7 @@ const EmployeeProfile = () => {
                        <label className="block text-xs font-semibold text-slate-700 mb-1">DOB</label>
                        <input type="date" name="dob" value={form.dob} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
                      </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                     <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-semibold text-slate-700 mb-1">Gender</label>
                           <select name="gender" value={form.gender} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
@@ -270,7 +270,7 @@ const EmployeeProfile = () => {
               {/* SECTION: EMPLOYMENT DETAILS */}
               <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Employment Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
                     <input type="text" name="company" value={form.company} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" placeholder="Enter Company" />
@@ -393,7 +393,7 @@ const EmployeeProfile = () => {
               {/* SECTION: IDENTITY & COMPLIANCE */}
               <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Identity & Compliance</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">PAN</label>
                     <input type="text" name="pan" value={form.pan} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none uppercase" />
@@ -416,7 +416,7 @@ const EmployeeProfile = () => {
               {/* SECTION: BANK & SALARY */}
               <div className="border border-slate-200 rounded-lg p-5 bg-slate-50">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-200">Bank & Salary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Bank</label>
                     <input type="text" name="bank" value={form.bank} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
@@ -468,7 +468,7 @@ const EmployeeProfile = () => {
               {/* SECTION: EMERGENCY CONTACT */}
               <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Emergency Contact</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Name</label>
                     <input type="text" name="emergencyName" value={form.emergencyName} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
@@ -487,7 +487,7 @@ const EmployeeProfile = () => {
               {/* SECTION: ERP LOGIN */}
               <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">ERP Login</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Create Login</label>
                     <select name="createLogin" value={form.createLogin} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">

@@ -82,7 +82,7 @@ const CompanyProfile = () => {
 
           {isEditing ? (
             <form onSubmit={handleSave} className="space-y-4 text-[11px] sm:text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block font-semibold text-gray-700 uppercase mb-1">Company Name</label>
                   <input
@@ -147,7 +147,7 @@ const CompanyProfile = () => {
               </div>
             </form>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 text-[11px] sm:text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] sm:text-xs">
               <div className="bg-slate-50 p-4 rounded border space-y-2.5">
                 <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Building size={14} className="text-indigo-600" /> Identity Info</h4>
                 <p><span className="text-gray-500">Corporate Name:</span> <strong className="text-gray-900">{activeCo.name}</strong></p>

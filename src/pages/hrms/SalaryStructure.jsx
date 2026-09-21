@@ -289,7 +289,7 @@ const SalaryStructure = () => {
           // LIST VIEW
           <div className="p-6">
             <div className="overflow-x-auto border rounded-lg">
-              <table className="block w-full overflow-x-auto w-full text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b text-slate-600 font-semibold">
                   <tr>
                     <th className="p-3">Code</th>
@@ -408,7 +408,7 @@ const SalaryStructure = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                
                {/* LEFT COLUMN: EARNINGS & DEDUCTIONS TABLES */}
                <div className="xl:col-span-2 space-y-6">
@@ -421,7 +421,7 @@ const SalaryStructure = () => {
                      </div>
                      
                      <div className="overflow-x-auto">
-                       <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+                       <table className="w-full text-left border-collapse">
                          <thead>
                            <tr className="border-b border-emerald-200">
                              <th className="pb-2 text-xs font-semibold text-emerald-900 w-1/2">Component</th>
@@ -471,7 +471,7 @@ const SalaryStructure = () => {
                      </div>
                      
                      <div className="overflow-x-auto">
-                       <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+                       <table className="w-full text-left border-collapse">
                          <thead>
                            <tr className="border-b border-red-200">
                              <th className="pb-2 text-xs font-semibold text-red-900 w-1/2">Component</th>
@@ -517,7 +517,7 @@ const SalaryStructure = () => {
                   {/* SECTION: ACCOUNTING & REMARKS */}
                   <div className="border border-slate-200 rounded-lg p-5">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Accounting</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-[10px] font-semibold text-slate-700 mb-1">Salary Expense</label>
                         <input type="text" name="salaryExpenseAccount" value={form.salaryExpenseAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-emerald-500 outline-none" />
@@ -580,7 +580,7 @@ const SalaryStructure = () => {
                   {/* SECTION: PAYROLL RULES */}
                   <div className="border border-slate-200 rounded-lg p-5">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Payroll Rules</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-2">
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Working Days</label>
                         <input type="number" name="workingDays" value={form.workingDays} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none" />
@@ -626,7 +626,7 @@ const SalaryStructure = () => {
                   {/* SECTION: TAX & COMPLIANCE */}
                   <div className="border border-slate-200 rounded-lg p-5 bg-slate-50">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-200">Tax & Compliance</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
                        <div className="flex flex-col items-center">
                          <label className="text-[10px] font-bold text-slate-500 mb-1">PF</label>
                          <select name="pfApplicable" value={form.pfApplicable} onChange={handleChange} className="w-full border border-slate-300 rounded p-1 text-xs text-center focus:border-emerald-500 outline-none bg-white">

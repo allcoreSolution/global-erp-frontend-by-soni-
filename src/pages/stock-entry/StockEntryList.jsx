@@ -231,7 +231,7 @@ const StockEntryList = () => {
 
       {/* Filter and Search Panel */}
       <div className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 p-4 rounded-lg border border-gray-100 dark:border-slate-200 shadow-sm transition-colors">
-        <div className="grid grid-cols-1 md:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           {/* Search bar */}
           <div className="relative col-span-1 md:col-span-2">
             <Search className="absolute left-3 top-3 text-gray-400" size={16} />
@@ -295,7 +295,7 @@ const StockEntryList = () => {
       {/* Main List Table */}
       <div id="printable-list-area" className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 border border-gray-100 dark:border-slate-200 rounded-lg shadow-sm overflow-hidden transition-colors">
         <div className="overflow-x-auto">
-          <table className="block w-full overflow-x-auto w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 dark:bg-slate-855/50 border-b border-gray-200 dark:border-slate-200 text-gray-700 dark:text-slate-350 font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">Voucher No</th>
@@ -432,7 +432,7 @@ const StockEntryList = () => {
                 </div>
 
                 {/* Voucher Meta details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 text-xs">
+                <div className="grid grid-cols-2 gap-4 py-4 text-xs">
                   <div>
                     <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedEntry.stockNo}</span></div>
                     <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher Type:</span> <span className="font-bold text-indigo-600">{selectedEntry.stockType}</span></div>
@@ -447,7 +447,7 @@ const StockEntryList = () => {
 
                 {/* Voucher Items Grid */}
                 <div className="mt-4">
-                  <table className="block w-full overflow-x-auto w-full text-left text-xs border border-gray-200 dark:border-slate-200">
+                  <table className="w-full text-left text-xs border border-gray-200 dark:border-slate-200">
                     <thead>
                       <tr className="bg-gray-50 dark:bg-slate-850 border-b border-gray-200 dark:border-slate-200 text-gray-700 dark:text-slate-350 font-bold uppercase">
                         <th className="py-2 px-3 border-r border-gray-200 dark:border-slate-200">Product / Item Name</th>
@@ -488,7 +488,7 @@ const StockEntryList = () => {
                 </div>
 
                 {/* Purpose and Remarks */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 text-xs text-gray-700 dark:text-slate-350">
+                <div className="grid grid-cols-2 gap-4 mt-6 text-xs text-gray-700 dark:text-slate-350">
                   <div className="col-span-2">
                     <div className="font-bold">Remarks / Internal Comments:</div>
                     <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200">{selectedEntry.remarks || 'No remarks provided.'}</p>
@@ -496,7 +496,7 @@ const StockEntryList = () => {
                 </div>
 
                 {/* Signatures */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 pt-8 text-center text-xs">
+                <div className="grid grid-cols-3 gap-6 mt-12 pt-8 text-center text-xs">
                   <div>
                     <div className="border-b border-gray-300 dark:border-slate-200 pb-1 mx-4"></div>
                     <div className="text-gray-500 mt-2 font-medium">Store Keeper</div>

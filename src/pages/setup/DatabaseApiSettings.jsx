@@ -34,7 +34,7 @@ const DatabaseApiSettings = () => {
       </div>
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold uppercase text-slate-700">API Access</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Generated API Key</label><input type="text" readOnly className="w-full text-xs border bg-slate-50 rounded p-2" value={formData.apiKey || ''} /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Webhook URL</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.webhookUrl || ''} onChange={e => handleChange('webhookUrl', e.target.value)} /></div>
         </div>

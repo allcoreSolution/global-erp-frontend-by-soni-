@@ -146,7 +146,7 @@ const PurchaseReturn = () => {
       </div>
 
       {/* Filter Options Controls Form Header */}
-      <div className="bg-gray-50 border border-blue-500 rounded-lg p-4 mb-6 grid grid-cols-1 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+      <div className="bg-gray-50 border border-blue-500 rounded-lg p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
         {/* Start Date */}
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Start Date</label>
@@ -239,7 +239,7 @@ const PurchaseReturn = () => {
 
       {/* Table view layout */}
       <div className="overflow-x-auto border border-blue-500 rounded-lg">
-        <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>
@@ -382,7 +382,7 @@ const PurchaseReturn = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Warehouse *</label>
                   <select

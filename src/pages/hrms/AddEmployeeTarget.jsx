@@ -342,7 +342,7 @@ const AddEmployeeTarget = () => {
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">KPI *</label>
                   <input type="text" name="kpi" value={form.kpi} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="KPI Metrics" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Target Value *</label>
                     <input type="number" name="targetValue" value={form.targetValue} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
@@ -357,7 +357,7 @@ const AddEmployeeTarget = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="block text-[11px] font-bold text-slate-600 uppercase">Priority</label>
@@ -419,7 +419,7 @@ const AddEmployeeTarget = () => {
                 </h3>
               </div>
               <div className="p-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Start Date *</label>
                     <input type="date" name="startDate" value={form.startDate} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
@@ -429,7 +429,7 @@ const AddEmployeeTarget = () => {
                     <input type="date" name="endDate" value={form.endDate} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="block text-[11px] font-bold text-slate-600 uppercase">Frequency</label>
@@ -469,7 +469,7 @@ const AddEmployeeTarget = () => {
                     {measurements.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Baseline</label>
                     <input type="number" name="baseline" value={form.baseline} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
@@ -512,7 +512,7 @@ const AddEmployeeTarget = () => {
                 </h3>
               </div>
               <div className="p-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Assigned By</label>
                     <input type="text" name="assignedBy" value={form.assignedBy} onChange={handleChange} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />

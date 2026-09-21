@@ -354,7 +354,7 @@ const ChallanList = () => {
 
       {/* Table view log grid */}
       <div className="overflow-x-auto border border-blue-500 rounded-lg">
-        <table className="block w-full overflow-x-auto w-full text-left border-collapse min-w-[1000px]">
+        <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               {visibleColumns.date && <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>}
@@ -578,7 +578,7 @@ const ChallanList = () => {
                         <option value="Cust1">Acme Corp</option>
                       </select>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Contact Person</label>
                         <input type="text" value={form.contactPerson} onChange={e => setForm({...form, contactPerson: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" placeholder="Enter name" />
@@ -619,7 +619,7 @@ const ChallanList = () => {
                   </button>
                 </div>
                 <div className="overflow-x-auto rounded border border-blue-500">
-                  <table className="block w-full overflow-x-auto w-full text-left border-collapse min-w-[700px]">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
                     <thead className="bg-gray-50 border-b border-blue-500">
                       <tr>
                         <th className="p-2 text-xs font-bold text-gray-700 border-r border-blue-500">Product</th>
@@ -679,7 +679,7 @@ const ChallanList = () => {
               {/* TRANSPORT DETAILS */}
               <div>
                 <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-4 tracking-wide text-indigo-700">Transport Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Transport Mode *</label>
                     <select value={form.transportMode} onChange={e => setForm({...form, transportMode: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" required>

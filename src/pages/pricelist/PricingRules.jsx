@@ -125,7 +125,7 @@ const PricingRules = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] sm:text-xs">
+            <div className="grid grid-cols-2 gap-3 text-[11px] sm:text-xs">
               <div>
                 <span className="text-gray-500">Price Type:</span>
                 <p className="font-semibold text-gray-800">{rule.type}</p>
@@ -218,7 +218,7 @@ const PricingRules = () => {
               {/* Apply To */}
               <div>
                 <h4 className="text-sm font-bold text-indigo-600 mb-3 border-b pb-1">APPLY TO</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Company *</label>
                     <select
@@ -381,7 +381,7 @@ const PricingRules = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="text-sm font-bold text-indigo-600 mb-3 border-b pb-1">VALIDITY</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Effective From</label>
                       <input

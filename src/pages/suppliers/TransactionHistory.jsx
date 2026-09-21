@@ -64,7 +64,7 @@ const TransactionHistory = () => {
         <p className="text-[11px] sm:text-xs text-gray-500">Track purchase statements, payments, ledger posting reports, and outstanding summaries.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Suppliers selection */}
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Suppliers Logs</div>
@@ -116,7 +116,7 @@ const TransactionHistory = () => {
               <div className="space-y-3 text-[11px] sm:text-xs">
                 <h4 className="font-bold text-slate-800">Purchase Bills Log</h4>
                 <div className="overflow-x-auto border rounded">
-                  <table className="block w-full overflow-x-auto w-full text-left">
+                  <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b font-bold text-gray-700">
                       <tr>
                         <th className="p-2 whitespace-nowrap">Bill No</th>
@@ -152,7 +152,7 @@ const TransactionHistory = () => {
               <div className="space-y-3 text-[11px] sm:text-xs">
                 <h4 className="font-bold text-slate-800">Supplier Payments Log</h4>
                 <div className="overflow-x-auto border rounded">
-                  <table className="block w-full overflow-x-auto w-full text-left">
+                  <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b font-bold text-gray-700">
                       <tr>
                         <th className="p-2 whitespace-nowrap">Payment No</th>
@@ -186,7 +186,7 @@ const TransactionHistory = () => {
               <div className="space-y-3 text-[11px] sm:text-xs">
                 <h4 className="font-bold text-slate-800">Purchase Returns history (Debit Notes)</h4>
                 <div className="overflow-x-auto border rounded">
-                  <table className="block w-full overflow-x-auto w-full text-left">
+                  <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b font-bold text-gray-700">
                       <tr>
                         <th className="p-2 whitespace-nowrap">Debit Note No</th>
@@ -218,7 +218,7 @@ const TransactionHistory = () => {
               <div className="space-y-3 text-[11px] sm:text-xs">
                 <h4 className="font-bold text-slate-800">Supplier General Ledger postings</h4>
                 <div className="overflow-x-auto border rounded border-slate-200">
-                  <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse">
                     <thead className="bg-slate-50/50 shadow-inner border border-slate-200 text-slate-800 font-bold">
                       <tr>
                         <th className="p-2 whitespace-nowrap">Date</th>

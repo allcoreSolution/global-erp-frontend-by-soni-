@@ -84,7 +84,7 @@ const SalespersonWiseSales = () => {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total Sales Staff', val: '24', color: 'bg-blue-50 text-blue-700 border-blue-200' },
           { label: 'Top Performer', val: 'Neha Gupta', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -102,7 +102,7 @@ const SalespersonWiseSales = () => {
 
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors group">Employee ID</th>

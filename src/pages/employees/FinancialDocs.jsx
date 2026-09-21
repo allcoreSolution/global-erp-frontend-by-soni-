@@ -107,7 +107,7 @@ const FinancialDocs = () => {
         <p className="text-[11px] sm:text-xs text-gray-500">Edit payroll structure settings, bank routing profiles, and statutory identity numbers (PAN/Aadhaar).</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sidebar list */}
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Employees Directory</div>
@@ -151,7 +151,7 @@ const FinancialDocs = () => {
                 <form onSubmit={handleSave} className="space-y-4 text-[11px] sm:text-xs">
                   <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-3">
                     <h4 className="font-bold text-slate-800 uppercase tracking-wide">Salary Details</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[10px] text-gray-500 uppercase mb-0.5">Basic Salary (₹)</label>
                         <input
@@ -184,7 +184,7 @@ const FinancialDocs = () => {
 
                   <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-3">
                     <h4 className="font-bold text-slate-800 uppercase tracking-wide">Bank Details</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <input
                         type="text"
                         placeholder="Bank Name"
@@ -209,7 +209,7 @@ const FinancialDocs = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">PAN Number</label>
                       <input
@@ -239,7 +239,7 @@ const FinancialDocs = () => {
                 </form>
               ) : (
                 <div className="space-y-4 text-[11px] sm:text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                       <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><CreditCard size={14} className="text-indigo-600" /> Salary Configuration</h4>
                       <p><span className="text-gray-500">Basic Monthly:</span> <strong className="text-gray-900">₹ {(activeEmp.basicSalary || 0).toLocaleString()}</strong></p>

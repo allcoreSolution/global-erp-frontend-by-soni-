@@ -301,7 +301,7 @@ const AddAppraisal = () => {
                 </h3>
               </div>
               <div className="p-5 overflow-x-auto">
-                <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="p-2 text-[10px] font-bold text-slate-500 uppercase rounded-l-lg border-y border-l border-slate-200">Goal</th>
@@ -475,7 +475,7 @@ const AddAppraisal = () => {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Increment</label>
                     <select value={finalAppraisal.increment} onChange={e => setFinalAppraisal({...finalAppraisal, increment: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">

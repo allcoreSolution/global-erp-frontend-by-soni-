@@ -106,7 +106,7 @@ const FinancialReports = () => {
       </div>
 
       {/* Stats Summary Panel */}
-      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-3 no-print">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 no-print">
         <div className="p-4 rounded-lg bg-blue-50/30 border border-blue-150 flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Accounting Standard</span>
@@ -132,7 +132,7 @@ const FinancialReports = () => {
       </div>
 
       {/* Grid of Financial Reports Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {financialReportsList.map((rep, idx) => {
           const IconComponent = rep.icon;
           return (

@@ -78,7 +78,7 @@ const ManageCompanies = () => {
         <p className="text-gray-500">Loading companies...</p>
       ) : (
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table className="block w-full overflow-x-auto w-full text-left text-sm text-gray-500 dark:text-gray-400">
+          <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
             <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-700 dark:text-gray-300">
               <tr>
                 <th className="px-6 py-4 font-semibold">Company Info</th>

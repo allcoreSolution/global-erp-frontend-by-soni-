@@ -144,7 +144,7 @@ const TaxFinancial = () => {
 
               {isEditing ? (
                 <form onSubmit={handleSave} className="space-y-5 text-xs sm:text-sm animate-in fade-in duration-300">
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GSTIN Registration</label>
                       <input
@@ -169,7 +169,7 @@ const TaxFinancial = () => {
                     <h4 className="font-extrabold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
                       <Building size={14} className="text-slate-500" /> Banking Coordinates
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bank Name</label>
                         <input
@@ -200,7 +200,7 @@ const TaxFinancial = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Opening Bal (₹)</label>
                       <input
@@ -254,7 +254,7 @@ const TaxFinancial = () => {
                 </form>
               ) : (
                 <div className="space-y-6 text-xs sm:text-sm animate-in fade-in duration-300">
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {/* Tax Passport block */}
                     <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4 group hover:border-indigo-200 transition-colors">
                       <div className="flex items-center justify-between mb-2">
@@ -266,7 +266,7 @@ const TaxFinancial = () => {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
+                      <div className="grid grid-cols-2 gap-4 font-mono">
                         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                           <div className="text-[10px] text-slate-500 mb-1 font-sans font-bold">GSTIN</div>
                           <div className="font-bold text-slate-800 text-xs sm:text-sm tracking-wider">{activeSupplier.gstin || 'N/A'}</div>
@@ -304,7 +304,7 @@ const TaxFinancial = () => {
                     <h4 className="font-extrabold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-3">
                       <CreditCard size={15} className="text-indigo-500" /> Credit Terms & Ledger
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                       <div className="flex items-start gap-3">
                         <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600 border border-emerald-100">
                           <DollarSign size={16} />

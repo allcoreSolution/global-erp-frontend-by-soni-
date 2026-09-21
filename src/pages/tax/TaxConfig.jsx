@@ -135,7 +135,7 @@ const TaxConfig = () => {
 
       {/* Responsive table */}
       <div className="overflow-x-auto rounded border border-slate-200">
-        <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
+        <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100 border-b font-semibold text-gray-700">
               <th className="p-2.5 sm:p-3">Code</th>
@@ -185,7 +185,7 @@ const TaxConfig = () => {
               {/* BASIC INFORMATION */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Basic Information</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Tax Code *</label>
                     <input type="text" disabled value={currentTax.id} className="w-full bg-slate-50 border p-2 rounded text-gray-500 text-xs cursor-not-allowed" />
@@ -223,7 +223,7 @@ const TaxConfig = () => {
               {/* GST CONFIGURATION */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">GST Configuration</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="md:col-span-1">
                     <label className="block text-xs font-semibold text-gray-700 mb-1">GST Type</label>
                     <select value={currentTax.gstType} onChange={(e) => setCurrentTax({ ...currentTax, gstType: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
@@ -268,7 +268,7 @@ const TaxConfig = () => {
                       </label>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Apply On</label>
                       <select value={currentTax.applyOn} onChange={(e) => setCurrentTax({ ...currentTax, applyOn: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
@@ -298,7 +298,7 @@ const TaxConfig = () => {
                 {/* TAX CALCULATION */}
                 <div>
                   <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Tax Calculation</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Calculation</label>
                       <select value={currentTax.calculation} onChange={(e) => setCurrentTax({ ...currentTax, calculation: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
@@ -322,7 +322,7 @@ const TaxConfig = () => {
                 {/* PLACE OF SUPPLY */}
                 <div>
                   <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Place of Supply</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">State</label>
                       <select value={currentTax.placeState} onChange={(e) => setCurrentTax({ ...currentTax, placeState: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
@@ -346,7 +346,7 @@ const TaxConfig = () => {
               {/* ACCOUNTING */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Accounting</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Input Tax Ledger</label>
                     <select value={currentTax.inputLedger} onChange={(e) => setCurrentTax({ ...currentTax, inputLedger: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
@@ -371,8 +371,8 @@ const TaxConfig = () => {
               {/* VALIDITY */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Validity</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Effective From</label>
                       <input type="date" value={currentTax.effectiveFrom} onChange={(e) => setCurrentTax({ ...currentTax, effectiveFrom: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs" />

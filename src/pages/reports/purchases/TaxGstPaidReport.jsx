@@ -43,7 +43,7 @@ const TaxGstPaidReport = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-xl border border-purple-100 shadow-sm">
           <p className="text-[11px] font-bold text-slate-500 uppercase">Total Taxable Value</p>
           <h3 className="text-xl font-bold text-slate-800 mt-2">$315,000.00</h3>
@@ -77,7 +77,7 @@ const TaxGstPaidReport = () => {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="block w-full overflow-x-auto w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
                 <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Date</th>

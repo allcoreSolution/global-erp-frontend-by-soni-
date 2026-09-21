@@ -115,7 +115,7 @@ const BusinessAnalysis = () => {
       </div>
 
       {/* Grid of Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* 1. TOP CUSTOMERS */}
         {(activeTab === 'All' || activeTab === 'Customers & Products') && (
@@ -246,7 +246,7 @@ const BusinessAnalysis = () => {
               </h3>
               <span className="text-[10px] text-emerald-600 font-semibold">{outstanding.netStatus}</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 border-b pb-3">
+            <div className="grid grid-cols-2 gap-2 border-b pb-3">
               <div>
                 <span className="text-[9px] text-gray-500 block uppercase font-bold">Total Receivables</span>
                 <span className="text-base font-extrabold text-slate-800">{outstanding.receivables}</span>
@@ -305,7 +305,7 @@ const BusinessAnalysis = () => {
               <span className="text-[10px] text-gray-400">Consolidated Operational Margin Log</span>
             </div>
             <div className="overflow-x-auto">
-              <table className="block w-full overflow-x-auto w-full text-left text-xs">
+              <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="text-gray-500 font-semibold border-b">
                     <th className="py-2">Month</th>

@@ -412,7 +412,7 @@ const AddShiftSetup = () => {
                 </h3>
               </div>
               <div className="p-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Start Time *</label>
                     <input type="time" name="startTime" value={form.startTime} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none" />
@@ -426,7 +426,7 @@ const AddShiftSetup = () => {
                   <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Working Hours (Auto)</label>
                   <input type="text" value={`${form.workingHours} Hrs`} disabled className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-emerald-600 font-bold" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Grace Time</label>
                     <div className="flex items-center gap-2">
@@ -442,7 +442,7 @@ const AddShiftSetup = () => {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="block text-[10px] font-bold text-slate-600 uppercase">Early Leaving</label>
@@ -479,7 +479,7 @@ const AddShiftSetup = () => {
                 </h3>
               </div>
               <div className="p-5 space-y-4 text-sm">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="block text-[11px] font-bold text-slate-600 uppercase">Break Applicable</label>
@@ -502,7 +502,7 @@ const AddShiftSetup = () => {
                 
                 {form.breakApplicable === 'Yes' && (
                   <div className="border rounded-xl overflow-hidden mt-4">
-                    <table className="block w-full overflow-x-auto w-full text-left text-xs">
+                    <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 border-b text-slate-600 uppercase">
                         <tr>
                           <th className="px-3 py-2 font-bold">Name</th>
@@ -573,7 +573,7 @@ const AddShiftSetup = () => {
                     {employees.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Effective From *</label>
                     <input type="date" name="effectiveFrom" value={form.effectiveFrom} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
@@ -602,7 +602,7 @@ const AddShiftSetup = () => {
                   <Moon size={14} className="text-slate-700" /> Night Shift
                 </h3>
               </div>
-              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 grid grid-cols-2 gap-4">
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-[11px] font-bold text-slate-600 uppercase">Night Shift</label>

@@ -130,7 +130,7 @@ const LeaveRequests = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         
         <div className="bg-slate-50 dark:bg-slate-50/50 shadow-inner border border-slate-200 border dark:border-slate-200/80 rounded-xl p-4 flex items-center justify-between">
           <div>
@@ -180,7 +180,7 @@ const LeaveRequests = () => {
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Leave Application Records Matrix</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="block w-full overflow-x-auto w-full text-left text-xs">
+          <table className="w-full text-left text-xs">
             <thead className="bg-slate-100/50 border-b border-gray-200 text-gray-500 font-semibold">
               <tr>
                 <th className="p-3">Req ID</th>
@@ -282,7 +282,7 @@ const LeaveRequests = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-600 mb-1">Start Date *</label>
                   <input 

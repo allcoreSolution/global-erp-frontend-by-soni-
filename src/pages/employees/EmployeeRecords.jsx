@@ -68,7 +68,7 @@ const EmployeeRecords = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sidebar list */}
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Employees Directory</div>
@@ -110,11 +110,11 @@ const EmployeeRecords = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Leaves */}
                 <div className="bg-slate-50 p-4 rounded border space-y-3">
                   <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Calendar size={14} className="text-indigo-600" /> Leave Balance Directory</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-center">
+                  <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="bg-white p-2 rounded border">
                       <span className="text-[10px] text-gray-500">Leaves Taken</span>
                       <p className="font-bold text-sm text-gray-800 mt-0.5">{activeEmp.leavesTaken || 0}</p>

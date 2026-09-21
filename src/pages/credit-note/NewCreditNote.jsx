@@ -295,12 +295,12 @@ const NewCreditNote = () => {
 
         <form onSubmit={handleSave} className="p-6 space-y-8">
           
-          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* SECTION: BASIC INFORMATION */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Credit Note No.</label>
                   <input type="text" name="creditNoteNo" value={form.creditNoteNo} readOnly className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm font-bold text-slate-600 cursor-not-allowed" />
@@ -359,7 +359,7 @@ const NewCreditNote = () => {
             {/* SECTION: CUSTOMER DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Customer Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer *</label>
                   <DynamicSelect 
@@ -389,7 +389,7 @@ const NewCreditNote = () => {
             {/* SECTION: ORIGINAL SALES DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Original Sales Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No. *</label>
                   <DynamicSelect 
@@ -427,7 +427,7 @@ const NewCreditNote = () => {
             </div>
             
             <div className="overflow-x-auto">
-              <table className="block w-full overflow-x-auto w-full text-left min-w-[800px]">
+              <table className="w-full text-left min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-50 text-slate-600">
                     <th className="px-2 py-2 text-xs font-bold uppercase w-1/4">Product</th>
@@ -486,7 +486,7 @@ const NewCreditNote = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* LEFT COLUMN: SETTLEMENT, ACCOUNTING & REMARKS */}
             <div className="lg:col-span-2 space-y-6">
@@ -494,7 +494,7 @@ const NewCreditNote = () => {
                {/* SECTION: SETTLEMENT / ADJUSTMENT */}
                <div className="border border-slate-200 rounded-lg p-5">
                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Settlement / Adjustment</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                    <div className="col-span-2 md:col-span-4">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
                      <DynamicSelect 
@@ -528,7 +528,7 @@ const NewCreditNote = () => {
                {/* SECTION: ACCOUNTING */}
                <div className="border border-slate-200 rounded-lg p-5">
                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Accounting</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="grid grid-cols-2 gap-4">
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Ledger</label>
                      <DynamicSelect 

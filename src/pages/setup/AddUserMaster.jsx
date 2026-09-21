@@ -264,7 +264,7 @@ const AddUserMaster = () => {
       <div className="max-w-7xl mx-auto space-y-6">
 
         <form onSubmit={handleSave} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* LEFT COLUMN */}
             <div className="space-y-6">
 
@@ -276,7 +276,7 @@ const AddUserMaster = () => {
                   </h3>
                 </div>
                 <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">User ID</label>
                       <input type="text" name="userId" value={form.userId} readOnly className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-500 outline-none" />
@@ -295,7 +295,7 @@ const AddUserMaster = () => {
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name *</label>
                     <input type="text" name="fullName" value={form.fullName} onChange={handleChange} required className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none" />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mobile No</label>
                       <input type="text" name="mobile" value={form.mobile} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none" />
@@ -325,7 +325,7 @@ const AddUserMaster = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Branch Access</label>
                       <select name="branchAccess" value={form.branchAccess} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none">
@@ -365,7 +365,7 @@ const AddUserMaster = () => {
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Username *</label>
                     <input type="text" name="username" value={form.username} onChange={handleChange} required autoComplete="new-password" placeholder="Choose username" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none" />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Password *</label>
                       <input type="password" name="password" value={form.password} onChange={handleChange} required autoComplete="new-password" className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none" />
@@ -405,7 +405,7 @@ const AddUserMaster = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status</label>
                       <select name="status" value={form.status} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none">
@@ -445,7 +445,7 @@ const AddUserMaster = () => {
                     <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Module Permissions</h3>
                   </div>
                   <div className="p-0 overflow-x-auto">
-                    <table className="block w-full overflow-x-auto w-full text-left text-xs">
+                    <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 border-b text-slate-500">
                         <tr>
                           <th className="px-5 py-3 font-bold">Module / Page Name</th>
@@ -504,7 +504,7 @@ const AddUserMaster = () => {
                     <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Approval Permissions</h3>
                   </div>
                   <div className="p-0 overflow-x-auto">
-                    <table className="block w-full overflow-x-auto w-full text-left text-xs">
+                    <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 border-b text-slate-500">
                         <tr>
                           <th className="px-5 py-3 font-bold">Transaction Type</th>

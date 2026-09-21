@@ -81,7 +81,7 @@ const ProfitAndLoss = () => {
         {/* Expenses Side */}
         <div className="border rounded overflow-hidden">
           <div className="bg-rose-50 border-b border-rose-100 p-2 font-bold text-rose-800">Expenses (Dr)</div>
-          <table className="block w-full overflow-x-auto w-full text-left">
+          <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading expenses...</td></tr>
@@ -114,7 +114,7 @@ const ProfitAndLoss = () => {
         {/* Income Side */}
         <div className="border rounded overflow-hidden">
           <div className="bg-blue-50 border-b border-blue-100 p-2 font-bold text-blue-800">Income (Cr)</div>
-          <table className="block w-full overflow-x-auto w-full text-left">
+          <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading income...</td></tr>

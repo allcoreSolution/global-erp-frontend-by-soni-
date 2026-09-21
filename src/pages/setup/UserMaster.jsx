@@ -218,7 +218,7 @@ const UserMaster = () => {
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 font-semibold">Active ERP Users Database</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="block w-full overflow-x-auto w-full text-left text-xs">
+          <table className="w-full text-left text-xs">
             <thead className="bg-slate-100/50 border-b border-gray-200 text-gray-500 font-semibold">
               <tr>
                 <th className="p-3">User ID</th>
@@ -275,7 +275,7 @@ const UserMaster = () => {
               </button>
             </div>
             <form onSubmit={handleCreateUser} className="p-4 space-y-4 text-xs font-semibold">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-600 mb-1">Username (Login ID)</label>
                   <input 
@@ -310,7 +310,7 @@ const UserMaster = () => {
                   required
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-600 mb-1">Role Assigned</label>
                   <select 

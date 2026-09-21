@@ -88,7 +88,7 @@ const PurchaseAmountReport = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total Invoices', val: '280', color: 'bg-blue-50 text-blue-700 border-blue-200' },
           { label: 'Total Purchase Amount', val: '₹ 2.4 Cr', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: <TrendingDown size={16} className="ml-1 inline-block opacity-70" /> },
@@ -107,7 +107,7 @@ const PurchaseAmountReport = () => {
       {/* Data Table */}
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors group">

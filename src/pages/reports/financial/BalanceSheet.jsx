@@ -78,7 +78,7 @@ const BalanceSheet = () => {
         {/* Liabilities */}
         <div className="border rounded overflow-hidden">
           <div className="bg-rose-50 border-b border-rose-100 p-2 font-bold text-rose-800">Liabilities & Capital</div>
-          <table className="block w-full overflow-x-auto w-full text-left">
+          <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading liabilities...</td></tr>
@@ -105,7 +105,7 @@ const BalanceSheet = () => {
         {/* Assets */}
         <div className="border rounded overflow-hidden">
           <div className="bg-emerald-50 border-b border-emerald-100 p-2 font-bold text-emerald-800">Assets & Properties</div>
-          <table className="block w-full overflow-x-auto w-full text-left">
+          <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading assets...</td></tr>

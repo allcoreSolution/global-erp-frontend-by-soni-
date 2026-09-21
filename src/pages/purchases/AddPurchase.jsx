@@ -433,7 +433,7 @@ const AddPurchase = () => {
           <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">Order Table *</h2>
           
           <div className="overflow-x-auto border border-blue-500 rounded-lg">
-            <table className="block w-full overflow-x-auto w-full text-left border-collapse min-w-[900px]">
+            <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-blue-500">
                   <th className="px-4 py-3 text-xs font-bold uppercase text-gray-700">Product</th>
@@ -565,7 +565,7 @@ const AddPurchase = () => {
         </div>
 
         {/* Global Footer parameters selectors */}
-        <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-2">
           {/* Global Order Tax */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Order Tax</label>
@@ -616,7 +616,7 @@ const AddPurchase = () => {
         </div>
 
         {/* Global Summary Ribbon indicators */}
-        <div className="bg-gray-50 border border-blue-500 rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 md:grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center font-semibold text-xs tracking-wider text-gray-700 uppercase">
+        <div className="bg-gray-50 border border-blue-500 rounded-lg p-4 grid grid-cols-2 md:grid-cols-6 gap-4 text-center font-semibold text-xs tracking-wider text-gray-700 uppercase">
           <div className="border-r border-blue-500/20 last:border-none">
             <div className="text-gray-500 mb-1">Items</div>
             <div className="text-sm font-bold text-gray-900">{totalItemsCount} ({totalQuantity})</div>

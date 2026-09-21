@@ -225,7 +225,7 @@ const SalarySlips = () => {
       {view === 'list' ? (
         // LIST VIEW
         <div className="overflow-x-auto border rounded-lg">
-          <table className="block w-full overflow-x-auto w-full text-left text-sm">
+          <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 border-b text-slate-600 font-semibold">
               <tr>
                 <th className="p-3">Employee</th>
@@ -424,7 +424,7 @@ const SalarySlips = () => {
                   </div>
 
                   {/* Employee Details Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-5 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4 p-5 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="space-y-3 text-xs">
                       <div className="flex justify-between border-b border-slate-200 pb-1">
                         <span className="text-slate-500">Employee Name:</span>
@@ -464,7 +464,7 @@ const SalarySlips = () => {
                   </div>
 
                   {/* Earnings & Deductions Tables */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                  <div className="grid grid-cols-2 gap-0 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                     
                     {/* Earnings */}
                     <div className="border-r border-slate-200">
@@ -562,7 +562,7 @@ const SalarySlips = () => {
                     <h3 className="text-xs font-bold mt-2 bg-slate-100 px-3 py-1 rounded inline-block text-slate-700">SALARY SLIP FOR {activeSlip.month.toUpperCase()} {activeSlip.year}</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] border-b pb-3">
+                  <div className="grid grid-cols-2 gap-4 text-[10px] border-b pb-3">
                     <div className="space-y-1">
                       <p><strong>Employee Name:</strong> {activeSlip.employee?.name}</p>
                       <p><strong>Employee ID:</strong> {activeSlip.employee?.id}</p>
@@ -576,7 +576,7 @@ const SalarySlips = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 border border-gray-200 divide-x text-[10px]">
+                  <div className="grid grid-cols-2 border border-gray-200 divide-x text-[10px]">
                     {/* Earnings Column */}
                     <div>
                       <div className="bg-slate-50 font-bold p-2 border-b">EARNINGS</div>
@@ -598,7 +598,7 @@ const SalarySlips = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 border border-t-0 border-gray-200 divide-x text-[10px] font-bold">
+                  <div className="grid grid-cols-2 border border-t-0 border-gray-200 divide-x text-[10px] font-bold">
                     <div className="flex justify-between p-2"><span>Gross Earnings:</span><span>₹{activeSlip.totals.grossEarnings?.toLocaleString('en-IN')}</span></div>
                     <div className="flex justify-between p-2"><span>Total Deductions:</span><span>₹{activeSlip.totals.totalDeductions?.toLocaleString('en-IN')}</span></div>
                   </div>
@@ -650,7 +650,7 @@ const SalarySlips = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[10px] text-gray-600 bg-slate-50 p-3 rounded-lg">
+                  <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-600 bg-slate-50 p-3 rounded-lg">
                     <div>
                       <span className="text-gray-400 font-bold block mb-0.5">EMPLOYEE</span>
                       <strong>{activeSlip.employee?.name}</strong>
@@ -699,12 +699,12 @@ const SalarySlips = () => {
                   </div>
 
                   <div className="p-4 border border-t-0 rounded-b-lg space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] bg-slate-50 p-2.5 rounded">
+                    <div className="grid grid-cols-2 gap-4 text-[10px] bg-slate-50 p-2.5 rounded">
                       <p><strong>Employee:</strong> {activeSlip.employee?.name} ({activeSlip.employee?.id})</p>
                       <p className="text-right"><strong>Role:</strong> {activeSlip.employee?.designation}</p>
                     </div>
 
-                    <table className="block w-full overflow-x-auto w-full text-left text-[10px]">
+                    <table className="w-full text-left text-[10px]">
                       <thead>
                         <tr className="border-b font-bold text-gray-500">
                           <th className="py-1">Salary Heads</th>

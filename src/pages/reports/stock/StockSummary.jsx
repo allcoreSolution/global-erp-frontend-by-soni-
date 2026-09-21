@@ -87,7 +87,7 @@ const StockSummary = () => {
       </div>
 
       <div className="border rounded overflow-x-auto text-xs mt-4">
-        <table className="block w-full overflow-x-auto w-full text-left">
+        <table className="w-full text-left">
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="p-3">Stock Group</th>

@@ -219,7 +219,7 @@ const SaleList = () => {
 
       {/* Table view log grid */}
       <div className="overflow-x-auto border border-blue-500 rounded-lg">
-        <table className="block w-full overflow-x-auto w-full text-left border-collapse min-w-[1200px]">
+        <table className="w-full text-left border-collapse min-w-[1200px]">
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700 text-center w-16">Action</th>

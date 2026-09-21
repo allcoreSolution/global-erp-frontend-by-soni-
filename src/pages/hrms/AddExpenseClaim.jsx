@@ -285,7 +285,7 @@ const AddExpenseClaim = () => {
 
         <form onSubmit={handleSave} className="p-6 md:p-8 space-y-8">
           
-          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
              
              {/* LEFT & CENTER COLUMNS */}
              <div className="lg:col-span-2 space-y-8">
@@ -379,7 +379,7 @@ const AddExpenseClaim = () => {
                   </div>
                   
                   <div className="overflow-x-auto rounded-lg border border-slate-200">
-                    <table className="block w-full overflow-x-auto w-full text-left border-collapse bg-white">
+                    <table className="w-full text-left border-collapse bg-white">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
                           <th className="p-2 text-[10px] font-bold text-slate-500 uppercase">Date</th>
@@ -475,7 +475,7 @@ const AddExpenseClaim = () => {
                        <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Purpose *</label>
                        <textarea name="purpose" value={form.purpose} onChange={handleChange} required rows="2" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none resize-none" placeholder="Why was this expense incurred?"></textarea>
                      </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     <div className="grid grid-cols-2 gap-3">
                        <div>
                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Project</label>
                          <input type="text" name="project" value={form.project} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none" />
@@ -485,7 +485,7 @@ const AddExpenseClaim = () => {
                          <input type="text" name="client" value={form.client} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none" />
                        </div>
                      </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     <div className="grid grid-cols-2 gap-3">
                        <div>
                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Cost Center</label>
                          <input type="text" name="costCenter" value={form.costCenter} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none" />
@@ -506,7 +506,7 @@ const AddExpenseClaim = () => {
                      <Briefcase size={14} className="text-slate-500"/> Travel Details
                    </h3>
                    <div className="space-y-4">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     <div className="grid grid-cols-2 gap-3">
                        <div>
                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">From</label>
                          <input type="text" name="travelFrom" value={form.travelFrom} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none" placeholder="City/Area" />
@@ -516,7 +516,7 @@ const AddExpenseClaim = () => {
                          <input type="text" name="travelTo" value={form.travelTo} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none" placeholder="City/Area" />
                        </div>
                      </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     <div className="grid grid-cols-2 gap-3">
                        <div>
                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Mode</label>
                          <div className="flex gap-2">
@@ -602,7 +602,7 @@ const AddExpenseClaim = () => {
                     <CheckSquare size={14} className="text-slate-500"/> Approval Details
                   </h3>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Manager</label>
                         <div className="flex gap-2">
@@ -632,7 +632,7 @@ const AddExpenseClaim = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Approved Amt</label>
                         <input type="text" name="approvedAmount" value={form.approvedAmount} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none" />
@@ -659,7 +659,7 @@ const AddExpenseClaim = () => {
                     <Landmark size={14} className="text-slate-500"/> Payment Info
                   </h3>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Payment Status</label>
                         <select name="paymentStatus" value={form.paymentStatus} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-2 py-2 text-xs focus:border-violet-500 outline-none bg-white">
@@ -687,7 +687,7 @@ const AddExpenseClaim = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Payment Date</label>
                         <input type="date" name="paymentDate" value={form.paymentDate} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs focus:border-violet-500 outline-none" />
