@@ -184,7 +184,7 @@ const StockCount = () => {
 
       {/* Table View */}
       <div className="overflow-x-auto border border-blue-500 rounded-lg">
-        <table className="w-full text-left border-collapse">
+        <table className="block w-full overflow-x-auto w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>
@@ -499,7 +499,7 @@ const StockCount = () => {
               {/* 3. Product Selection */}
               <div>
                 <h4 className="text-sm font-bold text-indigo-600 mb-3 border-b pb-1">🔍 3. Product Selection</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Product Category</label>
                     <select className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white outline-none focus:border-blue-450"><option>All Categories</option></select>

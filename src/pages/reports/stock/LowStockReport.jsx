@@ -87,7 +87,7 @@ const LowStockReport = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Alerts', val: data.length.toString(), color: 'bg-rose-50 text-rose-700 border-rose-200' },
           { label: 'Critical Items', val: data.filter(d => d.currentStock === 0).length.toString(), color: 'bg-red-50 text-red-700 border-red-200' },
@@ -104,7 +104,7 @@ const LowStockReport = () => {
       {/* Data Table */}
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors group">

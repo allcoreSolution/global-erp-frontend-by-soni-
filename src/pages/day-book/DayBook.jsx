@@ -183,7 +183,7 @@ const DayBook = () => {
         {/* Data Table */}
         <div className="p-6">
           <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full text-left min-w-[900px] border-collapse">
+            <table className="block w-full overflow-x-auto w-full text-left min-w-[900px] border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-600 border-b border-slate-200">
                   <th className="px-4 py-3 text-xs font-bold uppercase w-28">Date</th>

@@ -82,7 +82,7 @@ const UserRoles = () => {
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="block w-full overflow-x-auto w-full text-left text-xs">
                 <thead className="bg-slate-100/50 border-b border-gray-200 text-gray-500 font-semibold">
                   <tr>
                     <th className="p-3">User ID</th>
@@ -129,7 +129,7 @@ const UserRoles = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
 
           {/* Left: Roles List */}
           <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
@@ -167,9 +167,9 @@ const UserRoles = () => {
             
             <div className="space-y-4 pt-2">
               {Object.keys(permissions).map((module) => (
-                <div key={module} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-center border-b pb-3">
+                <div key={module} className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 items-center border-b pb-3">
                   <span className="text-xs font-bold text-slate-800 sm:col-span-1">{module}</span>
-                  <div className="grid grid-cols-4 gap-2 sm:col-span-4 text-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:col-span-4 text-center">
                     {['view', 'add', 'edit', 'delete'].map((action) => (
                       <label 
                         key={action}

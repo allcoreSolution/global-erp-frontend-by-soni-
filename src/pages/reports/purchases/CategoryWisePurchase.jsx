@@ -43,7 +43,7 @@ const CategoryWisePurchase = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-xl border border-purple-100 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-purple-50 rounded-lg text-purple-600">
             <LayoutGrid size={24} />
@@ -88,7 +88,7 @@ const CategoryWisePurchase = () => {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="block w-full overflow-x-auto w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
                 <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Category Name</th>

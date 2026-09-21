@@ -21,7 +21,7 @@ export const IndustrySolutions = () => {
         <div className="text-[10px] text-gray-400 dark:text-gray-500">(Use ERP for Any Industry)</div>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:grid-cols-9 gap-4">
         {industries.map((item, idx) => (
           <div key={idx} className="flex flex-col items-center text-center group cursor-pointer">
             <item.icon size={28} className={`${item.color} mb-2 group-hover:scale-110 transition-transform`} strokeWidth={1.5} />

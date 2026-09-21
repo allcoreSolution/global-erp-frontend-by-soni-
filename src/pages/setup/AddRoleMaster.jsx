@@ -201,7 +201,7 @@ const AddRoleMaster = () => {
                 <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Module Permissions</h3>
               </div>
               <div className="p-0 overflow-auto max-h-[300px]">
-                <table className="w-full text-left text-xs relative">
+                <table className="block w-full overflow-x-auto w-full text-left text-xs relative">
                   <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
                     <tr>
                       <th className="px-5 py-3 font-bold">Module</th>
@@ -249,7 +249,7 @@ const AddRoleMaster = () => {
                 <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Approval Permissions</h3>
               </div>
               <div className="p-0 overflow-auto max-h-[300px]">
-                <table className="w-full text-left text-xs relative">
+                <table className="block w-full overflow-x-auto w-full text-left text-xs relative">
                   <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
                     <tr>
                       <th className="px-5 py-3 font-bold">Approval Type</th>
@@ -375,7 +375,7 @@ const AddRoleMaster = () => {
                 </h3>
               </div>
               <div className="p-0 overflow-auto max-h-[300px]">
-                <table className="w-full text-left text-xs relative">
+                <table className="block w-full overflow-x-auto w-full text-left text-xs relative">
                   <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
                     <tr>
                       <th className="px-5 py-3 font-bold">Permission</th>

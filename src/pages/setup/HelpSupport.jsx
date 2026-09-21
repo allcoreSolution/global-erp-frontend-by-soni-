@@ -75,7 +75,7 @@ const HelpSupport = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Column 1: Shortcuts Directory */}
         <div className="border border-gray-250 rounded-xl p-4 bg-white space-y-3 h-fit">

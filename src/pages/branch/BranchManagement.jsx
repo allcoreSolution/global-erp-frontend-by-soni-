@@ -73,7 +73,7 @@ const BranchManagement = () => {
         <p className="text-[11px] sm:text-xs text-gray-500">Configure branch managers hierarchy, local warehouse inventories, bank account clearings, and tax definitions.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
         {/* Branch selector sidebar */}
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Active Branches</div>
@@ -111,7 +111,7 @@ const BranchManagement = () => {
 
               {isEditing ? (
                 <form onSubmit={handleSave} className="space-y-4 text-[11px] sm:text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Branch Manager</label>
                       <input
@@ -170,7 +170,7 @@ const BranchManagement = () => {
                   </div>
                 </form>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] sm:text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 text-[11px] sm:text-xs">
                   <div className="bg-slate-50 p-4 rounded border space-y-2.5">
                     <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><User size={14} className="text-indigo-600" /> Administrative Head</h4>
                     <p><span className="text-gray-500">Branch Manager:</span> <strong className="text-gray-900 text-indigo-600">{activeBranch.manager}</strong></p>

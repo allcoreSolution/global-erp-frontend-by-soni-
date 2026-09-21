@@ -106,7 +106,7 @@ const TaxMapping = () => {
       </div>
 
       {/* Grid mappings */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
         {mappings.map(m => (
           <div key={m.id} className="bg-slate-50 border rounded-lg p-4 space-y-2 relative">
             <div className="flex justify-between items-center border-b pb-2">
@@ -144,7 +144,7 @@ const TaxMapping = () => {
               {/* BASIC INFORMATION */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Basic Information</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">HSN Map Code</label>
                     <input type="text" disabled value={currentMap.id} className="w-full bg-slate-50 border p-2 rounded text-gray-500 text-xs cursor-not-allowed" />
@@ -170,7 +170,7 @@ const TaxMapping = () => {
               {/* PRODUCT MAPPING */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Product Mapping</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Company *</label>
                     <select required value={currentMap.company} onChange={(e) => setCurrentMap({ ...currentMap, company: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
@@ -210,7 +210,7 @@ const TaxMapping = () => {
               {/* TAX MAPPING */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Tax Mapping</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                   <div className="md:col-span-1">
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Tax Configuration *</label>
                     <select required value={currentMap.taxConfig} onChange={(e) => {
@@ -254,8 +254,8 @@ const TaxMapping = () => {
               {/* VALIDITY */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Validity</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Effective From *</label>
                       <input type="date" required value={currentMap.effectiveFrom} onChange={(e) => setCurrentMap({ ...currentMap, effectiveFrom: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs" />

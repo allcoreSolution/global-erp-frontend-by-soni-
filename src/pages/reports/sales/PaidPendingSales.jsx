@@ -69,7 +69,7 @@ const PaidPendingSales = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Current Pending (0-30)', val: '₹ 4.5 L', color: 'bg-blue-50 text-blue-700 border-blue-200' },
           { label: 'Overdue (30-60 Days)', val: '₹ 1.2 L', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -88,7 +88,7 @@ const PaidPendingSales = () => {
 
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4">Customer Name</th>

@@ -111,7 +111,7 @@ const TdsSales = () => {
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">TDS Receivables Register</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="block w-full overflow-x-auto w-full text-left text-xs">
             <thead className="bg-slate-100/50 border-b border-gray-200">
               <tr>
                 <th className="p-3 font-semibold text-gray-600">Client / Customer Name</th>

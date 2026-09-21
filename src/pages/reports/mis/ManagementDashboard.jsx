@@ -138,7 +138,7 @@ const ManagementDashboard = () => {
       </div>
 
       {/* Main Grid Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* 1. SALES SUMMARY */}
         {(activeTab === 'All' || activeTab === 'Sales & Purchases') && (
@@ -289,7 +289,7 @@ const ManagementDashboard = () => {
                 <Layers size={18} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div>
                 <span className="text-[10px] text-gray-500 block">Receivable</span>
                 <span className="text-base font-extrabold text-slate-800">{summaries.receivablesPayables.receivable}</span>

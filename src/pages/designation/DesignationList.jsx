@@ -202,7 +202,7 @@ const DesignationList = () => {
 
       {/* Table responsive */}
       <div className="overflow-x-auto rounded border border-slate-200">
-        <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
+        <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100 border-b font-semibold text-gray-700">
               <th className="p-2.5 sm:p-3">Code</th>
@@ -256,7 +256,7 @@ const DesignationList = () => {
               <button onClick={() => setIsModalOpen(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-3.5 text-xs sm:text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Role Code *</label>
                   <input

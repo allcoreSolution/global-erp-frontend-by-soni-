@@ -109,7 +109,7 @@ const Utilities = () => {
       </div>
 
       {/* Control Actions Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-semibold no-print">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-semibold no-print">
         <div className="bg-slate-50 p-4 border rounded-lg space-y-2 flex flex-col justify-between">
           <div>
             <h3 className="font-bold text-slate-800 text-[12px] sm:text-[13px] flex items-center gap-1.5"><Download size={14} className="text-indigo-600" /> Export Registry</h3>
@@ -144,7 +144,7 @@ const Utilities = () => {
       {/* Advanced Search Filter Demonstration */}
       <div className="border rounded-lg p-4 space-y-4">
         <h3 className="font-bold text-[11px] sm:text-xs uppercase text-slate-700 tracking-wider">Search Filters Testing Matrix</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs no-print">
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-3 text-xs no-print">
           <input
             type="text"
             placeholder="Search by ID, Name or Contact..."
@@ -168,7 +168,7 @@ const Utilities = () => {
 
         {/* Demo filtered list */}
         <div className="border rounded overflow-x-auto text-[10px] sm:text-[11px]">
-          <table className="w-full text-left">
+          <table className="block w-full overflow-x-auto w-full text-left">
             <thead className="bg-slate-50 border-b">
               <tr>
                 <th className="p-2 whitespace-nowrap">Code</th>

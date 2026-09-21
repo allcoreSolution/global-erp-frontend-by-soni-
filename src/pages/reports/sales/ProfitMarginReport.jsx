@@ -71,7 +71,7 @@ const ProfitMarginReport = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Sales Revenue', val: '₹ 80.5 L', color: 'bg-blue-50 text-blue-700 border-blue-200' },
           { label: 'Total COGS (Cost)', val: '₹ 56.1 L', color: 'bg-rose-50 text-rose-700 border-rose-200' },
@@ -89,7 +89,7 @@ const ProfitMarginReport = () => {
 
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4">SKU Code</th>

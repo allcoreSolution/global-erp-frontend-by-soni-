@@ -152,14 +152,14 @@ const BackupRestore = () => {
       </div>
 
       {/* History table and activity logs */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
         {/* Backup History Table */}
         <div className="border border-slate-200/70 rounded-2xl overflow-hidden bg-white shadow-sm lg:col-span-2">
           <div className="bg-slate-50/50 p-4 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">System Backups Log History</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="block w-full overflow-x-auto w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   <th className="p-4 font-bold text-slate-600">Backup Version</th>

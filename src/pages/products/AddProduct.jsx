@@ -671,7 +671,7 @@ const AddProduct = () => {
         <div className="bg-transparent rounded-xl border border-blue-500 p-6 shadow-xl space-y-6">
           <h2 className="text-lg font-semibold text-black border-b border-blue-500/50 pb-2">Media & Description</h2>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Product Image */}
             <div className="lg:col-span-1">

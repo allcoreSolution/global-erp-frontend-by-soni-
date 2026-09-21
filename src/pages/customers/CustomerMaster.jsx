@@ -344,7 +344,7 @@ const CustomerMaster = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3 mb-6 bg-slate-50 p-3 sm:p-4 rounded-lg no-print">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-6 bg-slate-50 p-3 sm:p-4 rounded-lg no-print">
         <div className="relative col-span-1 sm:col-span-2 md:col-span-2">
           <Search size={15} className="absolute left-3 top-2.5 text-gray-400" />
           <input
@@ -394,7 +394,7 @@ const CustomerMaster = () => {
 
       {/* Customers Table */}
       <div className="overflow-x-auto rounded-lg border border-slate-200 mb-4">
-        <table className="w-full text-left border-collapse text-[10px] sm:text-xs md:text-sm">
+        <table className="block w-full overflow-x-auto w-full text-left border-collapse text-[10px] sm:text-xs md:text-sm">
           <thead>
             <tr className="bg-slate-100 border-b border-slate-200 font-semibold text-gray-700">
               <th className="p-2 sm:p-3">Customer ID</th>
@@ -550,7 +550,7 @@ const CustomerMaster = () => {
             <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 text-xs sm:text-sm">
               {activeFormTab === 'basic' && (
                 <div className="space-y-4 sm:space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Customer Name *</label>
                       <input type="text" required placeholder="e.g. Ramesh Kumar" value={customerForm.name} onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
@@ -604,7 +604,7 @@ const CustomerMaster = () => {
                       <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-2 sm:mb-3 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-600" /> Billing Address</h4>
                       <div className="space-y-2 sm:space-y-3">
                         <textarea placeholder="Street Address" rows="2" value={customerForm.billingAddress.street} onChange={(e) => setCustomerForm({ ...customerForm, billingAddress: { ...customerForm.billingAddress, street: e.target.value } })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           <input type="text" placeholder="State" value={customerForm.billingAddress.state} onChange={(e) => setCustomerForm({ ...customerForm, billingAddress: { ...customerForm.billingAddress, state: e.target.value } })} className="border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
                           <input type="text" placeholder="City" value={customerForm.billingAddress.city} onChange={(e) => setCustomerForm({ ...customerForm, billingAddress: { ...customerForm.billingAddress, city: e.target.value } })} className="border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
                         </div>
@@ -621,7 +621,7 @@ const CustomerMaster = () => {
                       </div>
                       <div className="space-y-2 sm:space-y-3">
                         <textarea placeholder="Street Address" rows="2" disabled={copyAddress} value={copyAddress ? customerForm.billingAddress.street : customerForm.shippingAddress.street} onChange={(e) => setCustomerForm({ ...customerForm, shippingAddress: { ...customerForm.shippingAddress, street: e.target.value } })} className={`w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none ${copyAddress ? 'bg-slate-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`} />
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           <input type="text" placeholder="State" disabled={copyAddress} value={copyAddress ? customerForm.billingAddress.state : customerForm.shippingAddress.state} onChange={(e) => setCustomerForm({ ...customerForm, shippingAddress: { ...customerForm.shippingAddress, state: e.target.value } })} className={`border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none ${copyAddress ? 'bg-slate-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`} />
                           <input type="text" placeholder="City" disabled={copyAddress} value={copyAddress ? customerForm.billingAddress.city : customerForm.shippingAddress.city} onChange={(e) => setCustomerForm({ ...customerForm, shippingAddress: { ...customerForm.shippingAddress, city: e.target.value } })} className={`border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none ${copyAddress ? 'bg-slate-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`} />
                         </div>
@@ -634,7 +634,7 @@ const CustomerMaster = () => {
 
               {activeFormTab === 'business' && (
                 <div className="space-y-4 sm:space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">{customerForm.type} Code / ID *</label>
                       <input type="text" disabled value={customerForm.customerCode || 'Auto Generated'} className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs sm:text-sm text-gray-500 cursor-not-allowed" />
@@ -722,7 +722,7 @@ const CustomerMaster = () => {
                   {customerForm.type === 'Retailer' && (
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                       <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><FileText size={14} className="text-indigo-600" /> Documents Upload</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                         <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
                           <p className="text-xs font-medium text-slate-700 mb-1">GST Certificate</p>
                           {customerForm.gstCertificate ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
@@ -750,7 +750,7 @@ const CustomerMaster = () => {
                   {customerForm.type === 'Wholesaler' && (
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                       <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><Building size={14} className="text-indigo-600" /> Warehouse Details</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Warehouse Name</label>
                           <input type="text" placeholder="Main Warehouse" value={customerForm.warehouseName} onChange={(e) => setCustomerForm({ ...customerForm, warehouseName: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
@@ -774,7 +774,7 @@ const CustomerMaster = () => {
                   {customerForm.type === 'Distributor' && (
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                       <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-600" /> Logistics Details</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Linked Warehouse</label>
                           <input type="text" placeholder="Warehouse Name" value={customerForm.logisticsWarehouse} onChange={(e) => setCustomerForm({ ...customerForm, logisticsWarehouse: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
@@ -894,7 +894,7 @@ const CustomerMaster = () => {
               {activeViewTab === 'general' && (
                 <div className="space-y-4 sm:space-y-6">
                   {/* Basic Details Grid */}
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-100">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-100">
                     <div>
                       <span className="text-[10px] sm:text-xs text-gray-500">Customer Type</span>
                       <p className="font-semibold text-gray-800 text-xs sm:text-sm">{viewCustomer.type}</p>
@@ -914,7 +914,7 @@ const CustomerMaster = () => {
                   </div>
 
                   {/* Financial Metrics */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div className="p-2 sm:p-3 bg-red-50 rounded-lg text-center border border-red-100">
                       <span className="text-[9px] sm:text-[10px] uppercase font-bold text-red-500">Credit Limit</span>
                       <p className="font-bold text-gray-800 mt-1 text-[11px] sm:text-xs md:text-sm">₹ {viewCustomer.creditLimit.toLocaleString()}</p>
@@ -930,7 +930,7 @@ const CustomerMaster = () => {
                   </div>
 
                   {/* Addresses */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="border border-slate-200 p-3 rounded-lg">
                       <h4 className="font-bold text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider mb-2">Billing Address</h4>
                       <p className="text-gray-800 text-xs sm:text-sm">{viewCustomer.billingAddress.street}</p>
@@ -950,7 +950,7 @@ const CustomerMaster = () => {
                     <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 font-bold text-[10px] sm:text-xs text-slate-700 uppercase">
                       Tax & Banking Credentials
                     </div>
-                    <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
+                    <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <span className="text-[10px] sm:text-xs text-gray-500">GSTIN</span>
                         <p className="font-mono font-semibold text-gray-800 text-xs sm:text-sm">{viewCustomer.gstin || 'N/A'}</p>
@@ -974,7 +974,7 @@ const CustomerMaster = () => {
                 <div className="space-y-4">
                   <h4 className="font-bold text-gray-800 text-xs sm:text-sm">Customer Invoices (Sales Log)</h4>
                   <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                    <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
+                    <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-100 border-b border-slate-200 font-semibold text-gray-700">
                           <th className="p-2 sm:p-3">Invoice No</th>
@@ -1013,7 +1013,7 @@ const CustomerMaster = () => {
                 <div className="space-y-4">
                   <h4 className="font-bold text-gray-800 text-xs sm:text-sm">Receipts & Payment History</h4>
                   <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                    <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
+                    <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-100 border-b border-slate-200 font-semibold text-gray-700">
                           <th className="p-2 sm:p-3">Receipt No</th>
@@ -1049,7 +1049,7 @@ const CustomerMaster = () => {
                 <div className="space-y-4">
                   <h4 className="font-bold text-gray-800 text-xs sm:text-sm">Sales Return Log (Credit Notes)</h4>
                   <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                    <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
+                    <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-100 border-b border-slate-200 font-semibold text-gray-700">
                           <th className="p-2 sm:p-3">Credit Note No</th>
@@ -1088,7 +1088,7 @@ const CustomerMaster = () => {
                     </span>
                   </div>
                   <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                    <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
+                    <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-50/50 shadow-inner border border-slate-200 text-slate-800 font-semibold border-b">
                           <th className="p-2">Date</th>

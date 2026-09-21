@@ -233,12 +233,12 @@ const NewPayment = () => {
 
         <form onSubmit={handleSave} className="p-6 space-y-8">
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* SECTION: BASIC INFORMATION */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Basic Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Payment No. *</label>
                   <input type="text" name="paymentNo" value={form.paymentNo} readOnly className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm font-bold text-slate-600 cursor-not-allowed" />
@@ -269,7 +269,7 @@ const NewPayment = () => {
             {/* SECTION: PARTY DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Party Details</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier / Party *</label>
                   <DynamicSelect category="Supplier" name="supplierParty" value={form.supplierParty} onChange={handleChange} />
@@ -297,7 +297,7 @@ const NewPayment = () => {
           {/* SECTION: PAYMENT DETAILS */}
           <div className="border border-slate-200 rounded-lg p-5">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Payment Details</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Amount *</label>
                   <input type="number" name="paymentAmount" value={form.paymentAmount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold text-blue-700 focus:border-indigo-500 outline-none" />
@@ -350,7 +350,7 @@ const NewPayment = () => {
             </div>
             
             <div className="overflow-x-auto mb-6">
-              <table className="w-full text-left min-w-[600px]">
+              <table className="block w-full overflow-x-auto w-full text-left min-w-[600px]">
                 <thead>
                   <tr className="bg-slate-50 text-slate-600">
                     <th className="px-3 py-2 text-xs font-bold uppercase">Invoice No.</th>
@@ -408,11 +408,11 @@ const NewPayment = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
              {/* SECTION: DEDUCTIONS / ACCOUNTING */}
              <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Deductions / Accounting</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Account</label>
                     <DynamicSelect category="Payment Account" name="paymentAccount" value={form.paymentAccount} onChange={handleChange} />
@@ -445,7 +445,7 @@ const NewPayment = () => {
              {/* SECTION: ADDITIONAL INFORMATION */}
              <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Additional Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Paid By</label>
                     <DynamicSelect category="Paid By" name="paidBy" value={form.paidBy} onChange={handleChange} />

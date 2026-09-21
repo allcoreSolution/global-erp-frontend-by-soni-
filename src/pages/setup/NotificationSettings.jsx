@@ -34,7 +34,7 @@ const NotificationSettings = () => {
       </div>
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold uppercase text-slate-700">Alert Preferences</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-1"><input type="checkbox" checked={formData.emailNotifications || false} onChange={e => handleChange('emailNotifications', e.target.checked)} /> Email Notifications</label></div>
             <div><label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-1"><input type="checkbox" checked={formData.smsAlerts || false} onChange={e => handleChange('smsAlerts', e.target.checked)} /> SMS Alerts</label></div>
             <div><label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-1"><input type="checkbox" checked={formData.inAppPopups || false} onChange={e => handleChange('inAppPopups', e.target.checked)} /> In-App Popups</label></div>

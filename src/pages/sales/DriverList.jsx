@@ -217,7 +217,7 @@ const DriverList = () => {
 
       {/* Drivers Table Grid */}
       <div className="overflow-x-auto border border-blue-500 rounded-lg">
-        <table className="w-full text-left border-collapse">
+        <table className="block w-full overflow-x-auto w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Driver Name</th>
@@ -348,7 +348,7 @@ const DriverList = () => {
               {/* --- ADD NEW DRIVER (Basic Info) --- */}
               <div>
                 <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Basic Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Driver Name *</label>
                     <input type="text" required placeholder="e.g. Ramesh Kumar"
@@ -423,7 +423,7 @@ const DriverList = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">City</label>
                     <input type="text"
@@ -458,7 +458,7 @@ const DriverList = () => {
               {/* --- DRIVING LICENSE DETAILS --- */}
               <div>
                 <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Driving License Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">License Number *</label>
                     <input type="text" required placeholder="e.g. DL-IND1293..."
@@ -506,7 +506,7 @@ const DriverList = () => {
               {/* --- EMPLOYMENT DETAILS --- */}
               <div>
                 <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Employment Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Joining Date</label>
                     <input type="date"
@@ -563,7 +563,7 @@ const DriverList = () => {
               {/* --- VEHICLE ASSIGNMENT --- */}
               <div>
                 <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Vehicle Assignment</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Vehicle Number</label>
                     <input type="text" placeholder="e.g. DL 3C AM 1204"
@@ -600,7 +600,7 @@ const DriverList = () => {
               {/* --- EMERGENCY CONTACT --- */}
               <div>
                 <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3 border-b border-indigo-100 pb-1">Emergency Contact</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Contact Name</label>
                     <input type="text"

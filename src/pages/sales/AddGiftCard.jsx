@@ -175,7 +175,7 @@ const AddGiftCard = () => {
             {/* CARD VALUE */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Card Value</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Card Value *</label>
                   <input type="number" name="cardValue" value={form.cardValue} onChange={handleChange} required placeholder="e.g. 1000" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -209,7 +209,7 @@ const AddGiftCard = () => {
             {/* VALIDITY */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Validity</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Issue Date *</label>
                   <input type="date" name="issueDate" value={form.issueDate} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -284,7 +284,7 @@ const AddGiftCard = () => {
             {/* USAGE RULES */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Usage Rules</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Usage Type</label>
                   <DynamicSelect 
@@ -308,7 +308,7 @@ const AddGiftCard = () => {
                   />
                 </div>
                 
-                <div className="col-span-2 grid grid-cols-2 gap-2 mt-2">
+                <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
                     <input type="checkbox" name="onlineUsage" checked={form.onlineUsage} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
                     Online Usage

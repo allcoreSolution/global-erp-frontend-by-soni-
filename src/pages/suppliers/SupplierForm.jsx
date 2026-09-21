@@ -193,7 +193,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
             {/* Basic Info */}
             <div>
               <h3 className="font-bold text-slate-700 mb-4 border-b pb-2 flex items-center gap-2"><User size={16}/> Basic Information</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Supplier Code *</label>
                   <input type="text" disabled value={supplierForm.id} className="w-full border border-slate-300 rounded p-2 bg-slate-100 text-gray-500 cursor-not-allowed" />
@@ -261,7 +261,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
             {/* Tax Details */}
             <div>
               <h3 className="font-bold text-slate-700 mb-4 border-b pb-2 flex items-center gap-2"><FileText size={16}/> Tax & Registration Details</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">GST Reg. Status</label>
                   <select value={supplierForm.gstStatus} onChange={(e) => setSupplierForm({ ...supplierForm, gstStatus: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white">
@@ -322,11 +322,11 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
                 <div className="space-y-3">
                   <input type="text" placeholder="Address Line 1" value={supplierForm.billingAddress.street1} onChange={(e) => setSupplierForm({...supplierForm, billingAddress: { ...supplierForm.billingAddress, street1: e.target.value }})} className="w-full border border-slate-300 rounded p-2" />
                   <input type="text" placeholder="Address Line 2" value={supplierForm.billingAddress.street2} onChange={(e) => setSupplierForm({...supplierForm, billingAddress: { ...supplierForm.billingAddress, street2: e.target.value }})} className="w-full border border-slate-300 rounded p-2" />
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input type="text" placeholder="City" value={supplierForm.billingAddress.city} onChange={(e) => setSupplierForm({...supplierForm, billingAddress: { ...supplierForm.billingAddress, city: e.target.value }})} className="w-full border border-slate-300 rounded p-2" />
                     <input type="text" placeholder="State" value={supplierForm.billingAddress.state} onChange={(e) => setSupplierForm({...supplierForm, billingAddress: { ...supplierForm.billingAddress, state: e.target.value }})} className="w-full border border-slate-300 rounded p-2" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input type="text" placeholder="Country" value={supplierForm.billingAddress.country} onChange={(e) => setSupplierForm({...supplierForm, billingAddress: { ...supplierForm.billingAddress, country: e.target.value }})} className="w-full border border-slate-300 rounded p-2" />
                     <input type="text" placeholder="Pincode" value={supplierForm.billingAddress.zip} onChange={(e) => setSupplierForm({...supplierForm, billingAddress: { ...supplierForm.billingAddress, zip: e.target.value }})} className="w-full border border-slate-300 rounded p-2" />
                   </div>
@@ -342,11 +342,11 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
                 <div className="space-y-3">
                   <input type="text" disabled={copyAddress} placeholder="Address Line 1" value={copyAddress ? supplierForm.billingAddress.street1 : supplierForm.shippingAddress.street1} onChange={(e) => setSupplierForm({...supplierForm, shippingAddress: { ...supplierForm.shippingAddress, street1: e.target.value }})} className={`w-full border border-slate-300 rounded p-2 ${copyAddress ? 'bg-slate-100 text-gray-500' : 'bg-white'}`} />
                   <input type="text" disabled={copyAddress} placeholder="Address Line 2" value={copyAddress ? supplierForm.billingAddress.street2 : supplierForm.shippingAddress.street2} onChange={(e) => setSupplierForm({...supplierForm, shippingAddress: { ...supplierForm.shippingAddress, street2: e.target.value }})} className={`w-full border border-slate-300 rounded p-2 ${copyAddress ? 'bg-slate-100 text-gray-500' : 'bg-white'}`} />
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input type="text" disabled={copyAddress} placeholder="City" value={copyAddress ? supplierForm.billingAddress.city : supplierForm.shippingAddress.city} onChange={(e) => setSupplierForm({...supplierForm, shippingAddress: { ...supplierForm.shippingAddress, city: e.target.value }})} className={`w-full border border-slate-300 rounded p-2 ${copyAddress ? 'bg-slate-100 text-gray-500' : 'bg-white'}`} />
                     <input type="text" disabled={copyAddress} placeholder="State" value={copyAddress ? supplierForm.billingAddress.state : supplierForm.shippingAddress.state} onChange={(e) => setSupplierForm({...supplierForm, shippingAddress: { ...supplierForm.shippingAddress, state: e.target.value }})} className={`w-full border border-slate-300 rounded p-2 ${copyAddress ? 'bg-slate-100 text-gray-500' : 'bg-white'}`} />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input type="text" disabled={copyAddress} placeholder="Country" value={copyAddress ? supplierForm.billingAddress.country : supplierForm.shippingAddress.country} onChange={(e) => setSupplierForm({...supplierForm, shippingAddress: { ...supplierForm.shippingAddress, country: e.target.value }})} className={`w-full border border-slate-300 rounded p-2 ${copyAddress ? 'bg-slate-100 text-gray-500' : 'bg-white'}`} />
                     <input type="text" disabled={copyAddress} placeholder="Pincode" value={copyAddress ? supplierForm.billingAddress.zip : supplierForm.shippingAddress.zip} onChange={(e) => setSupplierForm({...supplierForm, shippingAddress: { ...supplierForm.shippingAddress, zip: e.target.value }})} className={`w-full border border-slate-300 rounded p-2 ${copyAddress ? 'bg-slate-100 text-gray-500' : 'bg-white'}`} />
                   </div>
@@ -395,7 +395,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
                   {supplierForm.banks.map((bank, idx) => (
                     <div key={idx} className="bg-slate-50 p-4 border border-slate-200 rounded-lg relative">
                       <button type="button" onClick={() => removeBank(idx)} className="absolute top-2 right-2 text-red-500 hover:bg-red-50 p-1 rounded"><X size={16}/></button>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
                         <div>
                           <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Account Holder Name *</label>
                           <input type="text" required value={bank.holderName} onChange={e => { const newArr = [...supplierForm.banks]; newArr[idx].holderName = e.target.value; setSupplierForm({...supplierForm, banks: newArr}); }} className="w-full border border-slate-300 rounded p-2" />
@@ -439,7 +439,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
         {activeFormTab === 'commercial' && (
           <div className="space-y-6">
             <h3 className="font-bold text-slate-700 mb-4 border-b pb-2 flex items-center gap-2"><DollarSign size={16}/> Purchase / Commercial Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Payment Terms</label>
                 <div className="flex gap-1">
@@ -541,7 +541,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
             {/* Documents Upload */}
             <div>
               <h3 className="font-bold text-slate-700 mb-4 border-b pb-2 flex items-center gap-2"><FileText size={16}/> Documents Upload</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { label: 'GST Certificate', field: 'gstCert' },
                   { label: 'PAN Card', field: 'panCard' },
@@ -568,7 +568,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
         {activeFormTab === 'performance' && (
           <div className="space-y-6">
             <h3 className="font-bold text-slate-700 mb-4 border-b pb-2 flex items-center gap-2"><Star size={16}/> Supplier Performance Ratings</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Overall Supplier Rating (1-5)</label>
                 <input type="number" min="0" max="5" step="0.1" value={supplierForm.performance.supplierRating} onChange={(e) => setSupplierForm({...supplierForm, performance: {...supplierForm.performance, supplierRating: e.target.value}})} className="w-full border border-slate-300 rounded p-2" />

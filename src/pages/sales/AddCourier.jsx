@@ -224,11 +224,11 @@ const AddCourier = () => {
 
         <form onSubmit={handleSave} className="p-6 space-y-8">
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
             {/* SECTION: BASIC INFORMATION */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Basic Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Courier Code *</label>
                   <input type="text" name="courierCode" value={form.courierCode} readOnly className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm font-bold text-slate-600 cursor-not-allowed" />
@@ -266,7 +266,7 @@ const AddCourier = () => {
             {/* SECTION: CONTACT DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Contact Details</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Person *</label>
                   <input type="text" name="contactPerson" value={form.contactPerson} onChange={handleChange} required placeholder="Name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -298,7 +298,7 @@ const AddCourier = () => {
           {/* SECTION: ADDRESS */}
           <div className="border border-slate-200 rounded-lg p-5">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Address</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="md:col-span-5">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Address Line 1 *</label>
                 <input type="text" name="addressLine1" value={form.addressLine1} onChange={handleChange} required placeholder="Street address" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -330,12 +330,12 @@ const AddCourier = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
             {/* SECTION: SERVICE DETAILS & AREA */}
             <div className="flex flex-col gap-6">
               <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Service Details</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Service Type *</label>
                     <DynamicSelect category="ServiceType" name="serviceType" value={form.serviceType} onChange={handleChange} />
@@ -348,7 +348,7 @@ const AddCourier = () => {
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Days</label>
                     <input type="text" name="deliveryDays" value={form.deliveryDays} onChange={handleChange} placeholder="e.g. 2-5 Days" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                   </div>
-                  <div className="col-span-2 grid grid-cols-2 gap-2 mt-2">
+                  <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
                       <input type="checkbox" name="pickupAvailable" checked={form.pickupAvailable} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
                       Pickup Available
@@ -395,7 +395,7 @@ const AddCourier = () => {
             {/* SECTION: SHIPPING CHARGES */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Shipping Charges</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Base Charge</label>
                   <input type="number" name="baseCharge" value={form.baseCharge} onChange={handleChange} placeholder="e.g. 50" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -432,11 +432,11 @@ const AddCourier = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
             {/* SECTION: TRACKING & INTEGRATION */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Tracking & Integration</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Tracking URL</label>
                   <input type="url" name="trackingURL" value={form.trackingURL} onChange={handleChange} placeholder="https://..." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -495,7 +495,7 @@ const AddCourier = () => {
 
               <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Additional Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="col-span-2 md:col-span-1 mt-2">
                     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
                       <input type="checkbox" name="defaultCourier" checked={form.defaultCourier} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />

@@ -36,7 +36,7 @@ const DesignationSalaryEmployees = () => {
         <p className="text-[11px] sm:text-xs text-gray-500">Configure salary grades structures, minimum-maximum pay bands, and mapped employee profiles.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
         {/* Sidebar roles */}
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Designations</div>
@@ -72,7 +72,7 @@ const DesignationSalaryEmployees = () => {
 
               {isEditing ? (
                 <form onSubmit={handleSave} className="space-y-4 text-[11px] sm:text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Salary Grade</label>
                       <input
@@ -121,7 +121,7 @@ const DesignationSalaryEmployees = () => {
                   </div>
                 </form>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] sm:text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 text-[11px] sm:text-xs">
                   <div className="bg-slate-50 p-4 rounded border space-y-2.5">
                     <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Award size={14} className="text-indigo-600" /> Salary Band details</h4>
                     <p><span className="text-gray-500">Pay Grade Rank:</span> <strong className="text-gray-900">{activeDesg.grade}</strong></p>

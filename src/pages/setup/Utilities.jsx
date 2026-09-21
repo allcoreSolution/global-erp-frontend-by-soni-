@@ -132,14 +132,14 @@ const Utilities = () => {
       </div>
 
       {/* Logs and System diagnostics */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* Diagnostics Info */}
         <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 lg:col-span-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
             <Server size={16} className="text-blue-500" /> Host Environment & Health Status
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-xs font-semibold my-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold my-2">
             <div className="p-3 bg-slate-50 border rounded-lg">
               <span className="text-[10px] text-gray-400 block font-bold">ERP Version Status</span>
               <span className="text-slate-800 block text-sm mt-1">v3.4.12 (Build 2489)</span>

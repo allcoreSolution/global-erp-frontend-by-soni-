@@ -89,7 +89,7 @@ const ExpiredStock = () => {
 
       {/* Table */}
       <div className="overflow-x-auto border rounded-lg">
-        <table className="w-full text-left text-sm">
+        <table className="block w-full overflow-x-auto w-full text-left text-sm">
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="p-3 font-semibold text-gray-600">Item Code</th>

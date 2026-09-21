@@ -69,7 +69,7 @@ const BranchData = () => {
         <p className="text-[11px] sm:text-xs text-gray-500">Track branch-wise active users counts, sales revenue, raw material purchases, stock levels, and expenses.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
         {/* Branch sidebar */}
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Active Branches</div>
@@ -101,7 +101,7 @@ const BranchData = () => {
               {loadingData ? (
                 <div className="p-8 text-center text-gray-500">Loading branch data...</div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-semibold">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-semibold">
                   {/* Sales */}
                   <div className="bg-white p-4 border rounded-lg space-y-2">
                     <span className="text-slate-500 flex items-center gap-1.5 text-[11px] uppercase font-bold"><ShoppingCart size={13} className="text-indigo-600" /> Sales Revenue</span>

@@ -5,7 +5,7 @@ const TableWidget = ({ title, columns, data, viewAllText, onViewAll, greenTotal 
   <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-xl shadow-md p-4 flex flex-col hover:shadow-lg transition-shadow duration-300">
     <div className="text-sm font-bold text-blue-900 dark:text-slate-250 tracking-wide uppercase mb-4">{title}</div>
     <div className="flex-1 overflow-x-auto">
-      <table className="w-full text-left text-[11px]">
+      <table className="block w-full overflow-x-auto w-full text-left text-[11px]">
         <thead>
           <tr className="border-b border-gray-200 dark:border-slate-800 text-gray-800 dark:text-slate-300 font-bold">
             {columns.map((col, idx) => (

@@ -99,7 +99,7 @@ const CashBook = () => {
         <button onClick={fetchStatement} className="px-3 py-1.5 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors">Apply Filter</button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-slate-50 border p-3 rounded-lg flex flex-col justify-between">
           <span className="text-[10px] uppercase font-bold text-gray-500">Opening Balance</span>
           <span className="text-base font-extrabold text-gray-800">₹ {openingBalance.toLocaleString()}</span>
@@ -119,7 +119,7 @@ const CashBook = () => {
       </div>
 
       <div className="border rounded overflow-x-auto text-xs">
-        <table className="w-full text-left">
+        <table className="block w-full overflow-x-auto w-full text-left">
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="p-3">Date</th>

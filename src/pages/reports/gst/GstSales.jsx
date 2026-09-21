@@ -100,7 +100,7 @@ const GstSales = () => {
       </div>
 
       {/* Content Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* 1. GSTR-1 SUMMARY & OUTPUT GST */}
         <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
@@ -189,7 +189,7 @@ const GstSales = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <span className="text-[10px] font-bold text-rose-600 block mb-2">Credit Notes (Sales Returns)</span>
-              <table className="w-full text-left text-xs">
+              <table className="block w-full overflow-x-auto w-full text-left text-xs">
                 <thead>
                   <tr className="border-b text-gray-400">
                     <th>Note No</th>
@@ -213,7 +213,7 @@ const GstSales = () => {
 
             <div>
               <span className="text-[10px] font-bold text-emerald-600 block mb-2">Debit Notes (Price Amendments)</span>
-              <table className="w-full text-left text-xs">
+              <table className="block w-full overflow-x-auto w-full text-left text-xs">
                 <thead>
                   <tr className="border-b text-gray-400">
                     <th>Note No</th>

@@ -194,12 +194,12 @@ const AddCoupon = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* SECTION: DISCOUNT DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Discount Details</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Discount Type *</label>
                   <DynamicSelect 
@@ -239,7 +239,7 @@ const AddCoupon = () => {
             {/* SECTION: VALIDITY */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Validity</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Start Date *</label>
                   <input type="date" name="startDate" value={form.startDate} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -308,7 +308,7 @@ const AddCoupon = () => {
             {/* SECTION: PRODUCT / CATEGORY */}
             <div className="border border-slate-200 rounded-lg p-5 lg:col-span-2">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Product / Category</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Applicable On *</label>
                   <DynamicSelect 
@@ -359,7 +359,7 @@ const AddCoupon = () => {
             {/* SECTION: USAGE RESTRICTIONS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Usage Restrictions</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Total Usage Limit</label>
                   <input type="number" name="totalUsageLimit" value={form.totalUsageLimit} onChange={handleChange} placeholder="e.g. 1000" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
@@ -412,7 +412,7 @@ const AddCoupon = () => {
 
               <div className="border border-slate-200 rounded-lg p-5">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Terms & Accounting</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Configuration</label>
                     <DynamicSelect 

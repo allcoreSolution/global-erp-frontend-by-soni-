@@ -34,7 +34,7 @@ const EmailSmsSettings = () => {
       </div>
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold uppercase text-slate-700">SMTP Settings</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Host</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.smtpHost || ''} onChange={e => handleChange('smtpHost', e.target.value)} /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Port</label><input type="number" className="w-full text-xs border rounded p-2" value={formData.smtpPort || ''} onChange={e => handleChange('smtpPort', e.target.value)} /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">SMTP Username</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.smtpUser || ''} onChange={e => handleChange('smtpUser', e.target.value)} /></div>

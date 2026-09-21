@@ -69,7 +69,7 @@ const StockAdjustmentReport = () => {
 
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4">Date</th>

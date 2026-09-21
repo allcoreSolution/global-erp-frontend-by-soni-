@@ -188,7 +188,7 @@ const NewTransfer = () => {
           <div className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 p-6 rounded-lg border border-gray-100 dark:border-slate-200 shadow-sm space-y-4 transition-colors">
             
             {/* Metadata and Warehouses */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Transfer No</label>
                 <input 
@@ -285,7 +285,7 @@ const NewTransfer = () => {
               </div>
 
               <div className="overflow-x-auto border dark:border-slate-200 rounded">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="block w-full overflow-x-auto w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-slate-855 border-b border-gray-200 dark:border-slate-850 text-gray-700 dark:text-slate-350 font-bold uppercase">
                       <th className="py-2.5 px-3">Product / Item *</th>

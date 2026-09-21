@@ -293,12 +293,12 @@ const AddSaleExchange = () => {
 
         <form onSubmit={handleSave} className="p-6 space-y-8">
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* SECTION: BASIC INFORMATION */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Basic Information</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Exchange No. *</label>
                   <input type="text" name="exchangeNo" value={form.exchangeNo} readOnly className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm font-bold text-slate-600 cursor-not-allowed" />
@@ -336,7 +336,7 @@ const AddSaleExchange = () => {
             {/* SECTION: ORIGINAL SALE DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Original Sale Details</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No. *</label>
                   <div className="relative">
@@ -378,7 +378,7 @@ const AddSaleExchange = () => {
             </div>
             
             <div className="overflow-x-auto mb-3">
-              <table className="w-full text-left min-w-[800px]">
+              <table className="block w-full overflow-x-auto w-full text-left min-w-[800px]">
                 <thead>
                   <tr className="bg-orange-100/50 text-orange-800">
                     <th className="px-3 py-2 text-xs font-bold uppercase w-1/4">Product</th>
@@ -448,7 +448,7 @@ const AddSaleExchange = () => {
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[800px]">
+              <table className="block w-full overflow-x-auto w-full text-left min-w-[800px]">
                 <thead>
                   <tr className="bg-emerald-100/50 text-emerald-800">
                     <th className="px-3 py-2 text-xs font-bold uppercase w-1/4">Product</th>
@@ -501,14 +501,14 @@ const AddSaleExchange = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-6">
              {/* LEFT COLUMN: PAYMENTS & OTHERS */}
              <div className="space-y-6">
                 
                 {/* SECTION: PAYMENT DETAILS */}
                 <div className="border border-slate-200 rounded-lg p-5">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Payment Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
                       <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
@@ -531,7 +531,7 @@ const AddSaleExchange = () => {
                 {/* SECTION: RETURN & INVENTORY */}
                 <div className="border border-slate-200 rounded-lg p-5">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Return & Inventory</h3>
-                  <div className="grid grid-cols-2 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Return Warehouse</label>
                       <DynamicSelect category="Warehouse" name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} />
@@ -550,7 +550,7 @@ const AddSaleExchange = () => {
                 {/* SECTION: APPROVAL & NOTES */}
                 <div className="border border-slate-200 rounded-lg p-5">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Approval & Notes</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Requested By</label>
                       <DynamicSelect category="Salesperson" name="requestedBy" value={form.requestedBy} onChange={handleChange} />

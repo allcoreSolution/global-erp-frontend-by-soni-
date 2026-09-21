@@ -34,7 +34,7 @@ const PaymentGatewaySettings = () => {
       </div>
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold uppercase text-slate-700">Razorpay Configuration</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">API Key ID</label><input type="password" className="w-full text-xs border rounded p-2" value={formData.razorpayKeyId || ''} onChange={e => handleChange('razorpayKeyId', e.target.value)} /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">API Secret Key</label><input type="password" className="w-full text-xs border rounded p-2" value={formData.razorpaySecret || ''} onChange={e => handleChange('razorpaySecret', e.target.value)} /></div>
         </div>

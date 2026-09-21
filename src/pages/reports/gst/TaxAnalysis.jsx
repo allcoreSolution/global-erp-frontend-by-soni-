@@ -81,7 +81,7 @@ const TaxAnalysis = () => {
       </div>
 
       {/* Content Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* 1. CGST, SGST, IGST & TAXABLE AMOUNT SUMMARY */}
         <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
@@ -163,7 +163,7 @@ const TaxAnalysis = () => {
             <span className="text-[10px] text-gray-400">Goods and Services Classifications</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="block w-full overflow-x-auto w-full text-left text-xs">
               <thead>
                 <tr className="border-b text-gray-400 font-semibold">
                   <th className="py-2">HSN Code</th>

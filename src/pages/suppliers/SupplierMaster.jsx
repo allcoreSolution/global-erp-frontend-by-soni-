@@ -148,7 +148,7 @@ const SupplierMaster = () => {
 
       {/* List / Table area */}
       <div className="overflow-x-auto rounded-lg border border-slate-200 mb-4">
-        <table className="w-full text-left border-collapse text-xs md:text-sm">
+        <table className="block w-full overflow-x-auto w-full text-left border-collapse text-xs md:text-sm">
           <thead>
             <tr className="bg-slate-100 border-b border-slate-200 text-gray-700">
               <th className="p-3">Supplier ID</th>

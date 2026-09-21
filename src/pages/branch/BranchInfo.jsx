@@ -159,7 +159,7 @@ const BranchInfo = () => {
 
       {/* Table responsive */}
       <div className="overflow-x-auto rounded border border-slate-200">
-        <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
+        <table className="block w-full overflow-x-auto w-full text-left text-[11px] sm:text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100 border-b font-semibold text-gray-700">
               <th className="p-2.5 sm:p-3">Code</th>
@@ -221,7 +221,7 @@ const BranchInfo = () => {
               {/* BASIC INFORMATION */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Basic Information</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Branch Code</label>
                     <input type="text" disabled value={currentBranch.code} className="w-full bg-slate-50 border p-2 rounded text-gray-500 text-xs cursor-not-allowed font-mono" />
@@ -269,7 +269,7 @@ const BranchInfo = () => {
               {/* CONTACT INFORMATION */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Contact Information</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Contact Person</label>
                     <input type="text" value={currentBranch.contactPerson} onChange={(e) => setCurrentBranch({ ...currentBranch, contactPerson: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs" />
@@ -292,7 +292,7 @@ const BranchInfo = () => {
               {/* BRANCH ADDRESS */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Branch Address</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Address Line 1 *</label>
                     <input type="text" required value={currentBranch.address1} onChange={(e) => setCurrentBranch({ ...currentBranch, address1: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs" />
@@ -338,7 +338,7 @@ const BranchInfo = () => {
               {/* TAX & LEGAL */}
               <div>
                 <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Tax & Legal</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 md:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">GST Status</label>
                     <select value={currentBranch.gstStatus} onChange={(e) => setCurrentBranch({ ...currentBranch, gstStatus: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
@@ -365,7 +365,7 @@ const BranchInfo = () => {
                 {/* OPERATIONS */}
                 <div>
                   <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Operations</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Default Warehouse</label>
                       <select value={currentBranch.warehouse} onChange={(e) => setCurrentBranch({ ...currentBranch, warehouse: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">

@@ -54,7 +54,7 @@ const TaxFinanceSettings = () => {
       </div>
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold uppercase text-slate-700">Financial Rules</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Fiscal Year Start</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.fiscalYearStart} onChange={e => handleChange('fiscalYearStart', e.target.value)} /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Base Currency</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.baseCurrency} onChange={e => handleChange('baseCurrency', e.target.value)} /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Default Tax System</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.defaultTaxSystem} onChange={e => handleChange('defaultTaxSystem', e.target.value)} /></div>

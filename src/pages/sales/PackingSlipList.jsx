@@ -290,7 +290,7 @@ const PackingSlipList = () => {
 
       {/* Table view grids */}
       <div className="overflow-x-auto border border-blue-500 rounded-lg">
-        <table className="w-full text-left border-collapse">
+        <table className="block w-full overflow-x-auto w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               {visibleColumns.reference && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Reference</th>}
@@ -447,7 +447,7 @@ const PackingSlipList = () => {
               {/* REFERENCE DETAILS */}
               <div>
                 <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Reference Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Sales Order</label>
                     <input type="text" value={form.salesOrder} onChange={e => setForm({...form, salesOrder: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
@@ -481,7 +481,7 @@ const PackingSlipList = () => {
               {/* SHIPPING DETAILS */}
               <div>
                 <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Shipping Details</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Billing Address</label>
                     <textarea rows="2" value={form.billingAddress} onChange={e => setForm({...form, billingAddress: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450"></textarea>
@@ -490,7 +490,7 @@ const PackingSlipList = () => {
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Shipping Address</label>
                     <textarea rows="2" value={form.shippingAddress} onChange={e => setForm({...form, shippingAddress: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450"></textarea>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Contact Person</label>
                       <input type="text" value={form.contact} onChange={e => setForm({...form, contact: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
@@ -500,7 +500,7 @@ const PackingSlipList = () => {
                       <input type="text" value={form.mobile} onChange={e => setForm({...form, mobile: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Transporter</label>
                       <input type="text" value={form.transporter} onChange={e => setForm({...form, transporter: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
@@ -517,7 +517,7 @@ const PackingSlipList = () => {
               <div>
                 <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Package / Product Details</h4>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse border border-blue-500">
+                  <table className="block w-full overflow-x-auto w-full text-left border-collapse border border-blue-500">
                     <thead className="bg-gray-50 border-b border-blue-500">
                       <tr>
                         <th className="p-2 text-xs font-bold text-gray-700 border-r border-blue-500">Product</th>
@@ -578,7 +578,7 @@ const PackingSlipList = () => {
               {/* VERIFICATION */}
               <div>
                 <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Verification</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Packed By</label>
                     <select value={form.packedBy} onChange={e => setForm({...form, packedBy: e.target.value})} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">

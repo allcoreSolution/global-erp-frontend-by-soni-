@@ -111,7 +111,7 @@ const KpiReports = () => {
       </div>
 
       {/* 10 KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 md:grid-cols-3 xl:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {kpiData.map((kpi, idx) => {
           const Icon = iconMap[kpi.iconName] || ShieldCheck;
           return (

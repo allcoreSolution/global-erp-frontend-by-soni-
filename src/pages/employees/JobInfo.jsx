@@ -105,7 +105,7 @@ const JobInfo = () => {
         <p className="text-[11px] sm:text-xs text-gray-500">View and update designations, reporting hierarchies, department channels, and shifts schedules.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 md:grid-cols-3 gap-6">
         {/* Sidebar list */}
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Employees Directory</div>
@@ -147,7 +147,7 @@ const JobInfo = () => {
 
               {isEditing ? (
                 <form onSubmit={handleSave} className="space-y-4 text-[11px] sm:text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Department</label>
                       <DynamicSelect category="Department" name="department" value={editForm.department} onChange={handleChange} defaultOptions={['IT', 'HR', 'Finance', 'Sales', 'Operations']} className="w-full text-sm bg-white" />
@@ -203,7 +203,7 @@ const JobInfo = () => {
                 </form>
               ) : (
                 <div className="space-y-4 text-[11px] sm:text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                       <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Briefcase size={14} className="text-indigo-600" /> Designation & Role</h4>
                       <p><span className="text-gray-500">Designation:</span> <strong className="text-gray-900">{activeEmp.designation || '-'}</strong></p>

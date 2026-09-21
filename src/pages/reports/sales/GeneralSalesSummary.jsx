@@ -95,7 +95,7 @@ const GeneralSalesSummary = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Orders', val: totals.orders.toLocaleString(), color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
           { label: 'Total Items Sold', val: totals.itemsSold.toLocaleString(), color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
@@ -114,7 +114,7 @@ const GeneralSalesSummary = () => {
       {/* Data Table */}
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="block w-full overflow-x-auto w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors group">

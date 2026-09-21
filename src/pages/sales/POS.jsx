@@ -284,7 +284,7 @@ const POS = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto max-h-[calc(100vh-210px)] pr-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-3 xl:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 overflow-y-auto max-h-[calc(100vh-210px)] pr-1">
           {filteredProducts.map(product => (
             <div 
               key={product.id}
@@ -458,7 +458,7 @@ const POS = () => {
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Payment Mode</label>
-            <div className="grid grid-cols-3 gap-2 text-xs font-bold">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs font-bold">
               {[
                 { name: 'Cash', icon: Banknote },
                 { name: 'Card', icon: CreditCard },
@@ -480,7 +480,7 @@ const POS = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-bold pt-2">
             <button 
               onClick={handleHoldBill}
               className="flex items-center justify-center gap-1 py-2.5 border rounded-lg hover:bg-slate-50 dark:border-slate-200 dark:hover:bg-slate-800 dark:text-slate-350 transition"
@@ -655,7 +655,7 @@ const POS = () => {
                         Payment: {paymentMode}
                       </div>
                     </div>
-                    <table className="w-full text-left border-collapse border-b">
+                    <table className="block w-full overflow-x-auto w-full text-left border-collapse border-b">
                       <thead>
                         <tr className="border-b font-bold text-[10px]">
                           <th className="py-1">Description</th>
@@ -766,7 +766,7 @@ const POS = () => {
                         <span className="text-xs font-extrabold uppercase bg-slate-100 px-2 py-0.5 rounded text-slate-600 border">GST Tax Invoice</span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-[9px] border-b pb-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[9px] border-b pb-2">
                       <div>
                         <strong>Supplier / Ship From:</strong><br />
                         Mumbai Warehouse HO<br />
@@ -779,7 +779,7 @@ const POS = () => {
                         {activeCustomerObj.gstin && <>GSTIN: {activeCustomerObj.gstin}<br /></>}
                       </div>
                     </div>
-                    <table className="w-full text-left border-collapse text-[9px]">
+                    <table className="block w-full overflow-x-auto w-full text-left border-collapse text-[9px]">
                       <thead>
                         <tr className="border-b-2 font-bold bg-slate-50">
                           <th className="py-1">Product Description</th>
@@ -839,7 +839,7 @@ const POS = () => {
                         <strong>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
                       </div>
                     </div>
-                    <table className="w-full text-left">
+                    <table className="block w-full overflow-x-auto w-full text-left">
                       <thead>
                         <tr className="text-gray-400 font-bold border-b text-[10px]">
                           <th className="py-2">Item Description</th>
@@ -879,7 +879,7 @@ const POS = () => {
                       <span>Customer: {activeCustomerObj.name}</span>
                       <span>Voucher Ref: {Date.now().toString().slice(-6)}</span>
                     </div>
-                    <table className="w-full text-left border-t border-b text-[10px]">
+                    <table className="block w-full overflow-x-auto w-full text-left border-t border-b text-[10px]">
                       <thead>
                         <tr className="border-b font-bold font-serif">
                           <th className="py-1">Particulars</th>
@@ -917,7 +917,7 @@ const POS = () => {
                       <p><strong>Billed To:</strong> {activeCustomerObj.name}</p>
                       {activeCustomerObj.phone && <p><strong>Phone:</strong> {activeCustomerObj.phone}</p>}
                     </div>
-                    <table className="w-full text-left text-[10px] border-b">
+                    <table className="block w-full overflow-x-auto w-full text-left text-[10px] border-b">
                       <thead>
                         <tr className="border-b font-bold text-gray-600 bg-slate-50">
                           <th className="py-1.5 px-2">Service Description</th>
