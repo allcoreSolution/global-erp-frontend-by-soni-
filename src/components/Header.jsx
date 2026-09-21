@@ -164,20 +164,20 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
       </button>
 
       {/* Search Bar */}
-      <div className="flex-1 max-w-2xl flex items-center relative">
+      <div className="flex-1 min-w-[120px] max-w-2xl flex items-center relative">
         <Search className="absolute left-3 text-gray-400 dark:text-gray-500" size={18} />
         <input
           type="text"
           placeholder="Search Menu / Customer / Invoice / Product..."
           className="w-full pl-10 pr-4 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 dark:placeholder-gray-500 dark:text-slate-100 transition-colors"
         />
-        <div className="absolute right-3 text-xs text-blue-500 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">F3</div>
+        <div className="absolute right-3 text-xs text-blue-500 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded hidden sm:block">F3</div>
       </div>
 
       {/* Quick Actions & User Profile */}
-      <div className="flex items-center gap-3 md:gap-6 ml-2 md:ml-4 min-w-0 flex-1 justify-end">
+      <div className="flex items-center gap-3 md:gap-6 ml-2 md:ml-4 min-w-0 justify-end">
         {/* Actions - Scrollable on Mobile */}
-        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 py-1 shrink-0 lg:flex-nowrap overflow-x-auto no-scrollbar max-w-[200px] sm:max-w-[300px] md:max-w-none">
+        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 py-1 shrink-0 lg:flex-nowrap overflow-x-auto no-scrollbar max-w-[160px] sm:max-w-[300px] md:max-w-none">
 
           {/* Calculator Popup */}
           <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={calcRef}>
