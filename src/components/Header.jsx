@@ -186,7 +186,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
               <span className="hidden xl:block text-[10px] mt-1 font-medium">Calculator</span>
             </div>
             {isCalcOpen && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 w-52 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
                 <div className="flex justify-between items-center mb-1.5 px-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Calculator</span>
                   <X size={14} className="cursor-pointer hover:text-red-500" onClick={() => setIsCalcOpen(false)} />
@@ -225,7 +225,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
               <span className="hidden xl:block text-[10px] mt-1 font-medium">Notepad</span>
             </div>
             {isNoteOpen && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 w-72 bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
                 <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-amber-200 dark:border-slate-800">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-500">Quick Notepad</span>
@@ -253,7 +253,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
               <span className="hidden xl:block text-[10px] mt-1 font-medium">Calendar</span>
             </div>
             {isCalOpen && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
                 <div className="flex justify-between items-center mb-3 pb-1 border-b border-slate-100 dark:border-slate-800">
                   <button
                     onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() - 1, 1))}
@@ -406,7 +406,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
               </span>
             </button>
             {isAddMenuOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-lg shadow-lg z-50 py-1.5 divide-y divide-gray-150 dark:divide-slate-800 text-[11px] font-semibold">
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-lg shadow-lg z-50 py-1.5 divide-y divide-gray-150 dark:divide-slate-800 text-[11px] font-semibold">
                 <div className="py-1">
                   <Link to="/sales/add-sale" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Sale Entry</Link>
                   <Link to="/purchases/add-purchase" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Purchase Entry</Link>
