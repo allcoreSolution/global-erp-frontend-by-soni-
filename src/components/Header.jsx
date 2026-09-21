@@ -175,9 +175,9 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
       </div>
 
       {/* Quick Actions & User Profile */}
-      <div className="flex items-center gap-6 ml-4">
+      <div className="flex items-center gap-3 md:gap-6 ml-2 md:ml-4 min-w-0 flex-1 justify-end">
         {/* Actions - Scrollable on Mobile */}
-        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 py-1 shrink-0 lg:flex-nowrap">
+        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 py-1 shrink-0 lg:flex-nowrap overflow-x-auto no-scrollbar max-w-[200px] sm:max-w-[300px] md:max-w-none">
 
           {/* Calculator Popup */}
           <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={calcRef}>
