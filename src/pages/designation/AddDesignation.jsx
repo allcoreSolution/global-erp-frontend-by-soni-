@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle, Save, X, Briefcase, FileText, Users, DollarSign, Info, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const AddDesignation = () => {
   const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [form, setForm] = useState({
     // Basic Information
@@ -49,15 +53,77 @@ const AddDesignation = () => {
     internalNotes: ''
   });
 
+  // Local Dropdown States
+  const [desigTypes, setDesigTypes] = useState(['Managerial', 'Technical', 'Administrative']);
+  const [companies, setCompanies] = useState(['Acme Corp']);
+  const [branches, setBranches] = useState(['HQ - Mumbai']);
+  const [departments, setDepartments] = useState(['IT & Systems', 'HR']);
+  const [parentDesigs, setParentDesigs] = useState(['CTO', 'VP Engineering']);
+  const [statuses, setStatuses] = useState(['Active', 'Inactive']);
+  const [jobLevels, setJobLevels] = useState(['L3', 'L4']);
+  const [jobCategories, setJobCategories] = useState(['Software Development', 'Quality Assurance']);
+  const [employmentTypes, setEmploymentTypes] = useState(['Permanent', 'Contract', 'Internship']);
+  const [reportsToList, setReportsToList] = useState(['Tech Lead', 'Engineering Manager']);
+  const [approvalAuthorities, setApprovalAuthorities] = useState(['Head of Department']);
+  const [leaveApprovals, setLeaveApprovals] = useState(['Yes', 'No']);
+  const [expenseApprovals, setExpenseApprovals] = useState(['Yes', 'No']);
+  const [salaryGrades, setSalaryGrades] = useState(['Grade A', 'Grade B']);
+  const [salaryStructures, setSalaryStructures] = useState(['Standard Corporate']);
+  const [overtimeApplicables, setOvertimeApplicables] = useState(['No', 'Yes']);
+  const [incentiveApplicables, setIncentiveApplicables] = useState(['Yes', 'No']);
+
+  const [modalType, setModalType] = useState(null);
+  const [modalData, setModalData] = useState({ name: '' });
+
+  const handleQuickAdd = (e) => {
+    e.preventDefault();
+    if (!modalData.name) return;
+    
+    if (modalType === 'Designation Type') setDesigTypes([...desigTypes, modalData.name]);
+    if (modalType === 'Company') setCompanies([...companies, modalData.name]);
+    if (modalType === 'Branch') setBranches([...branches, modalData.name]);
+    if (modalType === 'Department') setDepartments([...departments, modalData.name]);
+    if (modalType === 'Parent Designation') setParentDesigs([...parentDesigs, modalData.name]);
+    if (modalType === 'Status') setStatuses([...statuses, modalData.name]);
+    if (modalType === 'Job Level') setJobLevels([...jobLevels, modalData.name]);
+    if (modalType === 'Job Category') setJobCategories([...jobCategories, modalData.name]);
+    if (modalType === 'Employment Type') setEmploymentTypes([...employmentTypes, modalData.name]);
+    if (modalType === 'Reports To') setReportsToList([...reportsToList, modalData.name]);
+    if (modalType === 'Approval Authority') setApprovalAuthorities([...approvalAuthorities, modalData.name]);
+    if (modalType === 'Leave Approval') setLeaveApprovals([...leaveApprovals, modalData.name]);
+    if (modalType === 'Expense Approval') setExpenseApprovals([...expenseApprovals, modalData.name]);
+    if (modalType === 'Salary Grade') setSalaryGrades([...salaryGrades, modalData.name]);
+    if (modalType === 'Salary Structure') setSalaryStructures([...salaryStructures, modalData.name]);
+    if (modalType === 'Overtime Applicable') setOvertimeApplicables([...overtimeApplicables, modalData.name]);
+    if (modalType === 'Incentive Applicable') setIncentiveApplicables([...incentiveApplicables, modalData.name]);
+
+    const tempType = modalType;
+    setModalType(null);
+    setModalData({ name: '' });
+    alert(`${tempType} added successfully!`);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Designation Created Successfully!');
-    navigate('/designation/list');
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post('/designations', form);
+      if (response.data.success) {
+        alert('Designation Created Successfully!');
+        navigate('/designation/list');
+      }
+    } catch (err) {
+      console.error('Error creating designation:', err);
+      setError(err.response?.data?.message || 'Failed to create designation.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,14 +137,14 @@ const AddDesignation = () => {
         >
           <ArrowLeft size={18} /> Back to Designation List
         </button>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-sm hover:bg-indigo-700">
-            <Plus size={16} /> Add Designation
-          </button>
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto space-y-6">
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg border border-red-200 text-sm font-semibold">
+            {error}
+          </div>
+        )}
         <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           <div className="lg:col-span-8 space-y-6">
@@ -100,48 +166,61 @@ const AddDesignation = () => {
                   <input type="text" name="desigName" value={form.desigName} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="e.g. Senior Developer" />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Designation Type *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Designation Type *</label>
+                    <button type="button" onClick={() => setModalType('Designation Type')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="desigType" value={form.desigType} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    <option>Managerial</option>
-                    <option>Technical</option>
-                    <option>Administrative</option>
+                    {desigTypes.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Company *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Company *</label>
+                    <button type="button" onClick={() => setModalType('Company')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="company" value={form.company} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Company</option>
-                    <option>Acme Corp</option>
+                    {companies.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Branch</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Branch</label>
+                    <button type="button" onClick={() => setModalType('Branch')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="branch" value={form.branch} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Branch</option>
-                    <option>HQ - Mumbai</option>
+                    {branches.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Department *</label>
+                    <button type="button" onClick={() => setModalType('Department')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="department" value={form.department} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Department</option>
-                    <option>IT & Systems</option>
-                    <option>HR</option>
+                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Parent Designation</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Parent Designation</label>
+                    <button type="button" onClick={() => setModalType('Parent Designation')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="parentDesig" value={form.parentDesig} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Designation</option>
-                    <option>CTO</option>
-                    <option>VP Engineering</option>
+                    {parentDesigs.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Status *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Status *</label>
+                    <button type="button" onClick={() => setModalType('Status')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none text-emerald-600 font-bold">
-                    <option>Active</option>
-                    <option>Inactive</option>
+                    {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
@@ -160,27 +239,32 @@ const AddDesignation = () => {
                   <input type="text" name="jobTitle" value={form.jobTitle} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="e.g. Frontend Engineer" />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Job Level / Grade</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Job Level / Grade</label>
+                    <button type="button" onClick={() => setModalType('Job Level')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="jobLevel" value={form.jobLevel} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Grade</option>
-                    <option>L3</option>
-                    <option>L4</option>
+                    {jobLevels.map(j => <option key={j} value={j}>{j}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Job Category</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Job Category</label>
+                    <button type="button" onClick={() => setModalType('Job Category')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="jobCategory" value={form.jobCategory} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Category</option>
-                    <option>Software Development</option>
-                    <option>Quality Assurance</option>
+                    {jobCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Employment Type</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Employment Type</label>
+                    <button type="button" onClick={() => setModalType('Employment Type')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="employmentType" value={form.employmentType} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    <option>Permanent</option>
-                    <option>Contract</option>
-                    <option>Internship</option>
+                    {employmentTypes.map(e => <option key={e} value={e}>{e}</option>)}
                   </select>
                 </div>
                 <div>
@@ -224,18 +308,23 @@ const AddDesignation = () => {
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Reports To</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Reports To</label>
+                    <button type="button" onClick={() => setModalType('Reports To')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="reportsTo" value={form.reportsTo} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Employee</option>
-                    <option>Tech Lead</option>
-                    <option>Engineering Manager</option>
+                    {reportsToList.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Approval Authority</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Approval Authority</label>
+                    <button type="button" onClick={() => setModalType('Approval Authority')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="approvalAuthority" value={form.approvalAuthority} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Employee</option>
-                    <option>Head of Department</option>
+                    {approvalAuthorities.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div>
@@ -244,17 +333,21 @@ const AddDesignation = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Leave Approval</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Leave Approval</label>
+                      <button type="button" onClick={() => setModalType('Leave Approval')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="leaveApproval" value={form.leaveApproval} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>Yes</option>
-                      <option>No</option>
+                      {leaveApprovals.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Expense Approval</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Expense Approval</label>
+                      <button type="button" onClick={() => setModalType('Expense Approval')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="expenseApproval" value={form.expenseApproval} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>Yes</option>
-                      <option>No</option>
+                      {expenseApprovals.map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
                   </div>
                 </div>
@@ -262,51 +355,60 @@ const AddDesignation = () => {
             </div>
 
             {/* 4. SALARY CONFIGURATION */}
-            <div className="bg-slate-800 rounded-2xl shadow-xl shadow-slate-200 overflow-hidden text-white border border-slate-700">
-              <div className="bg-slate-900 border-b border-slate-700 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                  <DollarSign size={14} className="text-emerald-400" /> Salary Configuration
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <DollarSign size={14} className="text-emerald-500" /> Salary Configuration
                 </h3>
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Salary Grade</label>
-                  <select name="salaryGrade" value={form.salaryGrade} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Salary Grade</label>
+                    <button type="button" onClick={() => setModalType('Salary Grade')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="salaryGrade" value={form.salaryGrade} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Grade</option>
-                    <option>Grade A</option>
-                    <option>Grade B</option>
+                    {salaryGrades.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Minimum Salary</label>
-                    <input type="text" name="minSalary" value={form.minSalary} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none" placeholder="₹" />
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Minimum Salary</label>
+                    <input type="text" name="minSalary" value={form.minSalary} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="₹" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Maximum Salary</label>
-                    <input type="text" name="maxSalary" value={form.maxSalary} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none" placeholder="₹" />
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Maximum Salary</label>
+                    <input type="text" name="maxSalary" value={form.maxSalary} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="₹" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Salary Structure</label>
-                  <select name="salaryStructure" value={form.salaryStructure} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Salary Structure</label>
+                    <button type="button" onClick={() => setModalType('Salary Structure')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="salaryStructure" value={form.salaryStructure} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Structure</option>
-                    <option>Standard Corporate</option>
+                    {salaryStructures.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Overtime Applicable</label>
-                    <select name="overtimeApplicable" value={form.overtimeApplicable} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
-                      <option>No</option>
-                      <option>Yes</option>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Overtime Applicable</label>
+                      <button type="button" onClick={() => setModalType('Overtime Applicable')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
+                    <select name="overtimeApplicable" value={form.overtimeApplicable} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                      {overtimeApplicables.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Incentive Applicable</label>
-                    <select name="incentiveApplicable" value={form.incentiveApplicable} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
-                      <option>Yes</option>
-                      <option>No</option>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Incentive Applicable</label>
+                      <button type="button" onClick={() => setModalType('Incentive Applicable')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
+                    <select name="incentiveApplicable" value={form.incentiveApplicable} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                      {incentiveApplicables.map(i => <option key={i} value={i}>{i}</option>)}
                     </select>
                   </div>
                 </div>
@@ -350,13 +452,46 @@ const AddDesignation = () => {
             <button type="button" className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm shadow-sm hover:bg-slate-900 flex items-center gap-2">
               <Save size={16} /> Save Draft
             </button>
-            <button type="submit" className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-              <CheckCircle size={16} /> Create Designation
+            <button type="submit" disabled={loading} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <CheckCircle size={16} /> {loading ? 'Saving...' : 'Create Designation'}
             </button>
           </div>
 
         </form>
       </div>
+
+      {/* QUICK ADD MODAL */}
+      {modalType && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 uppercase tracking-wider text-xs">
+                Add New {modalType}
+              </h3>
+              <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleQuickAdd} className="p-5 space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">{modalType} Name *</label>
+                <input 
+                  type="text" 
+                  value={modalData.name} 
+                  onChange={(e) => setModalData({...modalData, name: e.target.value})} 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" 
+                  placeholder={`Enter ${modalType} Name`}
+                  required 
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setModalType(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-colors shadow-md shadow-indigo-200">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

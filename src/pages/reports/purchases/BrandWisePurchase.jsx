@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Award, Search, Filter, Download, Star, ShieldCheck, Tag } from 'lucide-react';
+import api from '../../../api';
 
 const BrandWisePurchase = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const brands = [
-    { id: 1, name: 'Samsung', category: 'Electronics', purchases: 450, value: 1250000, marketShare: 28 },
-    { id: 2, name: 'Cisco', category: 'Networking', purchases: 120, value: 850000, marketShare: 19 },
-    { id: 3, name: 'Herman Miller', category: 'Furniture', purchases: 45, value: 340000, marketShare: 7 },
-    { id: 4, name: 'Dell', category: 'Computers', purchases: 310, value: 920000, marketShare: 21 },
-    { id: 5, name: '3M', category: 'Supplies', purchases: 850, value: 150000, marketShare: 3 },
-  ];
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/analysis/brand-wise');
+        if (response.data.success) {
+          setBrands(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

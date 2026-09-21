@@ -1,38 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Filter, Download, Printer, Percent, ShieldCheck, CheckCircle } from 'lucide-react';
+import api from '../../../api';
 
 const GstPurchase = () => {
   const [period, setPeriod] = useState('This Month');
 
   // Purchase GST & Input Tax Credit datasets
-  const summaries = {
-    purchaseGst: { taxable: '₹9,80,000', cgst: '₹88,200', sgst: '₹88,200', igst: '₹36,000', totalItc: '₹2,12,400' },
-    supplierGst: [
-      { supplier: 'Ambani Raw Materials', gstNo: '27AMBAN9999A1Z9', taxableVal: 400000, cgst: 36000, sgst: 36000, igst: 0, itcEligible: 'Yes' },
-      { supplier: 'Vikas Tech Solutions', gstNo: '27VIKAS8888B2Z8', taxableVal: 200000, cgst: 0, sgst: 0, igst: 36000, itcEligible: 'Yes' },
-      { supplier: 'Modern Stationary', gstNo: '27MODER5555C3Z7', taxableVal: 50000, cgst: 4500, sgst: 4500, igst: 0, itcEligible: 'Yes' }
-    ],
-    purchaseReturn: [
-      { noteNo: 'PR-CN01', vendor: 'Ambani Raw Materials', returnVal: '₹-30,000', cgstAdj: '₹-2,700', sgstAdj: '₹-2,700' }
-    ]
-  };
+  
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/reports/gst/purchase')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setApiData(res.data.data);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !apiData) {
+    return <div className="p-6 text-center text-slate-500">Loading gst/GstPurchase.jsx...</div>;
+  }
+
+  const { summaries } = apiData;
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportCSV = () => {
-    const headers = ['Supplier Name', 'GSTIN', 'Taxable Purchase (₹)', 'CGST Paid (₹)', 'SGST Paid (₹)', 'IGST Paid (₹)', 'ITC Status'];
-    const rows = summaries.supplierGst.map(s => [s.supplier, s.gstNo, s.taxableVal, s.cgst, s.sgst, s.igst, s.itcEligible]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `GST_Purchase_Report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert("Export CSV functionality will be implemented here.");
   };
 
   return (

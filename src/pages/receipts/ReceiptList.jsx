@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Search, Download, Upload, Printer, CheckCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const ReceiptList = () => {
-  const [receipts, setReceipts] = useState([
-    { id: 'RCT-001', customerName: 'Ramesh Kumar & Sons', invoiceNo: 'INV-2024-001', amount: 15000, date: '2024-05-12', mode: 'NEFT', refNo: 'N123456', advance: false },
-    { id: 'RCT-002', customerName: 'Apex Retailers', invoiceNo: 'INV-2024-003', amount: 8000, date: '2024-05-15', mode: 'UPI', refNo: 'U987654', advance: false }
-  ]);
+  const navigate = useNavigate();
+  const [receipts, setReceipts] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -14,17 +15,41 @@ const ReceiptList = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete receipt ${id}?`)) {
-      setReceipts(prev => prev.filter(r => r.id !== id));
-      addLog(`Deleted receipt registration ${id}`);
+  const fetchReceipts = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/receipts');
+      if (data.success) {
+        setReceipts(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching receipts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReceipts();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this receipt?')) {
+      try {
+        await api.delete(`/receipts/${id}`);
+        setReceipts(prev => prev.filter(r => r._id !== id));
+        addLog(`Deleted receipt: ${id}`);
+      } catch (error) {
+        console.error('Error deleting receipt:', error);
+        addLog(`Error deleting receipt: ${id}`);
+      }
     }
   };
 
   const filtered = receipts.filter(r =>
-    r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase())
+    (r.customerParty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.receiptNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.referenceInvoice || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Real CSV Export
@@ -32,14 +57,14 @@ const ReceiptList = () => {
     addLog("Exporting receipts transactions to CSV format...");
     const headers = ['Receipt ID', 'Customer Name', 'Invoice Ref', 'Amount (₹)', 'Date', 'Payment Mode', 'Ref No', 'Advance'];
     const rows = receipts.map(r => [
-      r.id,
-      `"${r.customerName.replace(/"/g, '""')}"`,
-      r.invoiceNo,
-      r.amount,
-      r.date,
-      r.mode,
-      r.refNo,
-      r.advance ? 'Yes' : 'No'
+      r.receiptNo,
+      `"${(r.customerParty || '').replace(/"/g, '""')}"`,
+      r.referenceInvoice,
+      r.paymentAmount,
+      r.receiptDate,
+      r.paymentMethod,
+      r.transactionRef,
+      r.receiptType
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -179,27 +204,40 @@ const ReceiptList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(r => (
-                <tr key={r.id} className="hover:bg-slate-50">
-                  <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{r.id}</td>
-                  <td className="p-2 font-medium text-gray-900">{r.customerName}</td>
-                  <td className="p-2 text-gray-650">{r.invoiceNo}</td>
-                  <td className="p-2 text-right font-bold text-emerald-600">₹ {r.amount.toLocaleString()}</td>
-                  <td className="p-2 text-gray-500 whitespace-nowrap">{r.date}</td>
-                  <td className="p-2 text-gray-600">{r.mode}</td>
-                  <td className="p-2 font-mono text-gray-550">{r.refNo}</td>
-                  <td className="p-2 text-center">
-                    <span className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${r.advance ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {r.advance ? 'Advance' : 'Invoice Adj'}
-                    </span>
-                  </td>
-                  <td className="p-2 text-center no-print">
-                    <button onClick={() => handleDelete(r.id)} className="p-1 hover:bg-red-50 rounded text-red-600">
-                      <Trash2 size={13} />
-                    </button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">Loading receipts...</td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">No receipts found.</td>
+                </tr>
+              ) : (
+                filtered.map(r => (
+                  <tr key={r._id} className="hover:bg-slate-50">
+                    <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{r.receiptNo}</td>
+                    <td className="p-2 font-medium text-gray-900">{r.customerParty || '-'}</td>
+                    <td className="p-2 text-gray-650">{r.referenceInvoice || '-'}</td>
+                    <td className="p-2 text-right font-bold text-emerald-600">₹ {(r.paymentAmount || 0).toLocaleString()}</td>
+                    <td className="p-2 text-gray-500 whitespace-nowrap">{r.receiptDate}</td>
+                    <td className="p-2 text-gray-600">{r.paymentMethod}</td>
+                    <td className="p-2 font-mono text-gray-550">{r.transactionRef || '-'}</td>
+                    <td className="p-2 text-center">
+                      <span className="px-1.5 py-0.5 rounded font-bold text-[9px] bg-blue-100 text-blue-700">
+                        {r.receiptType}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center no-print flex justify-center items-center gap-2">
+                      <button onClick={() => navigate(`/receipt/edit/${r._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600">
+                        <Edit size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(r._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

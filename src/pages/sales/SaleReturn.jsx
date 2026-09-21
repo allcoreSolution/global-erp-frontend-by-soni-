@@ -1,23 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
   ChevronLeft, ChevronRight, AlertCircle
 } from 'lucide-react';
+import api from '../../api';
 
 const SaleReturn = () => {
   const navigate = useNavigate();
-  // Empty data table setup as requested: "No data available in table"
   const [returns, setReturns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const handleDelete = (id) => {
+  const fetchReturns = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/sale-returns');
+      if (data.success) {
+        setReturns(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching returns', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReturns();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this Return?")) {
-      setReturns(returns.filter(r => r.id !== id));
+      try {
+        await api.delete(`/sale-returns/${id}`);
+        setReturns(returns.filter(r => r._id !== id));
+      } catch (error) {
+        console.error('Error deleting return', error);
+        alert('Failed to delete sale return');
+      }
     }
   };
 
@@ -139,7 +164,7 @@ const SaleReturn = () => {
           <tbody className="divide-y divide-blue-500 bg-white">
             {currentRecords.length > 0 ? (
               currentRecords.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50/70 transition-colors">
+                <tr key={r._id} className="hover:bg-gray-50/70 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{r.returnNumber}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{r.returnDate}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">{r.customerName}</td>
@@ -165,14 +190,14 @@ const SaleReturn = () => {
                         <Eye size={15} />
                       </button>
                       <button
-                        onClick={() => alert(`Edit Return: ${r.returnNumber}`)}
+                        onClick={() => navigate(`/sales/edit-sale-return/${r._id}`)}
                         className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
                         title="Edit details"
                       >
                         <Edit size={15} />
                       </button>
                       <button
-                        onClick={() => handleDelete(r.id)}
+                        onClick={() => handleDelete(r._id)}
                         className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                         title="Delete Return"
                       >

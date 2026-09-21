@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Briefcase, Search, Filter, Download, Truck, Package, DollarSign } from 'lucide-react';
+import api from '../../../api';
 
 const PurchaseCostReport = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const costs = [
-    { id: 1, product: 'Intel Core i7', qty: 50, unitPrice: 245, freight: 12.5, customs: 5.5, handling: 2.0, landingCost: 265 },
-    { id: 2, product: 'Samsung 1TB SSD', qty: 100, unitPrice: 85, freight: 4.5, customs: 1.5, handling: 1.0, landingCost: 92 },
-    { id: 3, product: 'Office Chair Pro', qty: 25, unitPrice: 150, freight: 25.0, customs: 0, handling: 5.0, landingCost: 180 },
-    { id: 4, product: 'Mechanical Keyboard', qty: 75, unitPrice: 65, freight: 8.5, customs: 2.5, handling: 1.5, landingCost: 77.5 },
-    { id: 5, product: '27" 4K Monitor', qty: 40, unitPrice: 320, freight: 35.0, customs: 15.0, handling: 8.0, landingCost: 378 },
-  ];
+  const [costs, setCosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/financial/purchase-cost');
+        if (response.data.success) {
+          setCosts(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

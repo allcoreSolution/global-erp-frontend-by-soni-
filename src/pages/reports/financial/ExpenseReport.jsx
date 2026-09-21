@@ -1,14 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingDown, Download, Printer } from 'lucide-react';
+import api from '../../../api';
 
 const ExpenseReport = () => {
-  const expenses = [
-    { category: 'Direct Purchases', budgeted: 500000, actual: 450000 },
-    { category: 'Employee Salaries', budgeted: 150000, actual: 120000 },
-    { category: 'Office Rent & Utils', budgeted: 70000, actual: 60000 },
-    { category: 'Marketing & Sales', budgeted: 20000, actual: 25000 },
-    { category: 'Logistics & Travel', budgeted: 30000, actual: 15000 }
-  ];
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  const fetchExpenses = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/financial/profit-and-loss');
+      if (res.data && res.data.success) {
+        // Map the backend data to match the UI columns
+        const mappedData = (res.data.data.expenses || []).map(exp => ({
+          category: exp.accountName,
+          budgeted: 0, // No budget module yet
+          actual: exp.amount
+        }));
+        setExpenses(mappedData);
+      }
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -40,23 +60,29 @@ const ExpenseReport = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {expenses.map((item, idx) => {
-              const variance = item.budgeted - item.actual;
-              return (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 font-semibold text-gray-800">{item.category}</td>
-                  <td className="p-3 text-right text-gray-600 font-mono">{item.budgeted.toLocaleString()}</td>
-                  <td className="p-3 text-right font-extrabold text-rose-700">{item.actual.toLocaleString()}</td>
-                  <td className="p-3 text-right">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      variance >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                    }`}>
-                      {variance >= 0 ? `Under by ₹${variance.toLocaleString()}` : `Over by ₹${Math.abs(variance).toLocaleString()}`}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
+            {loading ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">Loading expense data...</td></tr>
+            ) : expenses.length === 0 ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">No expense records found.</td></tr>
+            ) : (
+              expenses.map((item, idx) => {
+                const variance = item.budgeted - item.actual;
+                return (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 font-semibold text-gray-800">{item.category}</td>
+                    <td className="p-3 text-right text-gray-600 font-mono">{item.budgeted.toLocaleString()}</td>
+                    <td className="p-3 text-right font-extrabold text-rose-700">{item.actual.toLocaleString()}</td>
+                    <td className="p-3 text-right">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        variance >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                      }`}>
+                        {variance >= 0 ? `Under by ₹${variance.toLocaleString()}` : `Over by ₹${Math.abs(variance).toLocaleString()}`}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>

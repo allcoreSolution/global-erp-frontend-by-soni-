@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Search, RefreshCw, Download, Printer, FileDown } from 'lucide-react';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const DayBook = () => {
-  // Filters state
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
   const [filters, setFilters] = useState({
-    fromDate: '2026-09-01',
-    toDate: '2026-09-12',
+    fromDate: firstDay,
+    toDate: lastDay,
     company: '',
     branch: '',
     voucherType: 'All',
@@ -13,36 +18,84 @@ const DayBook = () => {
     status: 'All'
   });
 
+  const [vouchers, setVouchers] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchAccounts();
+    fetchVouchers();
+  }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await api.get('/account-ledgers');
+      if (res.data && res.data.success) {
+        setAccounts(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+    }
+  };
+
+  const fetchVouchers = async () => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.fromDate) queryParams.append('fromDate', filters.fromDate);
+      if (filters.toDate) queryParams.append('toDate', filters.toDate);
+      if (filters.voucherType !== 'All') queryParams.append('voucherType', filters.voucherType);
+      if (filters.account !== 'All') queryParams.append('accountId', filters.account);
+      if (filters.status !== 'All') queryParams.append('status', filters.status);
+      
+      const res = await api.get(`/vouchers?${queryParams.toString()}`);
+      if (res.data && res.data.success) {
+        setVouchers(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching vouchers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
   const handleSearch = () => {
-    // Implement search logic
+    fetchVouchers();
   };
 
   const handleReset = () => {
     setFilters({
-      fromDate: '',
-      toDate: '',
+      fromDate: firstDay,
+      toDate: lastDay,
       company: '',
       branch: '',
       voucherType: 'All',
       account: 'All',
       status: 'All'
     });
+    // Need to trigger fetch after state updates, but since setState is async, we can just call fetchVouchers with default values
+    setTimeout(() => {
+       fetchVouchers();
+    }, 0);
   };
 
-  // Mock Data
-  const entries = [
-    { id: 1, date: '12-09-2026', voucherNo: 'REC-001', type: 'Receipt', particulars: 'ABC Customer', debit: 50000, credit: null },
-    { id: 2, date: '12-09-2026', voucherNo: 'PAY-004', type: 'Payment', particulars: 'XYZ Supplier', debit: null, credit: 15000 },
-    { id: 3, date: '12-09-2026', voucherNo: 'CON-002', type: 'Contra', particulars: 'HDFC → Cash', debit: 5000, credit: 5000 },
-    { id: 4, date: '12-09-2026', voucherNo: 'JV-008', type: 'Journal', particulars: 'Salary Exp.', debit: 30000, credit: null },
-    { id: 5, date: '12-09-2026', voucherNo: 'JV-008', type: 'Journal', particulars: 'Salary Payable', debit: null, credit: 30000 },
-  ];
+  // Flatmap the voucher entries for display
+  const entries = vouchers.flatMap(v => {
+    return v.entries.map((entry, index) => ({
+      id: `${v._id}-${index}`,
+      date: new Date(v.date).toLocaleDateString(),
+      voucherNo: v.voucherNo || v._id.slice(-6),
+      type: v.voucherType,
+      particulars: entry.account?.accountName || 'Unknown Account',
+      debit: entry.debitAmount > 0 ? entry.debitAmount : null,
+      credit: entry.creditAmount > 0 ? entry.creditAmount : null,
+    }));
+  });
 
-  // Calculate Totals
   const totalDebit = entries.reduce((sum, entry) => sum + (entry.debit || 0), 0);
   const totalCredit = entries.reduce((sum, entry) => sum + (entry.credit || 0), 0);
 
@@ -76,17 +129,18 @@ const DayBook = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Company</label>
-              <select name="company" value={filters.company} onChange={handleFilterChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-amber-500 outline-none bg-white">
-                <option value="">Select</option>
-                <option>Main Corp</option>
-              </select>
+              <input type="text" name="company" value={filters.company} onChange={handleFilterChange} placeholder="Enter Company" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-amber-500 outline-none bg-white" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Branch</label>
-              <select name="branch" value={filters.branch} onChange={handleFilterChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-amber-500 outline-none bg-white">
-                <option value="">Select</option>
-                <option>HQ</option>
-              </select>
+              <DynamicSelect
+                category="Branch"
+                name="branch"
+                value={filters.branch}
+                onChange={handleFilterChange}
+                defaultOptions={['HQ']}
+                className="w-full text-sm"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Voucher Type</label>
@@ -101,9 +155,10 @@ const DayBook = () => {
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Account</label>
               <select name="account" value={filters.account} onChange={handleFilterChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-amber-500 outline-none bg-white">
-                <option>All</option>
-                <option>Cash Account</option>
-                <option>HDFC Bank</option>
+                <option value="All">All</option>
+                {accounts.map(acc => (
+                  <option key={acc._id} value={acc._id}>{acc.accountName}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -140,35 +195,44 @@ const DayBook = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-amber-50/30 transition-colors">
-                    <td className="px-4 py-3 text-sm text-slate-700">{entry.date}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-amber-700">{entry.voucherNo}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        entry.type === 'Receipt' ? 'bg-green-100 text-green-700' :
-                        entry.type === 'Payment' ? 'bg-red-100 text-red-700' :
-                        entry.type === 'Contra' ? 'bg-purple-100 text-purple-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {entry.type}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-800">{entry.particulars}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-800 text-right">
-                      {entry.debit ? entry.debit.toLocaleString() : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-800 text-right">
-                      {entry.credit ? entry.credit.toLocaleString() : '—'}
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-8 text-center text-sm text-slate-500 italic bg-slate-50">
+                      Loading Day Book...
                     </td>
                   </tr>
-                ))}
-                {entries.length === 0 && (
+                ) : entries.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-4 py-8 text-center text-sm text-slate-500 italic bg-slate-50">
                       No transactions found for the selected criteria.
                     </td>
                   </tr>
+                ) : (
+                  entries.map((entry) => (
+                    <tr key={entry.id} className="hover:bg-amber-50/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-700">{entry.date}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-amber-700">{entry.voucherNo}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          entry.type === 'Receipt' ? 'bg-green-100 text-green-700' :
+                          entry.type === 'Payment' ? 'bg-red-100 text-red-700' :
+                          entry.type === 'Contra' ? 'bg-purple-100 text-purple-700' :
+                          entry.type === 'Sales' ? 'bg-blue-100 text-blue-700' :
+                          entry.type === 'Purchase' ? 'bg-orange-100 text-orange-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {entry.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-800">{entry.particulars}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-slate-800 text-right">
+                        {entry.debit ? entry.debit.toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-slate-800 text-right">
+                        {entry.credit ? entry.credit.toLocaleString() : '—'}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

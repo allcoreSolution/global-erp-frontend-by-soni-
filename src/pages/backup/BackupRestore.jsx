@@ -1,41 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Database, Upload, Download, RefreshCw, Clock, HardDrive, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import api from '../../api';
 
 const BackupRestore = () => {
   const [log, setLog] = useState([]);
-  const [backupHistory, setBackupHistory] = useState([
-    { version: 'v3.4.12_auto', date: '2024-05-15 02:00 AM', size: '42.8 MB', storage: 'Cloud (AWS S3)', status: 'Success' },
-    { version: 'v3.4.11_manual', date: '2024-05-10 11:30 AM', size: '41.5 MB', storage: 'Local Drive', status: 'Success' },
-    { version: 'v3.4.10_auto', date: '2024-05-08 02:00 AM', size: '41.2 MB', storage: 'Cloud (AWS S3)', status: 'Success' }
-  ]);
+  const [backupHistory, setBackupHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchBackups();
+  }, []);
+
+  const fetchBackups = async () => {
+    try {
+      const { data } = await api.get('/backups');
+      setBackupHistory(data);
+    } catch (error) {
+      console.error('Error fetching backups:', error);
+      addLog('Error: Failed to fetch backup history.');
+    }
+  };
 
   const addLog = (msg) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleCreateBackup = () => {
+  const handleCreateBackup = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
     addLog("Initializing full system backup database dump...");
-    setTimeout(() => {
-      const newBackup = {
-        version: `v3.4.13_manual_${Date.now().toString().slice(-4)}`,
-        date: new Date().toLocaleString(),
-        size: '43.2 MB',
-        storage: 'Local Drive',
-        status: 'Success'
-      };
-      setBackupHistory(prev => [newBackup, ...prev]);
+    try {
+      const { data } = await api.post('/backups/create');
+      setBackupHistory(prev => [data, ...prev]);
       addLog("Success: Backup file generated and saved successfully.");
       alert("System database backup created successfully!");
-    }, 1500);
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      addLog("Failed to create backup.");
+      alert("Failed to create backup.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRestoreBackup = (version) => {
+  const handleRestoreBackup = async (version) => {
     if (window.confirm(`Are you sure you want to restore the system database to version ${version}? Current unsaved progress will be overwritten.`)) {
+      if (isLoading) return;
+      setIsLoading(true);
       addLog(`Initializing restoration process for version ${version}...`);
-      setTimeout(() => {
+      try {
+        await api.post(`/backups/restore/${version}`);
         addLog(`Success: Database restored to version ${version} configuration.`);
         alert(`System successfully restored to version ${version}!`);
-      }, 2000);
+      } catch (error) {
+        console.error('Error restoring backup:', error);
+        addLog(`Failed to restore backup version ${version}.`);
+        alert("Failed to restore backup.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -66,9 +89,10 @@ const BackupRestore = () => {
           </div>
           <button 
             onClick={handleCreateBackup}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md hover:shadow-lg transition-all"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md hover:shadow-lg transition-all disabled:opacity-50"
           >
-            <HardDrive size={16} /> Create Backup Now
+            <HardDrive size={16} /> {isLoading ? 'Processing...' : 'Create Backup Now'}
           </button>
         </div>
 
@@ -80,14 +104,32 @@ const BackupRestore = () => {
               Upload a previously downloaded `.sql` or `.json` backup file to revert settings.
             </p>
           </div>
-          <label className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs cursor-pointer border border-dashed border-slate-300 transition-all">
-            <Upload size={16} className="text-indigo-500" /> Upload Backup File
-            <input type="file" className="hidden" accept=".sql,.json" onChange={(e) => {
+          <label className={`flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs cursor-pointer border border-dashed border-slate-300 transition-all ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <Upload size={16} className="text-indigo-500" /> {isLoading ? 'Uploading...' : 'Upload Backup File'}
+            <input type="file" className="hidden" accept=".sql,.json" disabled={isLoading} onChange={async (e) => {
               if (e.target.files[0]) {
-                addLog(`Uploading local file "${e.target.files[0].name}"...`);
-                setTimeout(() => {
-                  handleRestoreBackup(e.target.files[0].name);
-                }, 1000);
+                const file = e.target.files[0];
+                addLog(`Uploading local file "${file.name}"...`);
+                setIsLoading(true);
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                  const { data } = await api.post('/backups/upload', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                  });
+                  setBackupHistory(prev => [data.backup, ...prev]);
+                  addLog(`Success: Uploaded and restored database from ${file.name}.`);
+                  alert("System successfully restored from uploaded file!");
+                } catch (error) {
+                  console.error('Error uploading backup:', error);
+                  addLog(`Failed to upload and restore from ${file.name}.`);
+                  alert("Failed to upload and restore backup.");
+                } finally {
+                  setIsLoading(false);
+                  e.target.value = null; // reset input
+                }
               }
             }} />
           </label>
@@ -131,13 +173,14 @@ const BackupRestore = () => {
                 {backupHistory.map((item, idx) => (
                   <tr key={idx} className="hover:bg-indigo-50/30 transition-colors group">
                     <td className="p-4 font-bold text-slate-800">{item.version}</td>
-                    <td className="p-4 text-slate-500">{item.date}</td>
+                    <td className="p-4 text-slate-500">{item.createdAt ? new Date(item.createdAt).toLocaleString() : item.date}</td>
                     <td className="p-4 text-slate-700 font-medium">{item.size}</td>
                     <td className="p-4 text-slate-600">{item.storage}</td>
                     <td className="p-4 text-right">
                       <button 
                         onClick={() => handleRestoreBackup(item.version)}
-                        className="px-3 py-1.5 text-[10px] font-bold text-indigo-600 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition-all shadow-sm group-hover:shadow"
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-[10px] font-bold text-indigo-600 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition-all shadow-sm group-hover:shadow disabled:opacity-50"
                       >
                         Restore
                       </button>

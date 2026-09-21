@@ -1,24 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X, Download, Upload, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const DesignationList = () => {
   const navigate = useNavigate();
-  const [designations, setDesignations] = useState([
-    { id: 'DESG-01', name: 'Senior Developer', code: 'SDEV', dept: 'IT & Systems', manager: 'Vikram Malhotra', jd: 'Build corporate web systems, manage node pipelines.' },
-    { id: 'DESG-02', name: 'HR Executive', code: 'HREX', dept: 'HR & Admin', manager: 'Anjali Desai', jd: 'Perform payroll compliance audits and staff recruitments.' }
-  ]);
+  const [designations, setDesignations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [currentDesg, setCurrentDesg] = useState({
-    id: '', name: '', code: '', dept: 'IT & Systems', manager: '', jd: ''
+    _id: '', desigName: '', desigCode: '', department: 'IT & Systems', reportsTo: '', jobDescription: ''
   });
 
+  const fetchDesignations = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/designations');
+      if (res.data.success) {
+        setDesignations(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to fetch designations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDesignations();
+  }, []);
+
   const filtered = designations.filter(d =>
-    d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (d.desigName && d.desigName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (d.desigCode && d.desigCode.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleOpenAdd = () => {
@@ -31,19 +49,35 @@ const DesignationList = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isEdit) {
-      setDesignations(designations.map(d => d.id === currentDesg.id ? { ...currentDesg } : d));
+      try {
+        const res = await api.put(`/designations/${currentDesg._id}`, currentDesg);
+        if (res.data.success) {
+          fetchDesignations();
+          setIsModalOpen(false);
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.message || 'Failed to update designation');
+      }
     } else {
-      setDesignations([...designations, { ...currentDesg }]);
+      alert('Adding is done on a separate page.');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete designation ${id}?`)) {
-      setDesignations(designations.filter(d => d.id !== id));
+  const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete this designation?`)) {
+      try {
+        const res = await api.delete(`/designations/${id}`);
+        if (res.data.success) {
+          fetchDesignations();
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.message || 'Failed to delete designation');
+      }
     }
   };
 
@@ -51,11 +85,11 @@ const DesignationList = () => {
   const handleExport = () => {
     const headers = ['Designation Code', 'Designation Name', 'Department', 'Reporting Manager', 'Description'];
     const rows = designations.map(d => [
-      d.code,
-      `"${d.name.replace(/"/g, '""')}"`,
-      d.dept,
-      `"${d.manager.replace(/"/g, '""')}"`,
-      `"${d.jd.replace(/"/g, '""')}"`
+      d.desigCode,
+      `"${(d.desigName || '').replace(/"/g, '""')}"`,
+      d.department || '',
+      `"${(d.reportsTo || '').replace(/"/g, '""')}"`,
+      `"${(d.jobDescription || '').replace(/"/g, '""')}"`
     ]);
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -180,25 +214,35 @@ const DesignationList = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.map(d => (
-              <tr key={d.id} className="hover:bg-slate-50 transition-colors">
-                <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono">{d.code}</td>
-                <td className="p-2.5 sm:p-3 font-medium text-gray-900">{d.name}</td>
-                <td className="p-2.5 sm:p-3 text-gray-650">{d.dept}</td>
-                <td className="p-2.5 sm:p-3 text-gray-800 font-medium">{d.manager}</td>
-                <td className="p-2.5 sm:p-3 text-gray-500 max-w-[200px] truncate">{d.jd}</td>
-                <td className="p-2.5 sm:p-3 text-center no-print">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <button onClick={() => handleOpenEdit(d)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
-                      <Edit size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(d.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="p-4 text-center text-slate-500">Loading designations...</td>
               </tr>
-            ))}
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="p-4 text-center text-slate-500">No designations found.</td>
+              </tr>
+            ) : (
+              filtered.map(d => (
+                <tr key={d._id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono">{d.desigCode}</td>
+                  <td className="p-2.5 sm:p-3 font-medium text-gray-900">{d.desigName}</td>
+                  <td className="p-2.5 sm:p-3 text-gray-650">{d.department}</td>
+                  <td className="p-2.5 sm:p-3 text-gray-800 font-medium">{d.reportsTo}</td>
+                  <td className="p-2.5 sm:p-3 text-gray-500 max-w-[200px] truncate">{d.jobDescription}</td>
+                  <td className="p-2.5 sm:p-3 text-center no-print">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button onClick={() => handleOpenEdit(d)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
+                        <Edit size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(d._id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -219,8 +263,8 @@ const DesignationList = () => {
                     type="text"
                     required
                     placeholder="e.g. SDEV"
-                    value={currentDesg.code}
-                    onChange={(e) => setCurrentDesg({ ...currentDesg, code: e.target.value })}
+                    value={currentDesg.desigCode || ''}
+                    onChange={(e) => setCurrentDesg({ ...currentDesg, desigCode: e.target.value })}
                     className="w-full border p-2 rounded focus:outline-none text-xs font-mono"
                   />
                 </div>
@@ -230,16 +274,16 @@ const DesignationList = () => {
                     type="text"
                     required
                     placeholder="e.g. Senior Developer"
-                    value={currentDesg.name}
-                    onChange={(e) => setCurrentDesg({ ...currentDesg, name: e.target.value })}
+                    value={currentDesg.desigName || ''}
+                    onChange={(e) => setCurrentDesg({ ...currentDesg, desigName: e.target.value })}
                     className="w-full border p-2 rounded focus:outline-none text-xs"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Department</label>
                   <select
-                    value={currentDesg.dept}
-                    onChange={(e) => setCurrentDesg({ ...currentDesg, dept: e.target.value })}
+                    value={currentDesg.department || ''}
+                    onChange={(e) => setCurrentDesg({ ...currentDesg, department: e.target.value })}
                     className="w-full border p-2 rounded focus:outline-none bg-white text-xs"
                   >
                     <option value="IT & Systems">IT & Systems</option>
@@ -251,8 +295,8 @@ const DesignationList = () => {
                   <input
                     type="text"
                     required
-                    value={currentDesg.manager}
-                    onChange={(e) => setCurrentDesg({ ...currentDesg, manager: e.target.value })}
+                    value={currentDesg.reportsTo || ''}
+                    onChange={(e) => setCurrentDesg({ ...currentDesg, reportsTo: e.target.value })}
                     className="w-full border p-2 rounded focus:outline-none text-xs"
                   />
                 </div>
@@ -262,8 +306,8 @@ const DesignationList = () => {
                 <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Job Description</label>
                 <textarea
                   rows="3"
-                  value={currentDesg.jd}
-                  onChange={(e) => setCurrentDesg({ ...currentDesg, jd: e.target.value })}
+                  value={currentDesg.jobDescription || ''}
+                  onChange={(e) => setCurrentDesg({ ...currentDesg, jobDescription: e.target.value })}
                   className="w-full border p-2 rounded focus:outline-none text-xs"
                 />
               </div>

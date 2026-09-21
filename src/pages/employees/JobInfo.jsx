@@ -1,35 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Briefcase, Calendar, Users, Layers, Shield, Clock, Edit2 } from 'lucide-react';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const JobInfo = () => {
-  const [employees, setEmployees] = useState([
-    { id: 'EMP-001', name: 'Amit Sharma', dept: 'IT & Systems', designation: 'Senior Developer', doj: '2022-06-01', empType: 'Full-Time', manager: 'Vikram Malhotra', branch: 'Jaipur HQ', shift: 'Day Shift (09:00 - 18:00)' },
-    { id: 'EMP-002', name: 'Pooja Verma', dept: 'HR & Admin', designation: 'HR Executive', doj: '2023-01-15', empType: 'Full-Time', manager: 'Anjali Desai', branch: 'Jaipur HQ', shift: 'Day Shift (09:00 - 18:00)' }
-  ]);
-
-  const [selectedId, setSelectedId] = useState('EMP-001');
+  const [employees, setEmployees] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ dept: '', designation: '', doj: '', empType: 'Full-Time', manager: '', branch: '', shift: '' });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const [editForm, setEditForm] = useState({ 
+    department: '', 
+    designation: '', 
+    joiningDate: '', 
+    employeeType: 'Permanent', 
+    reportingManager: '', 
+    branch: '', 
+    shift: '' 
+  });
 
-  const activeEmp = employees.find(e => e.id === selectedId) || employees[0];
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/employees');
+      if (res.data?.success) {
+        setEmployees(res.data.data);
+        if (res.data.data.length > 0 && !selectedId) {
+          setSelectedId(res.data.data[0]._id);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch employees", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const activeEmp = employees.find(e => e._id === selectedId) || null;
 
   const handleEditClick = () => {
+    if (!activeEmp) return;
     setEditForm({
-      dept: activeEmp.dept,
-      designation: activeEmp.designation,
-      doj: activeEmp.doj,
-      empType: activeEmp.empType,
-      manager: activeEmp.manager,
-      branch: activeEmp.branch,
-      shift: activeEmp.shift
+      department: activeEmp.department || '',
+      designation: activeEmp.designation || '',
+      joiningDate: activeEmp.joiningDate || '',
+      employeeType: activeEmp.employeeType || 'Permanent',
+      reportingManager: activeEmp.reportingManager || '',
+      branch: activeEmp.branch || '',
+      shift: activeEmp.shift || ''
     });
     setIsEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setEmployees(employees.map(emp => emp.id === selectedId ? { ...emp, ...editForm } : emp));
-    setIsEditing(false);
+    setIsSaving(true);
+    try {
+      // Create a payload that merges the existing employee data with the updated job info
+      const payload = {
+        ...activeEmp,
+        department: editForm.department,
+        designation: editForm.designation,
+        joiningDate: editForm.joiningDate,
+        employeeType: editForm.employeeType,
+        reportingManager: editForm.reportingManager,
+        branch: editForm.branch,
+        shift: editForm.shift
+      };
+
+      // Ensure _id and __v are not in the payload
+      delete payload._id;
+      delete payload.__v;
+
+      const res = await api.put(`/employees/${selectedId}`, payload);
+      
+      if (res.data?.success) {
+        // Update local state
+        setEmployees(employees.map(emp => emp._id === selectedId ? res.data.data : emp));
+        setIsEditing(false);
+        alert('Job Info updated successfully!');
+      }
+    } catch (error) {
+      console.error('Failed to update job info', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      alert('Failed to update Job Info. Error: ' + errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
   return (
@@ -44,16 +110,22 @@ const JobInfo = () => {
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Employees Directory</div>
           <div className="divide-y overflow-y-auto flex-1 no-scrollbar text-[11px] sm:text-xs">
-            {employees.map(e => (
-              <div
-                key={e.id}
-                onClick={() => { setSelectedId(e.id); setIsEditing(false); }}
-                className={`p-3 cursor-pointer transition-colors ${selectedId === e.id ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-semibold' : 'hover:bg-slate-50'}`}
-              >
-                <div>{e.name}</div>
-                <div className="text-[9px] sm:text-[10px] text-gray-400 font-mono mt-0.5">{e.id}</div>
-              </div>
-            ))}
+            {isLoading ? (
+               <div className="p-4 text-center text-slate-500">Loading...</div>
+            ) : employees.length === 0 ? (
+               <div className="p-4 text-center text-slate-500">No employees found.</div>
+            ) : (
+              employees.map(e => (
+                <div
+                  key={e._id}
+                  onClick={() => { setSelectedId(e._id); setIsEditing(false); }}
+                  className={`p-3 cursor-pointer transition-colors ${selectedId === e._id ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-semibold' : 'hover:bg-slate-50'}`}
+                >
+                  <div>{e.employeeName}</div>
+                  <div className="text-[9px] sm:text-[10px] text-gray-400 font-mono mt-0.5">{e.employeeId}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -62,7 +134,7 @@ const JobInfo = () => {
           {activeEmp ? (
             <div className="border rounded-lg p-4 sm:p-5 space-y-4">
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-[10px] sm:text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">{activeEmp.id}</span>
+                <span className="text-[10px] sm:text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">{activeEmp.employeeId}</span>
                 {!isEditing && (
                   <button
                     onClick={handleEditClick}
@@ -78,42 +150,32 @@ const JobInfo = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Department</label>
-                      <input
-                        type="text"
-                        required
-                        value={editForm.dept}
-                        onChange={(e) => setEditForm({ ...editForm, dept: e.target.value })}
-                        className="w-full border p-2 rounded focus:outline-none"
-                      />
+                      <DynamicSelect category="Department" name="department" value={editForm.department} onChange={handleChange} defaultOptions={['IT', 'HR', 'Finance', 'Sales', 'Operations']} className="w-full text-sm bg-white" />
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Designation</label>
-                      <input
-                        type="text"
-                        required
-                        value={editForm.designation}
-                        onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
-                        className="w-full border p-2 rounded focus:outline-none"
-                      />
+                      <DynamicSelect category="Designation" name="designation" value={editForm.designation} onChange={handleChange} defaultOptions={['Software Engineer', 'Manager', 'Analyst', 'HR Executive']} className="w-full text-sm bg-white" />
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Date of Joining</label>
                       <input
                         type="date"
                         required
-                        value={editForm.doj}
-                        onChange={(e) => setEditForm({ ...editForm, doj: e.target.value })}
-                        className="w-full border p-2 rounded focus:outline-none"
+                        name="joiningDate"
+                        value={editForm.joiningDate}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 p-2 rounded focus:outline-none focus:border-indigo-500"
                       />
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Employment Type</label>
                       <select
-                        value={editForm.empType}
-                        onChange={(e) => setEditForm({ ...editForm, empType: e.target.value })}
-                        className="w-full border p-2 rounded focus:outline-none bg-white"
+                        name="employeeType"
+                        value={editForm.employeeType}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 p-2 rounded focus:outline-none focus:border-indigo-500 bg-white"
                       >
-                        <option value="Full-Time">Full-Time</option>
+                        <option value="Permanent">Permanent</option>
                         <option value="Part-Time">Part-Time</option>
                         <option value="Contract">Contract</option>
                         <option value="Intern">Intern</option>
@@ -121,38 +183,22 @@ const JobInfo = () => {
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Reporting Manager</label>
-                      <input
-                        type="text"
-                        value={editForm.manager}
-                        onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })}
-                        className="w-full border p-2 rounded focus:outline-none"
-                      />
+                      <DynamicSelect category="Manager" name="reportingManager" value={editForm.reportingManager} onChange={handleChange} defaultOptions={['Not Assigned']} className="w-full text-sm bg-white" />
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 uppercase mb-1">Branch</label>
-                      <input
-                        type="text"
-                        value={editForm.branch}
-                        onChange={(e) => setEditForm({ ...editForm, branch: e.target.value })}
-                        className="w-full border p-2 rounded focus:outline-none"
-                      />
+                      <DynamicSelect category="Branch" name="branch" value={editForm.branch} onChange={handleChange} defaultOptions={['Head Office', 'Branch 1']} className="w-full text-sm bg-white" />
                     </div>
                   </div>
                   <div>
                     <label className="block font-semibold text-gray-700 uppercase mb-1">Shift Timing</label>
-                    <select
-                      value={editForm.shift}
-                      onChange={(e) => setEditForm({ ...editForm, shift: e.target.value })}
-                      className="w-full border p-2 rounded focus:outline-none bg-white"
-                    >
-                      <option value="Day Shift (09:00 - 18:00)">Day Shift (09:00 - 18:00)</option>
-                      <option value="Evening Shift (14:00 - 22:00)">Evening Shift (14:00 - 22:00)</option>
-                      <option value="Night Shift (22:00 - 06:00)">Night Shift (22:00 - 06:00)</option>
-                    </select>
+                    <DynamicSelect category="Shift" name="shift" value={editForm.shift} onChange={handleChange} defaultOptions={['General Shift (09:00 AM - 06:00 PM)']} className="w-full text-sm bg-white" />
                   </div>
-                  <div className="flex gap-2 justify-end pt-2 border-t">
-                    <button type="button" onClick={() => setIsEditing(false)} className="px-3 py-1.5 border rounded hover:bg-slate-50">Cancel</button>
-                    <button type="submit" className="px-4 py-1.5 bg-indigo-600 text-white rounded font-semibold hover:bg-indigo-700">Save Changes</button>
+                  <div className="flex gap-2 justify-end pt-2 border-t mt-4">
+                    <button type="button" onClick={() => setIsEditing(false)} className="px-3 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" disabled={isSaving} className="px-4 py-1.5 bg-indigo-600 text-white rounded font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                       {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
                   </div>
                 </form>
               ) : (
@@ -160,27 +206,30 @@ const JobInfo = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                       <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Briefcase size={14} className="text-indigo-600" /> Designation & Role</h4>
-                      <p><span className="text-gray-500">Designation:</span> <strong className="text-gray-900">{activeEmp.designation}</strong></p>
-                      <p><span className="text-gray-500">Department:</span> <strong className="text-gray-900">{activeEmp.dept}</strong></p>
-                      <p><span className="text-gray-500">Employment Type:</span> <strong className="text-gray-900">{activeEmp.empType}</strong></p>
+                      <p><span className="text-gray-500">Designation:</span> <strong className="text-gray-900">{activeEmp.designation || '-'}</strong></p>
+                      <p><span className="text-gray-500">Department:</span> <strong className="text-gray-900">{activeEmp.department || '-'}</strong></p>
+                      <p><span className="text-gray-500">Employment Type:</span> <strong className="text-gray-900">{activeEmp.employeeType || '-'}</strong></p>
                     </div>
                     <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                       <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Calendar size={14} className="text-indigo-600" /> Chronology & Location</h4>
-                      <p><span className="text-gray-500">Joining Date:</span> <strong className="text-gray-900">{activeEmp.doj}</strong></p>
-                      <p><span className="text-gray-500">Office Branch:</span> <strong className="text-gray-900">{activeEmp.branch}</strong></p>
-                      <p><span className="text-gray-500">Reporting to:</span> <strong className="text-gray-900 text-indigo-600">{activeEmp.manager}</strong></p>
+                      <p><span className="text-gray-500">Joining Date:</span> <strong className="text-gray-900">{activeEmp.joiningDate || '-'}</strong></p>
+                      <p><span className="text-gray-500">Office Branch:</span> <strong className="text-gray-900">{activeEmp.branch || '-'}</strong></p>
+                      <p><span className="text-gray-500">Reporting to:</span> <strong className="text-gray-900 text-indigo-600">{activeEmp.reportingManager || '-'}</strong></p>
                     </div>
                   </div>
 
                   <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                     <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Clock size={14} className="text-emerald-600" /> Active Roster Shift</h4>
-                    <p><span className="text-gray-500">Assigned Shift:</span> <strong className="text-gray-900">{activeEmp.shift}</strong></p>
+                    <p><span className="text-gray-500">Assigned Shift:</span> <strong className="text-gray-900">{activeEmp.shift || '-'}</strong></p>
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="p-8 text-center text-gray-500 border rounded">Select an employee to see details.</div>
+            <div className="p-8 text-center text-gray-500 border rounded flex flex-col items-center justify-center">
+              <Users size={32} className="text-slate-300 mb-2" />
+              <p>{isLoading ? 'Loading...' : 'Select an employee to see details.'}</p>
+            </div>
           )}
         </div>
       </div>
@@ -189,3 +238,4 @@ const JobInfo = () => {
 };
 
 export default JobInfo;
+

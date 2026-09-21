@@ -1,17 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../api';
 import { Calendar, Printer, Download, FileText, Check, ShieldCheck, CreditCard, Banknote, Landmark } from 'lucide-react';
 
 const ExpenseLog = () => {
   const [selectedMonth, setSelectedMonth] = useState('August');
   const [selectedYear, setSelectedYear] = useState('2026');
 
-  const [logs] = useState([
-    { id: 'EXP-102', name: 'Neha Gupta', type: 'Client Meeting', amount: 2400, paidDate: '2026-08-09', mode: 'UPI / GPay', approvedBy: 'ADMIN', status: 'Disbursed' },
-    { id: 'EXP-103', name: 'Priya Patel', type: 'Office Stationery', amount: 850, paidDate: '2026-08-06', mode: 'Petty Cash', approvedBy: 'ADMIN', status: 'Disbursed' },
-    { id: 'EXP-104', name: 'Amit Sharma', type: 'Miscellaneous', amount: 1500, paidDate: '2026-08-05', mode: 'Bank Transfer', approvedBy: 'ACCOUNTANT', status: 'Disbursed' },
-    { id: 'EXP-095', name: 'Vikram Singh', type: 'Travel Expense', amount: 4800, paidDate: '2026-07-28', mode: 'Bank Transfer', approvedBy: 'ADMIN', status: 'Disbursed' },
-    { id: 'EXP-096', name: 'Rajesh Kumar', type: 'Food & Meals', amount: 950, paidDate: '2026-07-25', mode: 'Petty Cash', approvedBy: 'ACCOUNTANT', status: 'Disbursed' }
-  ]);
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const fetchLogs = async () => {
+    try {
+      const res = await api.get('/expense-claims');
+      if (res.data?.data) {
+        const formattedLogs = res.data.data.map(claim => ({
+          id: claim.claimNo || claim._id.substring(0, 8),
+          name: (typeof claim.employee === 'object' && claim.employee?.employeeName) ? claim.employee.employeeName : (claim.employee || 'Unknown'),
+          type: (claim.expenses && claim.expenses.length > 0) ? claim.expenses[0].category : (claim.purpose || 'General'),
+          amount: claim.reimbursementAmount || claim.totalExpense || 0,
+          paidDate: claim.claimDate ? new Date(claim.claimDate).toISOString().split('T')[0] : 'N/A',
+          mode: (claim.expenses && claim.expenses.length > 0) ? claim.expenses[0].mode : 'N/A',
+          approvedBy: claim.approver || 'ADMIN',
+          status: claim.status || 'Pending'
+        }));
+        setLogs(formattedLogs);
+      }
+    } catch (err) {
+      console.error("Error fetching expense logs:", err);
+    }
+  };
 
   const stats = {
     totalDisbursed: logs.reduce((acc, l) => acc + l.amount, 0),

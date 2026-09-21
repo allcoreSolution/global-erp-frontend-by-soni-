@@ -1,9 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../api';
 import { ArrowLeft, CheckCircle, Save, X, Shield, Key, LayoutGrid, CheckSquare, Star, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AddRoleMaster = () => {
   const navigate = useNavigate();
+  
+  const [companies, setCompanies] = useState([]);
+  const [branches, setBranches] = useState([]);
+
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [compRes, branchRes] = await Promise.all([
+          api.get('/companies').catch(() => ({ data: [] })),
+          api.get('/branches').catch(() => ({ data: [] }))
+        ]);
+        setCompanies(Array.isArray(compRes.data) ? compRes.data : compRes.data.data || []);
+        setBranches(Array.isArray(branchRes.data) ? branchRes.data : branchRes.data.data || []);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      }
+    };
+    fetchDropdownData();
+  }, []);
 
   const [form, setForm] = useState({
     // Basic Information
@@ -36,16 +56,29 @@ const AddRoleMaster = () => {
     { module: 'Settings', view: true, create: true, edit: true, del: true, approve: false, export: false }
   ]);
 
-  const [approvalPermissions, setApprovalPermissions] = useState({
-    leaveApproval: true, expenseApproval: true, purchaseApproval: true, paymentApproval: true, 
-    receiptApproval: true, stockAdjustment: true, journalApproval: true, appraisalApproval: true, 
-    creditNote: true, debitNote: true
-  });
+  const [approvalPermissions, setApprovalPermissions] = useState([
+    { name: 'Leave Approval', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Expense Approval', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Purchase Approval', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Payment Approval', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Receipt Approval', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Stock Adjustment', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Journal Approval', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Appraisal Approval', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Credit Note', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Debit Note', view: false, create: false, edit: false, del: false, approve: false, export: false }
+  ]);
 
-  const [specialPermissions, setSpecialPermissions] = useState({
-    manageUsers: true, manageRoles: true, viewSalary: true, editSalary: true, 
-    financialReports: true, profitAndLoss: true, manageBranches: true, manageMasters: true
-  });
+  const [specialPermissions, setSpecialPermissions] = useState([
+    { name: 'Manage Users', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Manage Roles', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'View Salary', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Edit Salary', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Financial Reports', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Profit And Loss', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Manage Branches', view: false, create: false, edit: false, del: false, approve: false, export: false },
+    { name: 'Manage Masters', view: false, create: false, edit: false, del: false, approve: false, export: false }
+  ]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -53,23 +86,49 @@ const AddRoleMaster = () => {
   };
 
   const handleModulePermChange = (index, field) => {
-    const newPerms = [...modulePermissions];
-    newPerms[index][field] = !newPerms[index][field];
-    setModulePermissions(newPerms);
+    setModulePermissions(prev => {
+      const newPerms = [...prev];
+      newPerms[index] = { ...newPerms[index], [field]: !newPerms[index][field] };
+      return newPerms;
+    });
   };
 
-  const handleApprovePermChange = (key) => {
-    setApprovalPermissions(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleApprovePermChange = (index, field) => {
+    setApprovalPermissions(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: !updated[index][field] };
+      return updated;
+    });
   };
 
-  const handleSpecialPermChange = (key) => {
-    setSpecialPermissions(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleSpecialPermChange = (index, field) => {
+    setSpecialPermissions(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: !updated[index][field] };
+      return updated;
+    });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Role Created Successfully!');
-    navigate('/setup/role-master');
+    try {
+      const payload = {
+        ...form,
+        name: form.roleName,
+        modulePermissions,
+        approvalPermissions,
+        specialPermissions
+      };
+      
+      const res = await api.post('/roles', payload);
+      if (res.data) {
+        alert('Role Created Successfully!');
+        navigate('/setup/role-master');
+      }
+    } catch (err) {
+      console.error('Error creating role:', err);
+      alert('Error saving role: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   return (
@@ -83,11 +142,6 @@ const AddRoleMaster = () => {
         >
           <ArrowLeft size={18} /> Back to Role List
         </button>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-sm hover:bg-indigo-700">
-            <Plus size={16} /> Create Role
-          </button>
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto space-y-6">
@@ -121,7 +175,9 @@ const AddRoleMaster = () => {
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Company *</label>
                   <select name="company" value={form.company} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Company</option>
-                    <option>Acme Corp</option>
+                    {companies.map(c => (
+                      <option key={c._id} value={c._id}>{c.companyName || c.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="md:col-span-2">
@@ -144,9 +200,9 @@ const AddRoleMaster = () => {
                 <LayoutGrid size={14} className="text-emerald-500" />
                 <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Module Permissions</h3>
               </div>
-              <div className="p-0 overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b text-slate-500">
+              <div className="p-0 overflow-auto max-h-[300px]">
+                <table className="w-full text-left text-xs relative">
+                  <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
                     <tr>
                       <th className="px-5 py-3 font-bold">Module</th>
                       <th className="px-3 py-3 font-bold text-center">View</th>
@@ -192,18 +248,45 @@ const AddRoleMaster = () => {
                 <CheckSquare size={14} className="text-purple-500" />
                 <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Approval Permissions</h3>
               </div>
-              <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-2">
-                {Object.keys(approvalPermissions).map((key) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={approvalPermissions[key]} 
-                      onChange={() => handleApprovePermChange(key)}
-                      className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm font-medium text-slate-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                  </label>
-                ))}
+              <div className="p-0 overflow-auto max-h-[300px]">
+                <table className="w-full text-left text-xs relative">
+                  <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-5 py-3 font-bold">Approval Type</th>
+                      <th className="px-3 py-3 font-bold text-center">View</th>
+                      <th className="px-3 py-3 font-bold text-center">Create</th>
+                      <th className="px-3 py-3 font-bold text-center">Edit</th>
+                      <th className="px-3 py-3 font-bold text-center">Delete</th>
+                      <th className="px-3 py-3 font-bold text-center">Approve</th>
+                      <th className="px-3 py-3 font-bold text-center">Export</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {approvalPermissions.map((mod, idx) => (
+                      <tr key={mod.name} className="hover:bg-slate-50/50">
+                        <td className="px-5 py-2.5 font-bold text-slate-700">{mod.name}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.view} onChange={() => handleApprovePermChange(idx, 'view')} className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.create} onChange={() => handleApprovePermChange(idx, 'create')} className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.edit} onChange={() => handleApprovePermChange(idx, 'edit')} className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.del} onChange={() => handleApprovePermChange(idx, 'del')} className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.approve} onChange={() => handleApprovePermChange(idx, 'approve')} className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.export} onChange={() => handleApprovePermChange(idx, 'export')} className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -214,10 +297,10 @@ const AddRoleMaster = () => {
           <div className="lg:col-span-4 space-y-6">
 
             {/* 2. ACCESS SCOPE */}
-            <div className="bg-slate-800 rounded-2xl shadow-xl shadow-slate-200 overflow-hidden text-white border border-slate-700">
-              <div className="bg-slate-900 border-b border-slate-700 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                  <Key size={14} className="text-amber-400" /> Access Scope
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <Key size={14} className="text-amber-500" /> Access Scope
                 </h3>
               </div>
               <div className="p-5 space-y-5">
@@ -225,10 +308,10 @@ const AddRoleMaster = () => {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Company Access</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="companyAccess" value="All" checked={form.companyAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> All
+                      <input type="radio" name="companyAccess" value="All" checked={form.companyAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> All
                     </label>
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="companyAccess" value="Selected" checked={form.companyAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> Selected
+                      <input type="radio" name="companyAccess" value="Selected" checked={form.companyAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> Selected
                     </label>
                   </div>
                 </div>
@@ -236,10 +319,10 @@ const AddRoleMaster = () => {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Branch Access</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="branchAccess" value="All" checked={form.branchAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> All
+                      <input type="radio" name="branchAccess" value="All" checked={form.branchAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> All
                     </label>
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="branchAccess" value="Selected" checked={form.branchAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> Selected
+                      <input type="radio" name="branchAccess" value="Selected" checked={form.branchAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> Selected
                     </label>
                   </div>
                 </div>
@@ -247,10 +330,10 @@ const AddRoleMaster = () => {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Department Access</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="departmentAccess" value="All" checked={form.departmentAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> All
+                      <input type="radio" name="departmentAccess" value="All" checked={form.departmentAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> All
                     </label>
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="departmentAccess" value="Selected" checked={form.departmentAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> Selected
+                      <input type="radio" name="departmentAccess" value="Selected" checked={form.departmentAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> Selected
                     </label>
                   </div>
                 </div>
@@ -258,23 +341,25 @@ const AddRoleMaster = () => {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Warehouse Access</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="warehouseAccess" value="All" checked={form.warehouseAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> All
+                      <input type="radio" name="warehouseAccess" value="All" checked={form.warehouseAccess === 'All'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> All
                     </label>
                     <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="radio" name="warehouseAccess" value="Selected" checked={form.warehouseAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-slate-700 border-slate-600" /> Selected
+                      <input type="radio" name="warehouseAccess" value="Selected" checked={form.warehouseAccess === 'Selected'} onChange={handleChange} className="text-emerald-500 focus:ring-emerald-400 bg-white border-slate-300" /> Selected
                     </label>
                   </div>
                 </div>
-                <div className="border-t border-slate-700 pt-4 mt-2">
+                <div className="border-t border-slate-200 pt-4 mt-2">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Default Branch</label>
-                  <select name="defaultBranch" value={form.defaultBranch} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
+                  <select name="defaultBranch" value={form.defaultBranch} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none">
                     <option value="">Select Branch</option>
-                    <option>HQ - Mumbai</option>
+                    {branches.map(b => (
+                      <option key={b._id} value={b._id}>{b.branchName || b.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Default Warehouse</label>
-                  <select name="defaultWarehouse" value={form.defaultWarehouse} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
+                  <select name="defaultWarehouse" value={form.defaultWarehouse} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 outline-none">
                     <option value="">Select Warehouse</option>
                     <option>Main Warehouse</option>
                   </select>
@@ -289,18 +374,45 @@ const AddRoleMaster = () => {
                   <Star size={14} className="text-rose-500" /> Special Permissions
                 </h3>
               </div>
-              <div className="p-5 flex flex-col gap-3">
-                {Object.keys(specialPermissions).map((key) => (
-                  <label key={key} className="flex items-center gap-3 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={specialPermissions[key]} 
-                      onChange={() => handleSpecialPermChange(key)}
-                      className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm font-medium text-slate-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                  </label>
-                ))}
+              <div className="p-0 overflow-auto max-h-[300px]">
+                <table className="w-full text-left text-xs relative">
+                  <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-5 py-3 font-bold">Permission</th>
+                      <th className="px-3 py-3 font-bold text-center">View</th>
+                      <th className="px-3 py-3 font-bold text-center">Create</th>
+                      <th className="px-3 py-3 font-bold text-center">Edit</th>
+                      <th className="px-3 py-3 font-bold text-center">Delete</th>
+                      <th className="px-3 py-3 font-bold text-center">Approve</th>
+                      <th className="px-3 py-3 font-bold text-center">Export</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {specialPermissions.map((mod, idx) => (
+                      <tr key={mod.name} className="hover:bg-slate-50/50">
+                        <td className="px-5 py-2.5 font-bold text-slate-700">{mod.name}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.view} onChange={() => handleSpecialPermChange(idx, 'view')} className="w-4 h-4 text-rose-500 rounded border-gray-300 focus:ring-rose-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.create} onChange={() => handleSpecialPermChange(idx, 'create')} className="w-4 h-4 text-rose-500 rounded border-gray-300 focus:ring-rose-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.edit} onChange={() => handleSpecialPermChange(idx, 'edit')} className="w-4 h-4 text-rose-500 rounded border-gray-300 focus:ring-rose-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.del} onChange={() => handleSpecialPermChange(idx, 'del')} className="w-4 h-4 text-rose-500 rounded border-gray-300 focus:ring-rose-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.approve} onChange={() => handleSpecialPermChange(idx, 'approve')} className="w-4 h-4 text-rose-500 rounded border-gray-300 focus:ring-rose-500" />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="checkbox" checked={mod.export} onChange={() => handleSpecialPermChange(idx, 'export')} className="w-4 h-4 text-rose-500 rounded border-gray-300 focus:ring-rose-500" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 

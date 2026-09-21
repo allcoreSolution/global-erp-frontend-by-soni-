@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, UploadCloud } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewContra = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Contra Form State
   const [form, setForm] = useState({
     // Basic Information
-    contraNo: 'CON-00001',
+    contraNo: `CON-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 1000)}`,
     contraDate: new Date().toISOString().split('T')[0],
     company: '',
     branch: '',
@@ -16,8 +19,8 @@ const NewContra = () => {
     status: 'Draft',
     
     // Transfer Details
-    fromAccount: 'HDFC Bank',
-    toAccount: 'Cash Account',
+    fromAccount: '',
+    toAccount: '',
     amount: '',
     transferMode: 'Cash Withdrawal',
     referenceNo: '',
@@ -36,15 +39,74 @@ const NewContra = () => {
     remarks: ''
   });
 
+  useEffect(() => {
+    if (id) {
+      const fetchContra = async () => {
+        try {
+          const res = await api.get(`/contras/${id}`);
+          if (res.data?.data) {
+            const data = res.data.data;
+            setForm({
+              contraNo: data.contraNo || '',
+              contraDate: data.contraDate || '',
+              company: data.company || '',
+              branch: data.branch || '',
+              voucherType: data.voucherType || 'Contra',
+              status: data.status || 'Draft',
+              fromAccount: data.fromAccount || '',
+              toAccount: data.toAccount || '',
+              amount: data.amount || 0,
+              transferMode: data.transferMode || 'Cash Withdrawal',
+              referenceNo: data.referenceNo || '',
+              transactionDate: data.transactionDate || '',
+              bankCharges: data.bankCharges || 0,
+              debitAccount: data.debitAccount || '',
+              creditAccount: data.creditAccount || '',
+              costCenter: data.costCenter || '',
+              narration: data.narration || '',
+              preparedBy: data.preparedBy || '',
+              approvedBy: data.approvedBy || '',
+              remarks: data.remarks || '',
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching contra", error);
+        }
+      };
+      fetchContra();
+    }
+  }, [id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Contra Entry Posted successfully!');
-    navigate('/contra/list');
+    try {
+      const { documentFile, ...restForm } = form; // Strip file
+
+      const payload = {
+        ...restForm,
+        contraId: restForm.contraNo, // Legacy index bypass
+        amount: Number(form.amount) || 0,
+        bankCharges: Number(form.bankCharges) || 0,
+      };
+
+      if (id) {
+        await api.put(`/contras/${id}`, payload);
+        alert('Contra Updated successfully!');
+      } else {
+        await api.post('/contras', payload);
+        alert('Contra Posted successfully!');
+      }
+      navigate('/contra/list');
+    } catch (error) {
+      console.error('Error saving contra', error);
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      alert('Failed to save contra. Backend error: ' + JSON.stringify(errMsg));
+    }
   };
 
   return (
@@ -105,17 +167,11 @@ const NewContra = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Voucher Type *</label>
@@ -130,19 +186,11 @@ const NewContra = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">From Account *</label>
-                  <select name="fromAccount" value={form.fromAccount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-purple-500 outline-none bg-white font-medium text-slate-700">
-                    <option>HDFC Bank</option>
-                    <option>SBI OD</option>
-                    <option>Cash Account</option>
-                  </select>
+                  <DynamicSelect category="Account" name="fromAccount" value={form.fromAccount} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">To Account *</label>
-                  <select name="toAccount" value={form.toAccount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-purple-500 outline-none bg-white font-medium text-slate-700">
-                    <option>Cash Account</option>
-                    <option>HDFC Bank</option>
-                    <option>SBI OD</option>
-                  </select>
+                  <DynamicSelect category="Account" name="toAccount" value={form.toAccount} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Amount *</label>
@@ -177,24 +225,15 @@ const NewContra = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Debit Account (To Account Ledger)</label>
-                  <select name="debitAccount" value={form.debitAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Ledger</option>
-                    <option>Cash A/C</option>
-                  </select>
+                  <DynamicSelect category="Account" name="debitAccount" value={form.debitAccount} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Credit Account (From Account Ledger)</label>
-                  <select name="creditAccount" value={form.creditAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Ledger</option>
-                    <option>HDFC Bank A/C</option>
-                  </select>
+                  <DynamicSelect category="Account" name="creditAccount" value={form.creditAccount} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Center</label>
-                  <select name="costCenter" value={form.costCenter} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select</option>
-                    <option>Finance Dept</option>
-                  </select>
+                  <DynamicSelect category="Cost Center" name="costCenter" value={form.costCenter} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Narration</label>
@@ -209,17 +248,11 @@ const NewContra = () => {
                <div className="grid grid-cols-2 gap-4">
                  <div>
                    <label className="block text-xs font-semibold text-slate-700 mb-1">Prepared By</label>
-                   <select name="preparedBy" value={form.preparedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                     <option value="">Select</option>
-                     <option>Accountant 1</option>
-                   </select>
+                   <DynamicSelect category="Employee" name="preparedBy" value={form.preparedBy} onChange={handleChange} />
                  </div>
                  <div>
                    <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                   <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                     <option value="">Select</option>
-                     <option>Finance Head</option>
-                   </select>
+                   <DynamicSelect category="Employee" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
                  </div>
                  <div className="col-span-2">
                    <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
@@ -227,9 +260,11 @@ const NewContra = () => {
                  </div>
                  <div className="col-span-2 mt-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Attachment</label>
-                    <button type="button" className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500">
-                       <UploadCloud size={18} /> Upload Document
-                    </button>
+                    <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">
+                       <UploadCloud size={18} /> 
+                       <span className="truncate">{form.documentFile ? form.documentFile.name : 'Upload Document'}</span>
+                       <input type="file" className="hidden" onChange={(e) => setForm(prev => ({ ...prev, documentFile: e.target.files[0] }))} />
+                    </label>
                  </div>
                </div>
             </div>

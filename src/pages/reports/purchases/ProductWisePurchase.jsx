@@ -1,5 +1,6 @@
 import React from 'react';
 import { Package, Download, Printer, Filter, Search, ArrowUpDown, TrendingDown } from 'lucide-react';
+import api from '../../../api';
 
 const ProductWisePurchase = () => {
   const data = [

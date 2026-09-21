@@ -1,14 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Download, Printer, Filter, Search, ArrowUpDown, Bell } from 'lucide-react';
+import api from '../../../api';
 
 const LowStockReport = () => {
-  const data = [
-    { sku: 'PRD-ELC-015', name: 'Wireless Headphones', category: 'Electronics', warehouse: 'Retail Outlet West', current: 3, reorderLevel: 10, deficit: 7, status: 'Critical' },
-    { sku: 'PRD-FUR-088', name: 'Office Desk Wooden', category: 'Furniture', warehouse: 'Main Hub (WH-01)', current: 15, reorderLevel: 25, deficit: 10, status: 'Reorder' },
-    { sku: 'RAW-PLST-01', name: 'Plastic Granules (kg)', category: 'Raw Material', warehouse: 'Factory Yard', current: 120, reorderLevel: 500, deficit: 380, status: 'Critical' },
-    { sku: 'PRD-ELC-002', name: 'Air Conditioner 1.5T', category: 'Electronics', warehouse: 'Retail Outlet East', current: 12, reorderLevel: 15, deficit: 3, status: 'Reorder' },
-    { sku: 'PRD-SFT-045', name: 'Cloud Backup Drive 1TB', category: 'Hardware', warehouse: 'Digital Vault', current: 2, reorderLevel: 20, deficit: 18, status: 'Critical' },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/stock/low-stock');
+      if (res.data && res.data.success) {
+        setData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching low stock:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusStyle = (status) => {
     switch(status) {
@@ -75,10 +89,10 @@ const LowStockReport = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Alerts', val: '42', color: 'bg-rose-50 text-rose-700 border-rose-200' },
-          { label: 'Critical Items (0-10%)', val: '18', color: 'bg-red-50 text-red-700 border-red-200' },
-          { label: 'Reorder Items', val: '24', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-          { label: 'Est. Restock Value', val: '₹ 8.2 L', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+          { label: 'Total Alerts', val: data.length.toString(), color: 'bg-rose-50 text-rose-700 border-rose-200' },
+          { label: 'Critical Items', val: data.filter(d => d.currentStock === 0).length.toString(), color: 'bg-red-50 text-red-700 border-red-200' },
+          { label: 'Reorder Items', val: data.filter(d => d.currentStock > 0).length.toString(), color: 'bg-amber-50 text-amber-700 border-amber-200' },
+          { label: 'Est. Restock Value', val: 'N/A', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
         ].map((stat, i) => (
           <div key={i} className={`p-4 rounded-xl border ${stat.color} flex flex-col justify-center items-start shadow-sm`}>
             <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{stat.label}</span>
@@ -107,26 +121,39 @@ const LowStockReport = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {data.map((item, idx) => (
-                <tr key={idx} className="hover:bg-amber-50/30 transition-colors">
-                  <td className="p-4 font-mono text-amber-700 font-medium">{item.sku}</td>
-                  <td className="p-4 font-semibold text-slate-800 flex flex-col">
-                    {item.name}
-                    <span className="text-xs font-normal text-slate-500 mt-0.5">{item.category}</span>
-                  </td>
-                  <td className="p-4 text-slate-600">{item.warehouse}</td>
-                  <td className="p-4 text-center">
-                    <span className={`font-bold ${item.current < (item.reorderLevel / 2) ? 'text-rose-600' : 'text-amber-600'}`}>{item.current}</span>
-                  </td>
-                  <td className="p-4 text-center font-medium text-slate-700 bg-slate-50/50">{item.reorderLevel}</td>
-                  <td className="p-4 text-center font-bold text-rose-500">-{item.deficit}</td>
-                  <td className="p-4 text-center">
-                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full border flex items-center justify-center gap-1 w-fit mx-auto ${getStatusStyle(item.status)}`}>
-                      <Bell size={12} /> {item.status}
-                    </span>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="p-4 text-center text-gray-500 italic">Fetching low stock reports...</td>
                 </tr>
-              ))}
+              ) : data.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-4 text-center text-gray-500 italic">No low stock items found.</td>
+                </tr>
+              ) : (
+                data.map((item, idx) => {
+                  const status = item.currentStock === 0 ? 'Critical' : 'Reorder';
+                  return (
+                    <tr key={idx} className="hover:bg-amber-50/30 transition-colors">
+                      <td className="p-4 font-mono text-amber-700 font-medium">{item.sku}</td>
+                      <td className="p-4 font-semibold text-slate-800 flex flex-col">
+                        {item.name}
+                        <span className="text-xs font-normal text-slate-500 mt-0.5">{item.category}</span>
+                      </td>
+                      <td className="p-4 text-slate-600">{item.brand}</td>
+                      <td className="p-4 text-center">
+                        <span className={`font-bold ${item.currentStock < (item.minStockLevel / 2) ? 'text-rose-600' : 'text-amber-600'}`}>{item.currentStock}</span>
+                      </td>
+                      <td className="p-4 text-center font-medium text-slate-700 bg-slate-50/50">{item.minStockLevel}</td>
+                      <td className="p-4 text-center font-bold text-rose-500">-{item.shortage}</td>
+                      <td className="p-4 text-center">
+                        <span className={`px-2.5 py-1 text-xs font-bold rounded-full border flex items-center justify-center gap-1 w-fit mx-auto ${getStatusStyle(status)}`}>
+                          <Bell size={12} /> {status}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>

@@ -33,7 +33,7 @@ const ControlReports = () => {
       icon: RefreshCw,
       color: 'text-indigo-600 bg-blue-50 border-blue-100',
       actionText: 'Check Reorder Lists',
-      to: '/coming-soon'
+      to: '/reports/stock/low-stock'
     },
     {
       title: 'Overstock Report',
@@ -41,7 +41,7 @@ const ControlReports = () => {
       icon: TrendingUp,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
       actionText: 'Review Overstocks',
-      to: '/coming-soon'
+      to: '/reports/stock/overstock'
     },
     {
       title: 'Out of Stock',
@@ -49,7 +49,7 @@ const ControlReports = () => {
       icon: FolderMinus,
       color: 'text-rose-600 bg-rose-50 border-rose-100',
       actionText: 'Check Out of Stock',
-      to: '/coming-soon',
+      to: '/reports/stock/out-of-stock',
       badge: 'Critical'
     },
     {
@@ -58,7 +58,7 @@ const ControlReports = () => {
       icon: Trash2,
       color: 'text-slate-600 bg-slate-50 border-slate-100',
       actionText: 'Audit Damaged Stock',
-      to: '/coming-soon'
+      to: '/reports/stock/damaged'
     },
     {
       title: 'Expired Stock',
@@ -66,7 +66,7 @@ const ControlReports = () => {
       icon: CalendarDays,
       color: 'text-red-600 bg-red-50 border-red-100',
       actionText: 'Audit Expired Items',
-      to: '/coming-soon'
+      to: '/reports/stock/expired-stock'
     },
     {
       title: 'Stock Adjustment Report',
@@ -74,7 +74,7 @@ const ControlReports = () => {
       icon: Sliders,
       color: 'text-teal-600 bg-teal-50 border-teal-100',
       actionText: 'Track Adjustments Log',
-      to: '/coming-soon'
+      to: '/reports/stock/adjustment'
     },
     {
       title: 'Stock Transfer Report',
@@ -82,7 +82,7 @@ const ControlReports = () => {
       icon: Move,
       color: 'text-indigo-600 bg-indigo-50 border-indigo-100',
       actionText: 'Audit Transfers Logs',
-      to: '/coming-soon'
+      to: '/reports/stock/transfer'
     }
   ];
 

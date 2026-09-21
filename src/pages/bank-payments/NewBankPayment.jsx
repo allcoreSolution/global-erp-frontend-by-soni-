@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewBankPayment = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Basic Information State
   const [form, setForm] = useState({
-    paymentNo: 'BPAY-00001',
+    paymentNo: `BPMT-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 1000)}`,
     paymentDate: new Date().toISOString().split('T')[0],
     company: '',
     branch: '',
@@ -21,7 +24,7 @@ const NewBankPayment = () => {
     poNo: '',
     
     // Bank Payment Details
-    amount: 50000,
+    amount: 0,
     method: 'NEFT',
     bankName: '',
     utrNo: '',
@@ -48,11 +51,55 @@ const NewBankPayment = () => {
 
   // Totals State
   const [totals, setTotals] = useState({
-    payment: 50000,
-    adjusted: 50000,
+    payment: 0,
+    adjusted: 0,
     unadjusted: 0,
-    netPayment: 50000
+    netPayment: 0
   });
+
+  useEffect(() => {
+    if (id) {
+      const fetchPayment = async () => {
+        try {
+          const { data } = await api.get(`/bank-payments/${id}`);
+          if (data.success && data.data) {
+            const pay = data.data;
+            setForm({
+              paymentNo: pay.paymentNo || `BPMT-${Date.now().toString().slice(-5)}`,
+              paymentDate: pay.paymentDate || new Date().toISOString().split('T')[0],
+              company: pay.company || '',
+              branch: pay.branch || '',
+              bankAccount: pay.bankAccount || '',
+              paymentType: pay.paymentType || 'Supplier',
+              supplierParty: pay.supplierParty || '',
+              supplierType: pay.supplierType || 'Supplier',
+              invoiceNo: pay.invoiceNo || '',
+              poNo: pay.poNo || '',
+              amount: pay.amount || 0,
+              method: pay.method || 'NEFT',
+              bankName: pay.bankName || '',
+              utrNo: pay.utrNo || '',
+              transactionDate: pay.transactionDate || new Date().toISOString().split('T')[0],
+              chequeNo: pay.chequeNo || '',
+              tdsAmount: pay.tdsAmount || 0,
+              bankCharges: pay.bankCharges || 0,
+              otherDeduction: pay.otherDeduction || 0,
+              supplierLedger: pay.supplierLedger || '',
+              bankLedger: pay.bankLedger || '',
+              paidBy: pay.paidBy || '',
+              approvedBy: pay.approvedBy || '',
+              remarks: pay.remarks || ''
+            });
+            setInvoices(pay.invoices || []);
+            setTotals(pay.totals || { payment: 0, adjusted: 0, unadjusted: 0, netPayment: 0 });
+          }
+        } catch (error) {
+          console.error("Error fetching bank payment data", error);
+        }
+      };
+      fetchPayment();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,10 +168,47 @@ const NewBankPayment = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Bank Payment Posted successfully!');
-    navigate('/bank-payment/list');
+    try {
+      const { documentFile, ...restForm } = form; // Remove File object before sending as JSON
+
+      const payload = {
+        ...restForm,
+        paymentId: restForm.paymentNo, // Added to bypass stale MongoDB index
+        amount: Number(form.amount) || 0,
+        tdsAmount: Number(form.tdsAmount) || 0,
+        bankCharges: Number(form.bankCharges) || 0,
+        otherDeduction: Number(form.otherDeduction) || 0,
+        invoices: invoices
+          .filter(inv => inv.invoiceNo && inv.invoiceNo.trim() !== '') // Filter empty invoices
+          .map(inv => ({
+            ...inv,
+            invoiceAmount: Number(inv.invoiceAmount) || 0,
+            dueAmount: Number(inv.dueAmount) || 0,
+            adjustAmount: Number(inv.adjustAmount) || 0
+          })),
+        totals: {
+          payment: Number(totals.payment) || 0,
+          adjusted: Number(totals.adjusted) || 0,
+          unadjusted: Number(totals.unadjusted) || 0,
+          netPayment: Number(totals.netPayment) || 0
+        }
+      };
+
+      if (id) {
+        await api.put(`/bank-payments/${id}`, payload);
+        alert('Bank Payment Updated successfully!');
+      } else {
+        await api.post('/bank-payments', payload);
+        alert('Bank Payment Posted successfully!');
+      }
+      navigate('/bank-payment/list');
+    } catch (error) {
+      console.error('Error saving bank payment', error);
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      alert('Failed to save bank payment. Backend error: ' + JSON.stringify(errMsg));
+    }
   };
 
   return (
@@ -177,32 +261,19 @@ const NewBankPayment = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Account *</label>
-                  <select name="bankAccount" value={form.bankAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Account</option>
-                    <option>HDFC Current</option>
-                    <option>ICICI OD</option>
-                  </select>
+                  <DynamicSelect category="Account" name="bankAccount" value={form.bankAccount} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Type *</label>
-                  <select name="paymentType" value={form.paymentType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Supplier</option>
-                    <option>Employee Expense</option>
-                  </select>
+                  <DynamicSelect category="Payment Type" name="paymentType" value={form.paymentType} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -213,11 +284,7 @@ const NewBankPayment = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier *</label>
-                  <select name="supplierParty" value={form.supplierParty} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Supplier</option>
-                    <option>Global Electronics</option>
-                    <option>Local Traders</option>
-                  </select>
+                  <DynamicSelect category="Supplier" name="supplierParty" value={form.supplierParty} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier Type</label>
@@ -228,17 +295,11 @@ const NewBankPayment = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No.</label>
-                  <select name="invoiceNo" value={form.invoiceNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Invoice</option>
-                    <option>PINV001</option>
-                  </select>
+                  <DynamicSelect category="Invoice" name="invoiceNo" value={form.invoiceNo} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">PO No.</label>
-                  <select name="poNo" value={form.poNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select PO</option>
-                    <option>PO-2023</option>
-                  </select>
+                  <DynamicSelect category="PO" name="poNo" value={form.poNo} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -254,12 +315,7 @@ const NewBankPayment = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Method *</label>
-                  <select name="method" value={form.method} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>NEFT</option>
-                    <option>RTGS</option>
-                    <option>IMPS</option>
-                    <option>Cheque</option>
-                  </select>
+                  <DynamicSelect category="Payment Method" name="method" value={form.method} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Name</label>
@@ -374,17 +430,11 @@ const NewBankPayment = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1 mt-2">Supplier Ledger</label>
-                    <select name="supplierLedger" value={form.supplierLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Global Electronics Ledger</option>
-                    </select>
+                    <DynamicSelect category="Supplier Ledger" name="supplierLedger" value={form.supplierLedger} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1 mt-2">Bank Ledger</label>
-                    <select name="bankLedger" value={form.bankLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>HDFC Bank Ledger</option>
-                    </select>
+                    <DynamicSelect category="Bank Ledger" name="bankLedger" value={form.bankLedger} onChange={handleChange} />
                   </div>
                 </div>
              </div>
@@ -395,17 +445,11 @@ const NewBankPayment = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Paid By</label>
-                    <select name="paidBy" value={form.paidBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Accountant 1</option>
-                    </select>
+                  <DynamicSelect category="Paid By" name="paidBy" value={form.paidBy} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                    <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Finance Head</option>
-                    </select>
+                  <DynamicSelect category="Approved By" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
@@ -413,9 +457,11 @@ const NewBankPayment = () => {
                   </div>
                   <div className="col-span-2 mt-2">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Attachment</label>
-                     <button type="button" className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500">
-                        <UploadCloud size={18} /> Upload Document
-                     </button>
+                     <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">
+                        <UploadCloud size={18} /> 
+                        <span className="truncate">{form.documentFile ? form.documentFile.name : 'Upload Document'}</span>
+                        <input type="file" className="hidden" onChange={(e) => setForm(prev => ({ ...prev, documentFile: e.target.files[0] }))} />
+                     </label>
                   </div>
                 </div>
              </div>

@@ -1,17 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, Search, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const CashBook = () => {
-  const [openingBalance] = useState(150000);
-  const [transactions] = useState([
-    { id: 'REC-2026-11', date: '2026-09-02', particulars: 'Cash Sales', refNo: 'CS-001', receipt: 25000, payment: 0, balance: 175000 },
-    { id: 'PAY-2026-08', date: '2026-09-04', particulars: 'Office Expenses', refNo: 'EXP-12', receipt: 0, payment: 4500, balance: 170500 },
-    { id: 'CNTR-2026-01', date: '2026-09-05', particulars: 'Cash Deposit to Bank', refNo: 'DEP-99', receipt: 0, payment: 50000, balance: 120500 }
-  ]);
+  const [ledgers, setLedgers] = useState([]);
+  const [accountId, setAccountId] = useState('');
+  
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
 
-  const totalReceipts = transactions.reduce((acc, curr) => acc + curr.receipt, 0);
-  const totalPayments = transactions.reduce((acc, curr) => acc + curr.payment, 0);
-  const closingBalance = transactions[transactions.length - 1]?.balance || openingBalance;
+  const [statementData, setStatementData] = useState([]);
+  const [accountInfo, setAccountInfo] = useState({
+    openingBalance: 0,
+    closingBalance: 0
+  });
+
+  useEffect(() => {
+    fetchLedgers();
+  }, []);
+
+  useEffect(() => {
+    if (accountId) {
+      fetchStatement();
+    }
+  }, [accountId]);
+
+  const fetchLedgers = async () => {
+    try {
+      const response = await api.get('/account-ledgers');
+      if (response.data && response.data.data) {
+        // Filter for Cash accounts
+        const cashLedgers = response.data.data.filter(l => 
+          l.groupType === 'Asset' && l.accountName.toLowerCase().includes('cash')
+        );
+        setLedgers(cashLedgers);
+        if (cashLedgers.length > 0) {
+          setAccountId(cashLedgers[0]._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching ledgers:', error);
+    }
+  };
+
+  const fetchStatement = async () => {
+    if (!accountId) return;
+    try {
+      const response = await api.get(`/vouchers/statement?accountId=${accountId}&fromDate=${fromDate}&toDate=${toDate}`);
+      if (response.data && response.data.success) {
+        setStatementData(response.data.data);
+        setAccountInfo(response.data.accountInfo);
+      }
+    } catch (error) {
+      console.error('Error fetching statement:', error);
+    }
+  };
+
+  const totalReceipts = statementData.reduce((acc, curr) => acc + (curr.debit || 0), 0); // Cash received is Dr to Cash A/c
+  const totalPayments = statementData.reduce((acc, curr) => acc + (curr.credit || 0), 0); // Cash paid is Cr to Cash A/c
+  const openingBalance = accountInfo.openingBalance || 0;
+  const closingBalance = accountInfo.closingBalance || 0;
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -34,11 +86,17 @@ const CashBook = () => {
 
       <div className="bg-slate-50 p-4 border border-amber-200 rounded-lg flex items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-amber-600" />
-        <span className="text-gray-500">Date Range:</span>
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-01" />
+        <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="border p-1.5 rounded min-w-[200px] outline-none focus:border-amber-500">
+          <option value="">Select Cash Account...</option>
+          {ledgers.map(l => (
+            <option key={l._id} value={l._id}>{l.accountName}</option>
+          ))}
+        </select>
+        <span className="text-gray-500 ml-2">Date Range:</span>
+        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-amber-500" />
         <span className="text-gray-400">to</span>
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-30" />
-        <button className="px-3 py-1.5 bg-amber-500 text-white rounded hover:bg-amber-600">Apply Filter</button>
+        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-amber-500" />
+        <button onClick={fetchStatement} className="px-3 py-1.5 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors">Apply Filter</button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -74,15 +132,22 @@ const CashBook = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {transactions.map(t => (
-              <tr key={t.id} className="hover:bg-slate-50">
-                <td className="p-3">{t.date}</td>
-                <td className="p-3 font-mono font-bold text-amber-600">{t.id}</td>
-                <td className="p-3 font-semibold text-gray-800">{t.particulars}</td>
-                <td className="p-3 text-gray-500">{t.refNo}</td>
-                <td className="p-3 text-right font-bold text-emerald-700">{t.receipt > 0 ? t.receipt.toLocaleString() : '-'}</td>
-                <td className="p-3 text-right font-bold text-rose-700">{t.payment > 0 ? t.payment.toLocaleString() : '-'}</td>
-                <td className="p-3 text-right font-bold text-gray-800">{t.balance.toLocaleString()}</td>
+            {statementData.length === 0 && (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 font-medium">No transactions found for this period.</td>
+              </tr>
+            )}
+            {statementData.map((t, idx) => (
+              <tr key={t.voucherId || idx} className="hover:bg-slate-50">
+                <td className="p-3">{new Date(t.date).toLocaleDateString()}</td>
+                <td className="p-3 font-mono font-bold text-amber-600">{t.voucherNo || t.voucherId.slice(-6)}</td>
+                <td className="p-3 font-semibold text-gray-800">
+                  {t.narration || t.voucherType}
+                </td>
+                <td className="p-3 text-gray-500">-</td>
+                <td className="p-3 text-right font-bold text-emerald-700">{t.debit > 0 ? t.debit.toLocaleString() : '-'}</td>
+                <td className="p-3 text-right font-bold text-rose-700">{t.credit > 0 ? t.credit.toLocaleString() : '-'}</td>
+                <td className="p-3 text-right font-bold text-gray-800">{t.runningBalance.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>

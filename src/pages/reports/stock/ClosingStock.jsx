@@ -1,22 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FolderMinus, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const ClosingStock = () => {
-  const data = [
-    { item: 'LED TV 55 Inch', date: '30-Sep-2026', qty: 45, rate: 25000, value: 1125000 },
-    { item: 'Air Conditioner 1.5 Ton', date: '30-Sep-2026', qty: 22, rate: 32000, value: 704000 },
-    { item: 'Ergonomic Office Chair', date: '30-Sep-2026', qty: 150, rate: 2500, value: 375000 },
-    { item: 'Steel Sheets (Grade A)', date: '30-Sep-2026', qty: 1200, rate: 80, value: 96000 },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [totalValue, setTotalValue] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const totalValue = data.reduce((acc, curr) => acc + curr.value, 0);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/stock/closing-stock');
+      if (res.data && res.data.success) {
+        setCategories(res.data.data.categories || []);
+        setTotalValue(res.data.data.totalClosingValue || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching closing stock:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-            <FolderMinus className="text-cyan-600" size={22} /> Closing Stock
+            <FolderMinus className="text-cyan-600" size={22} /> Closing Stock (Category-wise)
           </h1>
           <p className="text-[11px] sm:text-xs text-gray-500">Reconciled statements of remaining stocks left in warehouses after sales/purchases.</p>
         </div>
@@ -30,12 +47,14 @@ const ClosingStock = () => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-4 border border-cyan-200 rounded-lg flex items-center justify-between gap-4 text-xs font-semibold text-gray-700 mb-4">
+      <div className="bg-slate-50 p-4 border border-cyan-200 rounded-lg flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-gray-700 mb-4">
         <div className="flex items-center gap-4">
           <Filter size={16} className="text-cyan-600" />
-          <span className="text-gray-500">Closing Date:</span>
-          <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-30" />
-          <button className="px-3 py-1.5 bg-cyan-600 text-white rounded hover:bg-cyan-700">Calculate</button>
+          <span className="text-gray-500">Closing As On Date:</span>
+          <input type="date" className="border p-1.5 rounded outline-none focus:border-cyan-500" defaultValue={today} />
+          <button onClick={fetchData} className="px-3 py-1.5 bg-cyan-600 text-white rounded hover:bg-cyan-700 transition-colors">
+            Refresh Data
+          </button>
         </div>
         <div className="text-cyan-800 font-extrabold text-base">
           Total Closing Value: ₹ {totalValue.toLocaleString()}
@@ -46,23 +65,31 @@ const ClosingStock = () => {
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b">
             <tr>
-              <th className="p-3">Item Name</th>
-              <th className="p-3">As On Date</th>
-              <th className="p-3 text-right">Closing Qty</th>
-              <th className="p-3 text-right">Valuation Rate (₹)</th>
+              <th className="p-3">Category Name</th>
+              <th className="p-3 text-right">Unique Items</th>
+              <th className="p-3 text-right">Total Closing Qty</th>
               <th className="p-3 text-right">Total Closing Value (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 font-semibold text-gray-800">{item.item}</td>
-                <td className="p-3 text-gray-600">{item.date}</td>
-                <td className="p-3 text-right font-bold text-gray-700">{item.qty}</td>
-                <td className="p-3 text-right text-gray-600">{item.rate.toLocaleString()}</td>
-                <td className="p-3 text-right font-extrabold text-cyan-700">₹ {item.value.toLocaleString()}</td>
-              </tr>
-            ))}
+            {loading ? (
+               <tr>
+                 <td colSpan="4" className="p-4 text-center text-gray-500 italic">Fetching closing stock...</td>
+               </tr>
+            ) : categories.length === 0 ? (
+               <tr>
+                 <td colSpan="4" className="p-4 text-center text-gray-500 italic">No closing stock found.</td>
+               </tr>
+            ) : (
+              categories.map((cat, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="p-3 font-semibold text-gray-800">{cat.categoryName}</td>
+                  <td className="p-3 text-right text-gray-600">{cat.itemCount.toLocaleString()}</td>
+                  <td className="p-3 text-right font-bold text-gray-700">{cat.totalQty.toLocaleString()}</td>
+                  <td className="p-3 text-right font-extrabold text-cyan-700">₹ {(cat.stockValue || 0).toLocaleString()}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

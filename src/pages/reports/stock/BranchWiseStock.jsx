@@ -1,13 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { GitBranch, Download, Printer } from 'lucide-react';
+import api from '../../../api';
 
 const BranchWiseStock = () => {
-  const data = [
-    { branch: 'North India (Delhi HQ)', totalItems: 850, totalQty: 45000, value: 12500000, status: 'Healthy' },
-    { branch: 'West India (Mumbai)', totalItems: 620, totalQty: 25000, value: 8500000, status: 'Healthy' },
-    { branch: 'South India (Bangalore)', totalItems: 450, totalQty: 18000, value: 6200000, status: 'Low Stock' },
-    { branch: 'East India (Kolkata)', totalItems: 210, totalQty: 8500, value: 2100000, status: 'Critical' },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/stock/branch-wise');
+      if (res.data && res.data.success) {
+        setData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching branch wise stock:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -28,6 +43,12 @@ const BranchWiseStock = () => {
         </div>
       </div>
 
+      <div className="flex justify-end">
+        <button onClick={fetchData} className="px-3 py-1.5 bg-teal-600 text-white rounded hover:bg-teal-700 text-xs transition-colors">
+          Refresh Data
+        </button>
+      </div>
+
       <div className="border rounded overflow-x-auto text-xs mt-4">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b">
@@ -40,23 +61,33 @@ const BranchWiseStock = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((branch, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 font-bold text-teal-800">{branch.branch}</td>
-                <td className="p-3 text-right text-gray-600 font-semibold">{branch.totalItems}</td>
-                <td className="p-3 text-right font-bold text-gray-700">{branch.totalQty.toLocaleString()}</td>
-                <td className="p-3 text-right font-extrabold text-teal-700">₹ {branch.value.toLocaleString()}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    branch.status === 'Healthy' ? 'bg-emerald-100 text-emerald-700' :
-                    branch.status === 'Low Stock' ? 'bg-amber-100 text-amber-700' :
-                    'bg-rose-100 text-rose-700'
-                  }`}>
-                    {branch.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {loading ? (
+               <tr>
+                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">Fetching branch-wise stock...</td>
+               </tr>
+            ) : data.length === 0 ? (
+               <tr>
+                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">No stock found in any branch.</td>
+               </tr>
+            ) : (
+              data.map((branch, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="p-3 font-bold text-teal-800">{branch.branch || 'Unassigned'}</td>
+                  <td className="p-3 text-right text-gray-600 font-semibold">{branch.itemCount}</td>
+                  <td className="p-3 text-right font-bold text-gray-700">{branch.totalQty.toLocaleString()}</td>
+                  <td className="p-3 text-right font-extrabold text-teal-700">₹ {branch.value.toLocaleString()}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      branch.status === 'Healthy' ? 'bg-emerald-100 text-emerald-700' :
+                      branch.status === 'Low Stock' ? 'bg-amber-100 text-amber-700' :
+                      'bg-rose-100 text-rose-700'
+                    }`}>
+                      {branch.status}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

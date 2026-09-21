@@ -1,15 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Briefcase, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const AccountWiseSummary = () => {
-  const [data] = useState([
-    { group: 'Indirect Expenses', account: 'Office Rent A/c', opening: 0, debit: 120000, credit: 0, closing: 120000 },
-    { group: 'Indirect Expenses', account: 'Salary A/c', opening: 0, debit: 450000, credit: 0, closing: 450000 },
-    { group: 'Direct Incomes', account: 'Sales Revenue', opening: 0, debit: 0, credit: 1500000, closing: -1500000 },
-    { group: 'Sundry Debtors', account: 'Amit Sharma', opening: 15000, debit: 45000, credit: 20000, closing: 40000 },
-    { group: 'Sundry Creditors', account: 'Acme Traders', opening: -25000, debit: 15000, credit: 50000, closing: -60000 },
-    { group: 'Bank Accounts', account: 'HDFC Bank', opening: 100000, debit: 500000, credit: 250000, closing: 350000 },
-  ]);
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
+  const [groupFilter, setGroupFilter] = useState('All Groups');
+  
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/reports/analysis/account-wise?fromDate=${fromDate}&toDate=${toDate}`);
+      if (res.data && res.data.success) {
+        setData(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching account-wise summary:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredData = data.filter(item => {
+    if (groupFilter !== 'All Groups' && item.groupType !== groupFilter) return false;
+    // Don't show accounts with 0 movement unless they are specifically filtered
+    if (item.totalDebit === 0 && item.totalCredit === 0) return false;
+    return true;
+  });
+
+  const uniqueGroups = ['All Groups', ...new Set(data.map(d => d.groupType))];
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -30,16 +60,26 @@ const AccountWiseSummary = () => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-4 border border-blue-200 rounded-lg flex items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
+      <div className="bg-slate-50 p-4 border border-blue-200 rounded-lg flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-indigo-600" />
-        <span className="text-gray-500">Account Group:</span>
-        <select className="border p-1.5 rounded min-w-[200px]">
-          <option>All Groups</option>
-          <option>Indirect Expenses</option>
-          <option>Sundry Debtors</option>
-          <option>Bank Accounts</option>
-        </select>
-        <button className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700">Apply Filter</button>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500">Account Group:</span>
+          <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="border p-1.5 rounded min-w-[150px] outline-none">
+            {uniqueGroups.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500">Date Range:</span>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-1.5 rounded outline-none" />
+          <span className="text-gray-400">to</span>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-1.5 rounded outline-none" />
+        </div>
+
+        <button onClick={fetchData} className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+          Apply Filter
+        </button>
       </div>
 
       <div className="border rounded overflow-x-auto text-xs">
@@ -48,27 +88,33 @@ const AccountWiseSummary = () => {
             <tr>
               <th className="p-3">Account Group</th>
               <th className="p-3">Ledger Name</th>
-              <th className="p-3 text-right">Opening Bal (₹)</th>
               <th className="p-3 text-right">Debit (Dr) (₹)</th>
               <th className="p-3 text-right">Credit (Cr) (₹)</th>
-              <th className="p-3 text-right">Closing Bal (₹)</th>
+              <th className="p-3 text-right">Net Movement (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 text-gray-500">{item.group}</td>
-                <td className="p-3 font-semibold text-gray-800">{item.account}</td>
-                <td className="p-3 text-right text-gray-600 font-mono">
-                  {item.opening !== 0 ? (Math.abs(item.opening).toLocaleString() + (item.opening > 0 ? ' Dr' : ' Cr')) : '-'}
-                </td>
-                <td className="p-3 text-right font-medium text-blue-700">{item.debit > 0 ? item.debit.toLocaleString() : '-'}</td>
-                <td className="p-3 text-right font-medium text-rose-700">{item.credit > 0 ? item.credit.toLocaleString() : '-'}</td>
-                <td className="p-3 text-right font-extrabold text-indigo-700">
-                  {item.closing !== 0 ? (Math.abs(item.closing).toLocaleString() + (item.closing > 0 ? ' Dr' : ' Cr')) : '-'}
-                </td>
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-gray-500 italic">Loading summary...</td>
               </tr>
-            ))}
+            ) : filteredData.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-gray-500 italic">No account movements found.</td>
+              </tr>
+            ) : (
+              filteredData.map((item, idx) => (
+                <tr key={item.accountId || idx} className="hover:bg-slate-50">
+                  <td className="p-3 text-gray-500">{item.groupType}</td>
+                  <td className="p-3 font-semibold text-gray-800">{item.accountName}</td>
+                  <td className="p-3 text-right font-medium text-blue-700">{item.totalDebit > 0 ? item.totalDebit.toLocaleString() : '-'}</td>
+                  <td className="p-3 text-right font-medium text-rose-700">{item.totalCredit > 0 ? item.totalCredit.toLocaleString() : '-'}</td>
+                  <td className="p-3 text-right font-extrabold text-indigo-700">
+                    {item.netMovement !== 0 ? (Math.abs(item.netMovement).toLocaleString() + (item.netMovement > 0 ? ' Dr' : ' Cr')) : '-'}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

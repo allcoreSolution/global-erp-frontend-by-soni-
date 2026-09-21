@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../../api';
 import { Users, Search, Edit2, Trash2, CheckCircle2, XCircle, Download, Upload, Printer, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -30,8 +31,8 @@ const UserMaster = () => {
     try {
       // Import the api instance from src/api.js (adjust path as needed, assuming we have it available or we will import it at the top)
       const [usersRes, rolesRes] = await Promise.all([
-        window.api.get('/users'),
-        window.api.get('/roles')
+        api.get('/users'),
+        api.get('/roles')
       ]);
       setUsers(usersRes.data);
       setRoles(rolesRes.data);
@@ -51,7 +52,7 @@ const UserMaster = () => {
 
   const handleToggleStatus = async (id) => {
     try {
-      await window.api.put(`/users/${id}/toggle-status`);
+      await api.put(`/users/${id}/toggle-status`);
       fetchUsersAndRoles();
       addLog(`Toggled status for user ${id}`);
     } catch (error) {
@@ -74,7 +75,7 @@ const UserMaster = () => {
     }
     
     try {
-      await window.api.post('/users', {
+      await api.post('/users', {
         username: newUser.username,
         email: newUser.email,
         password: newUser.password,

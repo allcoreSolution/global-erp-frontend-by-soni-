@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PackageCheck, Search, Filter, Download, Box, TrendingUp, Calendar } from 'lucide-react';
+import api from '../../../api';
 
 const FrequentlyPurchasedProducts = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const products = [
-    { id: 1, name: 'Industrial Bearings A-12', category: 'Hardware', frequency: 145, avgRestock: '12 Days', cost: 12500 },
-    { id: 2, name: 'Safety Helmets Pro', category: 'PPE', frequency: 98, avgRestock: '30 Days', cost: 8400 },
-    { id: 3, name: 'Lubricant Oil 50L', category: 'Consumables', frequency: 76, avgRestock: '15 Days', cost: 15200 },
-    { id: 4, name: 'Copper Wiring 2.5mm', category: 'Electrical', frequency: 65, avgRestock: '20 Days', cost: 22000 },
-    { id: 5, name: 'Steel Bolts M10', category: 'Hardware', frequency: 54, avgRestock: '10 Days', cost: 4500 },
-  ];
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/performance/frequently-purchased');
+        if (response.data.success) {
+          setProducts(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

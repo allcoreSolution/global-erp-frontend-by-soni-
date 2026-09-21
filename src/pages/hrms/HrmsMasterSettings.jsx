@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Trash2, Tag, Flag } from 'lucide-react';
+import api from '../../api';
 
 const HrmsMasterSettings = () => {
   const [priorities, setPriorities] = useState(['High', 'Medium', 'Low']);
@@ -8,28 +9,65 @@ const HrmsMasterSettings = () => {
   const [newPriority, setNewPriority] = useState('');
   const [newStatus, setNewStatus] = useState('');
 
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.get('/hrms-settings');
+      if (response.data && response.data.data) {
+        setPriorities(response.data.data.priorities || []);
+        setStatuses(response.data.data.statuses || []);
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+  };
+
+  const saveSettings = async (newPriorities, newStatuses) => {
+    try {
+      await api.put('/hrms-settings', {
+        priorities: newPriorities,
+        statuses: newStatuses
+      });
+      // Optionally update local state with exact db response
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert(error.response?.data?.message || 'Failed to save settings. Please try again.');
+    }
+  };
+
   const handleAddPriority = (e) => {
     e.preventDefault();
     if (newPriority.trim() && !priorities.includes(newPriority.trim())) {
-      setPriorities([...priorities, newPriority.trim()]);
+      const updatedPriorities = [...priorities, newPriority.trim()];
+      setPriorities(updatedPriorities);
       setNewPriority('');
+      saveSettings(updatedPriorities, statuses);
     }
   };
 
   const handleDeletePriority = (val) => {
-    setPriorities(priorities.filter(p => p !== val));
+    const updatedPriorities = priorities.filter(p => p !== val);
+    setPriorities(updatedPriorities);
+    saveSettings(updatedPriorities, statuses);
   };
 
   const handleAddStatus = (e) => {
     e.preventDefault();
     if (newStatus.trim() && !statuses.includes(newStatus.trim())) {
-      setStatuses([...statuses, newStatus.trim()]);
+      const updatedStatuses = [...statuses, newStatus.trim()];
+      setStatuses(updatedStatuses);
       setNewStatus('');
+      saveSettings(priorities, updatedStatuses);
     }
   };
 
   const handleDeleteStatus = (val) => {
-    setStatuses(statuses.filter(s => s !== val));
+    const updatedStatuses = statuses.filter(s => s !== val);
+    setStatuses(updatedStatuses);
+    saveSettings(priorities, updatedStatuses);
   };
 
   return (

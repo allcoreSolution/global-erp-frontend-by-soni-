@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Search, Download, Upload, Printer, CheckCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const PaymentList = () => {
-  const [payments, setPayments] = useState([
-    { id: 'PMT-001', supplierName: 'Rathi Steel Traders Ltd', invoiceNo: 'PINV-2024-001', amount: 45000, date: '2024-05-10', mode: 'Bank Transfer', refNo: 'TXN88990', advance: false },
-    { id: 'PMT-002', supplierName: 'Saraswati Plastics', invoiceNo: 'PINV-2024-002', amount: 15000, date: '2024-05-14', mode: 'Cheque', refNo: 'CHQ00123', advance: false }
-  ]);
+  const navigate = useNavigate();
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -14,17 +15,41 @@ const PaymentList = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete payment ${id}?`)) {
-      setPayments(prev => prev.filter(p => p.id !== id));
-      addLog(`Deleted payment record ${id}`);
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/payments');
+      if (data.success) {
+        setPayments(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this payment?')) {
+      try {
+        await api.delete(`/payments/${id}`);
+        setPayments(prev => prev.filter(p => p._id !== id));
+        addLog(`Deleted payment record: ${id}`);
+      } catch (error) {
+        console.error('Error deleting payment:', error);
+        addLog(`Error deleting payment: ${id}`);
+      }
     }
   };
 
   const filtered = payments.filter(p =>
-    p.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.supplierParty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.paymentNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Real CSV Export
@@ -32,14 +57,14 @@ const PaymentList = () => {
     addLog("Exporting payments registers logs to CSV...");
     const headers = ['Payment ID', 'Supplier Name', 'Invoice Ref', 'Amount (₹)', 'Date', 'Payment Mode', 'Ref No', 'Advance'];
     const rows = payments.map(p => [
-      p.id,
-      `"${p.supplierName.replace(/"/g, '""')}"`,
+      p.paymentNo,
+      `"${(p.supplierParty || '').replace(/"/g, '""')}"`,
       p.invoiceNo,
-      p.amount,
-      p.date,
-      p.mode,
-      p.refNo,
-      p.advance ? 'Yes' : 'No'
+      p.paymentAmount,
+      p.paymentDate,
+      p.paymentMethod,
+      p.transactionRef,
+      p.paymentType
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -179,27 +204,40 @@ const PaymentList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(p => (
-                <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{p.id}</td>
-                  <td className="p-2 font-medium text-gray-900">{p.supplierName}</td>
-                  <td className="p-2 text-gray-650">{p.invoiceNo}</td>
-                  <td className="p-2 text-right font-bold text-rose-600">₹ {p.amount.toLocaleString()}</td>
-                  <td className="p-2 text-gray-500 whitespace-nowrap">{p.date}</td>
-                  <td className="p-2 text-gray-600">{p.mode}</td>
-                  <td className="p-2 font-mono text-gray-550">{p.refNo}</td>
-                  <td className="p-2 text-center">
-                    <span className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${p.advance ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {p.advance ? 'Advance' : 'Invoice Adj'}
-                    </span>
-                  </td>
-                  <td className="p-2 text-center no-print">
-                    <button onClick={() => handleDelete(p.id)} className="p-1 hover:bg-red-50 rounded text-red-600">
-                      <Trash2 size={13} />
-                    </button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">Loading payments...</td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">No payments found.</td>
+                </tr>
+              ) : (
+                filtered.map(p => (
+                  <tr key={p._id} className="hover:bg-slate-50">
+                    <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{p.paymentNo}</td>
+                    <td className="p-2 font-medium text-gray-900">{p.supplierParty || '-'}</td>
+                    <td className="p-2 text-gray-650">{p.invoiceNo || '-'}</td>
+                    <td className="p-2 text-right font-bold text-rose-600">₹ {(p.paymentAmount || 0).toLocaleString()}</td>
+                    <td className="p-2 text-gray-500 whitespace-nowrap">{p.paymentDate}</td>
+                    <td className="p-2 text-gray-600">{p.paymentMethod}</td>
+                    <td className="p-2 font-mono text-gray-550">{p.transactionRef || '-'}</td>
+                    <td className="p-2 text-center">
+                      <span className="px-1.5 py-0.5 rounded font-bold text-[9px] bg-blue-100 text-blue-700">
+                        {p.paymentType}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center no-print flex justify-center items-center gap-2">
+                      <button onClick={() => navigate(`/payment/edit/${p._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600">
+                        <Edit size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(p._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

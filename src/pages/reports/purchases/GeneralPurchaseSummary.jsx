@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, Download, Printer, Filter, Search, ArrowUpDown, TrendingDown } from 'lucide-react';
+import api from '../../../api';
 
 const GeneralPurchaseSummary = () => {
-  const data = [
-    { date: '2026-09-01', orders: 32, itemsPurchased: 85, grossPurchase: 320000, discount: 10000, tax: 55800, netPurchase: 365800 },
-    { date: '2026-09-02', orders: 28, itemsPurchased: 70, grossPurchase: 280000, discount: 8000, tax: 48960, netPurchase: 320960 },
-    { date: '2026-09-03', orders: 40, itemsPurchased: 110, grossPurchase: 410000, discount: 12000, tax: 71640, netPurchase: 469640 },
-    { date: '2026-09-04', orders: 45, itemsPurchased: 130, grossPurchase: 450000, discount: 15000, tax: 78300, netPurchase: 513300 },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/general-summary');
+        if (response.data && response.data.success) {
+          setData(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
 

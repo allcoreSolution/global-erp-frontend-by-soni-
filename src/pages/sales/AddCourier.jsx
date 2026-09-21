@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Truck, Upload } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const AddCourier = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   const [form, setForm] = useState({
     courierCode: 'CR-00001',
@@ -55,6 +58,71 @@ const AddCourier = () => {
     remarks: ''
   });
 
+  useEffect(() => {
+    if (id) {
+      const fetchCourier = async () => {
+        try {
+          const { data } = await api.get(`/couriers/${id}`);
+          if (data.success && data.data) {
+            const c = data.data;
+            setForm({
+              courierCode: c.courierCode || '',
+              courierName: c.name || '',
+              courierType: c.type || 'Domestic',
+              company: c.company || 'Select',
+              branch: c.branch || 'Select',
+              status: c.status || 'Active',
+              description: c.description || '',
+              contactPerson: c.contactPerson || '',
+              mobileNumber: c.phone || '',
+              altMobile: c.alternateMobile || '',
+              email: c.email || '',
+              website: c.website || '',
+              customerCare: c.customerCare || '',
+              addressLine1: c.addressLine1 || '',
+              addressLine2: c.addressLine2 || '',
+              country: c.country || 'Select',
+              state: c.state || 'Select',
+              city: c.city || 'Select',
+              district: c.district || 'Select',
+              pincode: c.pincode || '',
+              serviceType: c.serviceType || 'Standard',
+              deliveryMode: c.deliveryMode || 'Road',
+              deliveryDays: c.deliveryDays || '2-5 Days',
+              pickupAvailable: c.pickupAvailable ?? true,
+              codAvailable: c.codAvailable ?? true,
+              trackingAvailable: c.trackingAvailable ?? true,
+              reversePickup: c.reversePickup ?? true,
+              internationalShipping: c.internationalShipping ?? false,
+              serviceStates: c.serviceAreaStates?.[0] || 'Select',
+              serviceCities: c.serviceAreaCities?.[0] || 'Select',
+              servicePincodes: c.serviceAreaPincodes?.[0] || '',
+              baseCharge: c.baseCharge || '',
+              perKgCharge: c.perKgCharge || '',
+              additionalKg: c.additionalKgCharge || '',
+              codCharge: c.codCharge || '',
+              fuelSurcharge: c.fuelSurcharge || '',
+              returnCharge: c.returnCharge || '',
+              tax: c.tax || 'Select',
+              currency: c.currency || 'INR',
+              trackingURL: c.trackingUrl || '',
+              trackingPrefix: c.trackingPrefix || '',
+              apiAvailable: c.apiAvailable ?? true,
+              apiProvider: c.apiProvider || 'Select',
+              autoTrackingUpdate: c.autoTrackingUpdate ?? true,
+              defaultCourier: c.isDefaultCourier ?? true,
+              priority: c.priority || '',
+              remarks: c.remarks || ''
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching courier", error);
+        }
+      };
+      fetchCourier();
+    }
+  }, [id]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -63,10 +131,73 @@ const AddCourier = () => {
     }));
   };
 
-  const handleSave = (e) => {
+
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Courier registered successfully!');
-    navigate('/sales/courier-list');
+    try {
+      const payload = {
+        courierCode: form.courierCode,
+        name: form.courierName,
+        type: form.courierType,
+        company: form.company,
+        branch: form.branch,
+        status: form.status,
+        description: form.description,
+        contactPerson: form.contactPerson,
+        phone: form.mobileNumber,
+        alternateMobile: form.altMobile,
+        email: form.email,
+        website: form.website,
+        customerCare: form.customerCare,
+        addressLine1: form.addressLine1,
+        addressLine2: form.addressLine2,
+        country: form.country,
+        state: form.state,
+        city: form.city,
+        district: form.district,
+        pincode: form.pincode,
+        serviceType: form.serviceType,
+        deliveryMode: form.deliveryMode,
+        deliveryDays: form.deliveryDays,
+        pickupAvailable: form.pickupAvailable,
+        codAvailable: form.codAvailable,
+        trackingAvailable: form.trackingAvailable,
+        reversePickup: form.reversePickup,
+        internationalShipping: form.internationalShipping,
+        serviceAreaStates: [form.serviceStates],
+        serviceAreaCities: [form.serviceCities],
+        serviceAreaPincodes: [form.servicePincodes],
+        baseCharge: Number(form.baseCharge) || 0,
+        perKgCharge: Number(form.perKgCharge) || 0,
+        additionalKgCharge: Number(form.additionalKg) || 0,
+        codCharge: Number(form.codCharge) || 0,
+        fuelSurcharge: Number(form.fuelSurcharge) || 0,
+        returnCharge: Number(form.returnCharge) || 0,
+        tax: form.tax,
+        currency: form.currency,
+        trackingUrl: form.trackingURL,
+        trackingPrefix: form.trackingPrefix,
+        apiAvailable: form.apiAvailable,
+        apiProvider: form.apiProvider,
+        autoTrackingUpdate: form.autoTrackingUpdate,
+        isDefaultCourier: form.defaultCourier,
+        priority: Number(form.priority) || 0,
+        remarks: form.remarks
+      };
+
+      if (id) {
+        await api.put(`/couriers/${id}`, payload);
+        alert('Courier updated successfully!');
+      } else {
+        await api.post('/couriers', payload);
+        alert('Courier registered successfully!');
+      }
+      navigate('/sales/courier-list');
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Error saving courier');
+    }
   };
 
   return (
@@ -108,10 +239,7 @@ const AddCourier = () => {
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Courier Type *</label>
-                  <select name="courierType" value={form.courierType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Domestic</option>
-                    <option>International</option>
-                  </select>
+                  <DynamicSelect category="CourierType" name="courierType" value={form.courierType} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
@@ -122,17 +250,11 @@ const AddCourier = () => {
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Head Office</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Active</option>
-                    <option>Inactive</option>
-                  </select>
+                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
@@ -187,33 +309,19 @@ const AddCourier = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Country</label>
-                <select name="country" value={form.country} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                  <option>Select</option>
-                  <option>India</option>
-                </select>
+                <DynamicSelect category="Country" name="country" value={form.country} onChange={handleChange} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
-                <select name="state" value={form.state} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                  <option>Select</option>
-                  <option>Delhi</option>
-                  <option>Maharashtra</option>
-                </select>
+                <DynamicSelect category="State" name="state" value={form.state} onChange={handleChange} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
-                <select name="city" value={form.city} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                  <option>Select</option>
-                  <option>New Delhi</option>
-                  <option>Mumbai</option>
-                </select>
+                <DynamicSelect category="City" name="city" value={form.city} onChange={handleChange} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">District</label>
-                <select name="district" value={form.district} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                  <option>Select</option>
-                  <option>South Delhi</option>
-                </select>
+                <DynamicSelect category="District" name="district" value={form.district} onChange={handleChange} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
@@ -230,18 +338,11 @@ const AddCourier = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Service Type *</label>
-                    <select name="serviceType" value={form.serviceType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option>Standard</option>
-                      <option>Express</option>
-                    </select>
+                    <DynamicSelect category="ServiceType" name="serviceType" value={form.serviceType} onChange={handleChange} />
                   </div>
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Mode</label>
-                    <select name="deliveryMode" value={form.deliveryMode} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option>Road</option>
-                      <option>Air</option>
-                      <option>Surface</option>
-                    </select>
+                    <DynamicSelect category="DeliveryMode" name="deliveryMode" value={form.deliveryMode} onChange={handleChange} />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Days</label>
@@ -277,17 +378,11 @@ const AddCourier = () => {
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">States</label>
-                    <select name="serviceStates" value={form.serviceStates} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option>Select</option>
-                      <option>All States</option>
-                    </select>
+                    <DynamicSelect category="State" name="serviceStates" value={form.serviceStates} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cities</label>
-                    <select name="serviceCities" value={form.serviceCities} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option>Select</option>
-                      <option>All Cities</option>
-                    </select>
+                    <DynamicSelect category="City" name="serviceCities" value={form.serviceCities} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Pincodes</label>
@@ -327,17 +422,11 @@ const AddCourier = () => {
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Tax</label>
-                  <select name="tax" value={form.tax} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>GST 18%</option>
-                  </select>
+                  <DynamicSelect category="TaxConfiguration" name="tax" value={form.tax} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
-                  <select name="currency" value={form.currency} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>INR</option>
-                    <option>USD</option>
-                  </select>
+                  <DynamicSelect category="Currency" name="currency" value={form.currency} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -364,11 +453,7 @@ const AddCourier = () => {
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">API Provider</label>
-                  <select name="apiProvider" value={form.apiProvider} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Shiprocket</option>
-                    <option>Delhivery</option>
-                  </select>
+                  <DynamicSelect category="APIProvider" name="apiProvider" value={form.apiProvider} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 md:col-span-1 mt-2 md:mt-6">
                   <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">

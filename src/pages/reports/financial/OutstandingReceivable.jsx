@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowUpRight, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const OutstandingReceivable = () => {
-  const data = [
-    { customer: 'Amit Sharma (Retail)', ref: 'INV-2026-1122', date: '2026-08-15', dueAmount: 14160, overdueDays: 15, status: 'Overdue' },
-    { customer: 'Superstone Enterprises', ref: 'INV-2026-1004', date: '2026-08-01', dueAmount: 45000, overdueDays: 30, status: 'Critical' },
-    { customer: 'Rajesh Kumar', ref: 'INV-2026-1199', date: '2026-09-01', dueAmount: 8500, overdueDays: 0, status: 'Pending' }
-  ];
+  const [data, setData] = useState([]);
+  const [totalDue, setTotalDue] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const totalDue = data.reduce((acc, curr) => acc + curr.dueAmount, 0);
+  useEffect(() => {
+    fetchOutstanding();
+  }, []);
+
+  const fetchOutstanding = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/financial/outstanding?type=receivable');
+      if (res.data && res.data.success) {
+        setData(res.data.data.records || []);
+        setTotalDue(res.data.data.total || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching Receivables:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -47,32 +63,31 @@ const OutstandingReceivable = () => {
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b">
             <tr>
-              <th className="p-3">Customer Name</th>
-              <th className="p-3">Invoice Ref</th>
-              <th className="p-3">Bill Date</th>
-              <th className="p-3">Overdue Days</th>
+              <th className="p-3">Customer / Account Name</th>
+              <th className="p-3">Account Group</th>
               <th className="p-3">Status</th>
               <th className="p-3 text-right">Pending Amount (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 font-bold text-gray-800">{item.customer}</td>
-                <td className="p-3 font-mono text-cyan-700">{item.ref}</td>
-                <td className="p-3 text-gray-600">{item.date}</td>
-                <td className="p-3 text-gray-800 font-bold">{item.overdueDays} Days</td>
-                <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    item.status === 'Critical' ? 'bg-rose-100 text-rose-700' : 
-                    item.status === 'Overdue' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td className="p-3 text-right font-extrabold text-gray-800">₹ {item.dueAmount.toLocaleString()}</td>
-              </tr>
-            ))}
+            {loading ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">Loading Outstanding Receivables...</td></tr>
+            ) : data.length === 0 ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">No outstanding receivables found.</td></tr>
+            ) : (
+              data.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="p-3 font-bold text-gray-800">{item.accountName}</td>
+                  <td className="p-3 text-gray-600">Asset (Receivable)</td>
+                  <td className="p-3">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                      Pending
+                    </span>
+                  </td>
+                  <td className="p-3 text-right font-extrabold text-gray-800">₹ {item.amount.toLocaleString()}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

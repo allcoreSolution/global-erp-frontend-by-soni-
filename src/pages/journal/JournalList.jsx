@@ -4,62 +4,27 @@ import {
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
   Check, X, ChevronLeft, ChevronRight, Printer, Calendar, DollarSign, Filter
 } from 'lucide-react';
+import api from '../../api';
 
 const JournalList = () => {
   const navigate = useNavigate();
 
-  // Mock Journal Vouchers
-  const [journals, setJournals] = useState(() => {
-    const saved = localStorage.getItem('journal_entries');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [
-      {
-        id: 'JV-2024-001',
-        date: '2024-05-20',
-        reference: 'REF-88902',
-        narration: 'Office Rent for May 2024 adjusted against security deposit',
-        status: 'Approved',
-        items: [
-          { type: 'Dr', account: 'Rent Expense A/c', amount: 45000, narration: 'Monthly rent' },
-          { type: 'Cr', account: 'Security Deposit A/c', amount: 45000, narration: 'Adjustment' }
-        ],
-        totalAmount: 45000,
-        attachmentName: 'rent_agreement.pdf'
-      },
-      {
-        id: 'JV-2024-002',
-        date: '2024-05-22',
-        reference: 'DEP-209',
-        narration: 'Depreciation provision on office machinery for FY 24-25',
-        status: 'Pending',
-        items: [
-          { type: 'Dr', account: 'Depreciation A/c', amount: 12500, narration: 'Machinery dep.' },
-          { type: 'Cr', account: 'Accumulated Depreciation A/c', amount: 12500, narration: 'Machinery dep.' }
-        ],
-        totalAmount: 12500,
-        attachmentName: null
-      },
-      {
-        id: 'JV-2024-003',
-        date: '2024-05-23',
-        reference: 'JV-ADJ',
-        narration: 'Correction entry for sales commission wrong booking',
-        status: 'Draft',
-        items: [
-          { type: 'Dr', account: 'Commission Paid A/c', amount: 8000, narration: 'Correct booking' },
-          { type: 'Cr', account: 'Sundry Debtors - Ramesh & Sons', amount: 8000, narration: 'Rectification entry' }
-        ],
-        totalAmount: 8000,
-        attachmentName: 'correction_note.png'
-      }
-    ];
-  });
+  const [journals, setJournals] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem('journal_entries', JSON.stringify(journals));
-  }, [journals]);
+    fetchJournals();
+  }, []);
+
+  const fetchJournals = async () => {
+    try {
+      const res = await api.get('/journals');
+      if (res.data?.data) {
+        setJournals(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch journals', err);
+    }
+  };
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,12 +46,12 @@ const JournalList = () => {
 
   // Filter Logic
   const filteredJournals = journals.filter(jv => {
-    const matchesSearch = jv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          jv.narration.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          jv.reference.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (jv.journalNo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (jv.narration || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (jv.referenceNo || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter ? jv.status === statusFilter : true;
-    const matchesStartDate = startDate ? jv.date >= startDate : true;
-    const matchesEndDate = endDate ? jv.date <= endDate : true;
+    const matchesStartDate = startDate ? (jv.journalDate || '') >= startDate : true;
+    const matchesEndDate = endDate ? (jv.journalDate || '') <= endDate : true;
     return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
   });
 
@@ -94,12 +59,12 @@ const JournalList = () => {
   const handleExportCSV = () => {
     const headers = ['Voucher No', 'Date', 'Reference', 'Narration', 'Total Amount', 'Status'];
     const csvRows = filteredJournals.map(jv => [
-      `"${jv.id}"`,
-      `"${jv.date}"`,
-      `"${jv.reference || ''}"`,
-      `"${jv.narration.replace(/"/g, '""')}"`,
-      jv.totalAmount,
-      `"${jv.status}"`
+      `"${jv.journalNo || ''}"`,
+      `"${jv.journalDate || ''}"`,
+      `"${jv.referenceNo || ''}"`,
+      `"${(jv.narration || '').replace(/"/g, '""')}"`,
+      jv.totals?.debit || 0,
+      `"${jv.status || ''}"`
     ].join(','));
 
     const csvString = [headers.join(','), ...csvRows].join('\n');
@@ -179,14 +144,26 @@ const JournalList = () => {
     window.print();
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete journal voucher ${id}?`)) {
-      setJournals(journals.filter(j => j.id !== id));
+    const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete journal voucher?`)) {
+      try {
+        await api.delete(`/journals/${id}`);
+        setJournals(journals.filter(j => j._id !== id));
+      } catch (err) {
+        console.error('Failed to delete', err);
+        alert('Failed to delete journal entry.');
+      }
     }
   };
 
-  const handleApprove = (id, newStatus) => {
-    setJournals(journals.map(j => j.id === id ? { ...j, status: newStatus } : j));
+  const handleApprove = async (id, newStatus) => {
+    try {
+      await api.put(`/journals/${id}`, { status: newStatus });
+      setJournals(journals.map(j => j._id === id ? { ...j, status: newStatus } : j));
+    } catch (err) {
+      console.error('Failed to change status', err);
+      alert('Failed to change status.');
+    }
   };
 
   const handlePrint = (jv) => {
@@ -317,12 +294,12 @@ const JournalList = () => {
             <tbody>
               {filteredJournals.length > 0 ? (
                 filteredJournals.map((jv) => (
-                  <tr key={jv.id} className="border-b border-gray-100 dark:border-slate-200/60 hover:bg-gray-50 dark:hover:bg-slate-800/40 text-gray-700 dark:text-slate-300 transition-colors">
-                    <td className="py-3 px-4 font-bold text-indigo-600 dark:text-blue-400">{jv.id}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{jv.date}</td>
-                    <td className="py-3 px-4">{jv.reference || <span className="text-gray-400">-</span>}</td>
+                  <tr key={jv._id} className="border-b border-gray-100 dark:border-slate-200/60 hover:bg-gray-50 dark:hover:bg-slate-800/40 text-gray-700 dark:text-slate-300 transition-colors">
+                    <td className="py-3 px-4 font-bold text-indigo-600 dark:text-blue-400">{jv.journalNo}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{jv.journalDate}</td>
+                    <td className="py-3 px-4">{jv.referenceNo || <span className="text-gray-400">-</span>}</td>
                     <td className="py-3 px-4 max-w-xs truncate" title={jv.narration}>{jv.narration}</td>
-                    <td className="py-3 px-4 text-right font-bold">₹ {jv.totalAmount.toLocaleString('en-IN')}.00</td>
+                    <td className="py-3 px-4 text-right font-bold">₹ {(jv.totals?.debit || 0).toLocaleString('en-IN')}.00</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
                         ${jv.status === 'Approved' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
@@ -336,7 +313,7 @@ const JournalList = () => {
                       <div className="flex items-center justify-center gap-1">
                         {jv.status !== 'Approved' && (
                           <button
-                            onClick={() => handleApprove(jv.id, 'Approved')}
+                            onClick={() => handleApprove(jv._id, 'Approved')}
                             title="Approve Voucher"
                             className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 rounded transition-colors"
                           >
@@ -345,7 +322,7 @@ const JournalList = () => {
                         )}
                         {jv.status === 'Approved' && (
                           <button
-                            onClick={() => handleApprove(jv.id, 'Pending')}
+                            onClick={() => handleApprove(jv._id, 'Pending')}
                             title="Reject/Revert to Pending"
                             className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
                           >
@@ -364,14 +341,14 @@ const JournalList = () => {
                           <Printer size={15} />
                         </button>
                         <button
-                          onClick={() => navigate(`/journal/edit/${jv.id}`)}
+                          onClick={() => navigate(`/journal/edit/${jv._id}`)}
                           title="Edit Voucher"
                           className="p-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded"
                         >
                           <Edit size={15} />
                         </button>
                         <button
-                          onClick={() => handleDelete(jv.id)}
+                          onClick={() => handleDelete(jv._id)}
                           title="Delete Voucher"
                           className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
                         >
@@ -426,12 +403,12 @@ const JournalList = () => {
                 {/* Voucher Meta details */}
                 <div className="grid grid-cols-2 gap-4 py-4 text-xs">
                   <div>
-                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedJournal.id}</span></div>
-                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher Date:</span> <span className="text-gray-700 dark:text-slate-200">{selectedJournal.date}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedJournal.journalNo}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher Date:</span> <span className="text-gray-700 dark:text-slate-200">{selectedJournal.journalDate}</span></div>
                   </div>
                   <div className="text-right">
-                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Reference:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedJournal.reference || 'N/A'}</span></div>
-                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Status:</span> <span className="font-bold text-green-600">{selectedJournal.status}</span></div>
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Reference:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedJournal.referenceNo || 'N/A'}</span></div>
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Status:</span> <span className="font-bold text-green-600">{selectedJournal.status || ''}</span></div>
                   </div>
                 </div>
 
@@ -447,28 +424,28 @@ const JournalList = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedJournal.items.map((item, idx) => (
+                      {(selectedJournal.entries || []).map((item, idx) => (
                         <tr key={idx} className="border-b border-gray-100 dark:border-slate-200/60 text-gray-750 dark:text-slate-300">
                           <td className="py-2.5 px-3 border-r border-gray-200 dark:border-slate-200">
                             <div className="font-bold">{item.account}</div>
-                            {item.narration && <div className="text-[10px] text-gray-400 dark:text-gray-500 italic mt-0.5">{item.narration}</div>}
+                            {item.description && <div className="text-[10px] text-gray-400 dark:text-gray-500 italic mt-0.5">{item.description}</div>}
                           </td>
                           <td className="py-2.5 px-3 text-center border-r border-gray-200 dark:border-slate-200 font-semibold">
-                            {item.type}
+                            {item.debit > 0 ? 'Dr' : (item.credit > 0 ? 'Cr' : '-')}
                           </td>
                           <td className="py-2.5 px-3 text-right border-r border-gray-200 dark:border-slate-200 font-mono">
-                            {item.type === 'Dr' ? `₹ ${item.amount.toLocaleString('en-IN')}.00` : '-'}
+                            {item.debit > 0 ? `₹ ${item.debit.toLocaleString('en-IN')}.00` : '-'}
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono">
-                            {item.type === 'Cr' ? `₹ ${item.amount.toLocaleString('en-IN')}.00` : '-'}
+                            {item.credit > 0 ? `₹ ${item.credit.toLocaleString('en-IN')}.00` : '-'}
                           </td>
                         </tr>
                       ))}
                       {/* Totals Row */}
                       <tr className="bg-slate-50 dark:bg-slate-850 font-bold border-t border-gray-300 dark:border-slate-200">
                         <td colSpan="2" className="py-3 px-3 text-right border-r border-gray-200 dark:border-slate-200 uppercase">Total Amount:</td>
-                        <td className="py-3 px-3 text-right border-r border-gray-200 dark:border-slate-200 font-mono">₹ {selectedJournal.totalAmount.toLocaleString('en-IN')}.00</td>
-                        <td className="py-3 px-3 text-right font-mono">₹ {selectedJournal.totalAmount.toLocaleString('en-IN')}.00</td>
+                        <td className="py-3 px-3 text-right border-r border-gray-200 dark:border-slate-200 font-mono">₹ {(selectedJournal.totals?.debit || 0).toLocaleString('en-IN')}.00</td>
+                        <td className="py-3 px-3 text-right font-mono">₹ {(selectedJournal.totals?.credit || 0).toLocaleString('en-IN')}.00</td>
                       </tr>
                     </tbody>
                   </table>

@@ -1,15 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Receipt, Search, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const ReceiptRegister = () => {
-  const [transactions] = useState([
-    { id: 'REC-2026-001', date: '2026-09-01', party: 'Amit Sharma', refNo: 'NEFT-0012', amount: 15000, mode: 'Bank Transfer', status: 'Cleared' },
-    { id: 'REC-2026-002', date: '2026-09-03', party: 'Superstone Enterprises', refNo: 'CHQ-88899', amount: 75000, mode: 'Cheque', status: 'Pending' },
-    { id: 'REC-2026-003', date: '2026-09-05', party: 'Walk-in Customer', refNo: 'CSH-11', amount: 4500, mode: 'Cash', status: 'Cleared' }
-  ]);
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
-  const totalAmount = transactions.reduce((acc, curr) => acc + curr.amount, 0);
-  const totalCleared = transactions.filter(t => t.status === 'Cleared').reduce((acc, curr) => acc + curr.amount, 0);
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
+  const [vouchers, setVouchers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchReceipts();
+  }, []);
+
+  const fetchReceipts = async () => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams();
+      if (fromDate) queryParams.append('fromDate', fromDate);
+      if (toDate) queryParams.append('toDate', toDate);
+      queryParams.append('voucherType', 'Receipt');
+      
+      const res = await api.get(`/vouchers?${queryParams.toString()}`);
+      if (res.data && res.data.success) {
+        setVouchers(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching receipt vouchers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const receipts = vouchers.map(v => {
+    // In a Receipt, we receive money from a Party. So Cash/Bank is Debited, Party is Credited.
+    // Let's find the credited account to show as 'Party'
+    const partyEntry = v.entries.find(e => e.creditAmount > 0);
+    return {
+      id: v._id,
+      voucherNo: v.voucherNo || v._id.slice(-6),
+      date: new Date(v.date).toLocaleDateString(),
+      party: partyEntry?.account?.accountName || v.generalNarration || 'Unknown',
+      amount: v.totalDebit || 0, // Total receipt amount
+      mode: 'Receipt',
+      status: v.status || 'Posted',
+      refNo: '-'
+    };
+  });
+
+  const totalAmount = receipts.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalCleared = receipts.filter(t => t.status === 'Posted').reduce((acc, curr) => acc + curr.amount, 0);
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -38,10 +81,10 @@ const ReceiptRegister = () => {
           <option>Cheque</option>
           <option>Bank Transfer</option>
         </select>
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-01" />
+        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-rose-500" />
         <span className="text-gray-400">to</span>
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-30" />
-        <button className="px-3 py-1.5 bg-rose-600 text-white rounded hover:bg-rose-700">Apply Filter</button>
+        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-rose-500" />
+        <button onClick={fetchReceipts} className="px-3 py-1.5 bg-rose-600 text-white rounded hover:bg-rose-700 transition-colors">Apply Filter</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -69,21 +112,31 @@ const ReceiptRegister = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {transactions.map(t => (
-              <tr key={t.id} className="hover:bg-slate-50">
-                <td className="p-3">{t.date}</td>
-                <td className="p-3 font-mono font-bold text-rose-600">{t.id}</td>
-                <td className="p-3 font-semibold text-gray-800">{t.party}</td>
-                <td className="p-3 text-gray-500">{t.refNo}</td>
-                <td className="p-3 text-gray-700">{t.mode}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'Cleared' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {t.status}
-                  </span>
-                </td>
-                <td className="p-3 text-right font-extrabold text-emerald-700">₹ {t.amount.toLocaleString()}</td>
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 italic">Loading receipts...</td>
               </tr>
-            ))}
+            ) : receipts.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 italic">No receipt vouchers found.</td>
+              </tr>
+            ) : (
+              receipts.map((t, idx) => (
+                <tr key={t.id || idx} className="hover:bg-slate-50">
+                  <td className="p-3">{t.date}</td>
+                  <td className="p-3 font-mono font-bold text-rose-600">{t.voucherNo}</td>
+                  <td className="p-3 font-semibold text-gray-800">{t.party}</td>
+                  <td className="p-3 text-gray-500">{t.refNo}</td>
+                  <td className="p-3 text-gray-700">{t.mode}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'Posted' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right font-extrabold text-emerald-700">₹ {t.amount.toLocaleString()}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

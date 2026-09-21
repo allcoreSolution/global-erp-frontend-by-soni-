@@ -31,7 +31,7 @@ const SalesAnalysisReports = () => {
       icon: User,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
       actionText: 'Track Customer Purchasing',
-      to: '/coming-soon'
+      to: '/reports/sales/customer-wise-sales'
     },
     {
       title: 'Category-wise Sales',
@@ -39,7 +39,7 @@ const SalesAnalysisReports = () => {
       icon: Layers,
       color: 'text-purple-600 bg-purple-50 border-purple-100',
       actionText: 'Review Category Sales',
-      to: '/coming-soon'
+      to: '/reports/sales/category-wise-sales'
     },
     {
       title: 'Brand-wise Sales',
@@ -47,7 +47,7 @@ const SalesAnalysisReports = () => {
       icon: Award,
       color: 'text-cyan-600 bg-cyan-50 border-cyan-100',
       actionText: 'Audit Brand Performance',
-      to: '/coming-soon'
+      to: '/reports/sales/brand-wise-sales'
     },
     {
       title: 'Salesperson-wise Sales',
@@ -55,7 +55,7 @@ const SalesAnalysisReports = () => {
       icon: Users,
       color: 'text-amber-600 bg-amber-50 border-amber-100',
       actionText: 'Review Sales Staff Targets',
-      to: '/coming-soon'
+      to: '/reports/sales/salesperson-wise-sales'
     },
     {
       title: 'Branch-wise Sales',
@@ -63,7 +63,7 @@ const SalesAnalysisReports = () => {
       icon: GitBranch,
       color: 'text-indigo-600 bg-indigo-50 border-indigo-100',
       actionText: 'Open Regional Analytics',
-      to: '/coming-soon'
+      to: '/reports/sales/branch-wise-sales'
     },
     {
       title: 'Warehouse-wise Sales',
@@ -71,7 +71,7 @@ const SalesAnalysisReports = () => {
       icon: Home,
       color: 'text-teal-600 bg-teal-50 border-teal-100',
       actionText: 'View Warehouse Sales',
-      to: '/coming-soon'
+      to: '/reports/sales/warehouse-wise-sales'
     }
   ];
 

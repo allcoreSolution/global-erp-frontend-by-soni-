@@ -44,17 +44,25 @@ export const QuickLinks = () => {
   );
 };
 
-export const SummaryCards = () => {
+export const SummaryCards = ({ data, loading }) => {
   const navigate = useNavigate();
   const userRole = localStorage.getItem('userRole');
 
+  // Fallbacks for data coming from the backend
+  const sales = data?.sales || { amount: '₹1.25 Cr', percent: '18.65%', up: true };
+  const purchase = data?.purchase || { amount: '₹85.4 L', percent: '8.32%', up: false };
+  const grossProfit = data?.grossProfit || { amount: '₹40.4 L', percent: '22.41%', up: true };
+  const netProfit = data?.netProfit || { amount: '₹18.7 L', percent: '16.35%', up: true };
+  const totalExpenses = data?.totalExpenses || { amount: '₹75.4 L', percent: '12.52%', up: true };
+  const outstanding = data?.outstanding || { amount: '₹21.2 L' };
+
   const cards = [
-    { title: 'TOTAL SALES', amount: '₹ 1.25 Cr', percent: '18.65%', up: true, icon: ShoppingCart, to: '/reports/sales/summary', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-950/40' },
-    { title: 'TOTAL PURCHASE', amount: '₹ 85.4 L', percent: '8.32%', up: false, icon: Package, to: '/reports/purchases/summary', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-950/40' },
-    { title: 'GROSS PROFIT', amount: '₹ 40.4 L', percent: '22.41%', up: true, icon: Percent, to: '/reports/financial/profit-and-loss', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-950/40' },
-    { title: 'NET PROFIT', amount: '₹ 18.7 L', percent: '16.35%', up: true, icon: TrendingUp, to: '/reports/financial/profit-and-loss', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-950/40' },
-    { title: 'TOTAL EXPENSES', amount: '₹ 75.4 L', percent: '12.52%', up: true, icon: TrendingDown, to: '/reports/financial/expense-report', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-950/40' },
-    { title: 'OUTSTANDING', amount: '₹ 21.2 L', link: 'View Details', icon: FileText, to: '/reports/recent-outstanding-details', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-950/40' }
+    { title: 'TOTAL SALES', amount: sales.amount, percent: sales.percent, up: sales.up, icon: ShoppingCart, to: '/reports/sales/summary', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-950/40' },
+    { title: 'TOTAL PURCHASE', amount: purchase.amount, percent: purchase.percent, up: purchase.up, icon: Package, to: '/reports/purchases/summary', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-950/40' },
+    { title: 'GROSS PROFIT', amount: grossProfit.amount, percent: grossProfit.percent, up: grossProfit.up, icon: Percent, to: '/reports/financial/profit-and-loss', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-950/40' },
+    { title: 'NET PROFIT', amount: netProfit.amount, percent: netProfit.percent, up: netProfit.up, icon: TrendingUp, to: '/reports/financial/profit-and-loss', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-950/40' },
+    { title: 'TOTAL EXPENSES', amount: totalExpenses.amount, percent: totalExpenses.percent, up: totalExpenses.up, icon: TrendingDown, to: '/reports/financial/expense-report', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-950/40' },
+    { title: 'OUTSTANDING', amount: outstanding.amount, link: 'View Details', icon: FileText, to: '/reports/recent-outstanding-details', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-950/40' }
   ];
 
   if (userRole === 'SuperAdmin') {

@@ -1,12 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Download, Printer } from 'lucide-react';
+import api from '../../../api';
 
 const ReceivableAging = () => {
-  const data = [
-    { customer: 'Amit Sharma (Retail)', current: 5000, days30: 14160, days60: 0, days90: 0, older: 0 },
-    { customer: 'Superstone Enterprises', current: 0, days30: 25000, days60: 20000, days90: 0, older: 0 },
-    { customer: 'Rajesh Kumar', current: 8500, days30: 0, days60: 0, days90: 12000, older: 5000 }
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchAging();
+  }, []);
+
+  const fetchAging = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/financial/receivable-aging');
+      if (res.data && res.data.success) {
+        setData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching aging:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -40,19 +56,25 @@ const ReceivableAging = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => {
-              const total = item.current + item.days30 + item.days60 + item.days90 + item.older;
-              return (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 font-bold text-gray-800 border-r">{item.customer}</td>
-                  <td className="p-3 text-right text-gray-700">{item.current > 0 ? item.current.toLocaleString() : '-'}</td>
-                  <td className="p-3 text-right text-amber-700">{item.days30 > 0 ? item.days30.toLocaleString() : '-'}</td>
-                  <td className="p-3 text-right text-orange-700">{item.days60 > 0 ? item.days60.toLocaleString() : '-'}</td>
-                  <td className="p-3 text-right text-rose-700 font-bold">{item.older > 0 ? item.older.toLocaleString() : '-'}</td>
-                  <td className="p-3 text-right font-extrabold text-indigo-700 border-l">₹ {total.toLocaleString()}</td>
-                </tr>
-              )
-            })}
+            {loading ? (
+              <tr><td colSpan="6" className="p-4 text-center text-gray-500">Loading aging analysis...</td></tr>
+            ) : data.length === 0 ? (
+              <tr><td colSpan="6" className="p-4 text-center text-gray-500">No aging records found.</td></tr>
+            ) : (
+              data.map((item, idx) => {
+                const total = item.current + item.days30 + item.days60 + item.older;
+                return (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 font-bold text-gray-800 border-r">{item.customer}</td>
+                    <td className="p-3 text-right text-gray-700">{item.current > 0 ? item.current.toLocaleString() : '-'}</td>
+                    <td className="p-3 text-right text-amber-700">{item.days30 > 0 ? item.days30.toLocaleString() : '-'}</td>
+                    <td className="p-3 text-right text-orange-700">{item.days60 > 0 ? item.days60.toLocaleString() : '-'}</td>
+                    <td className="p-3 text-right text-rose-700 font-bold">{item.older > 0 ? item.older.toLocaleString() : '-'}</td>
+                    <td className="p-3 text-right font-extrabold text-indigo-700 border-l">₹ {total.toLocaleString()}</td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>

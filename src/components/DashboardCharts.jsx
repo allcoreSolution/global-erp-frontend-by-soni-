@@ -4,48 +4,20 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { ChevronDown, Loader2 } from 'lucide-react';
 import api from '../api';
 
-export const DashboardCharts = () => {
+export const DashboardCharts = ({ data, loading }) => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
-  const [lineData, setLineData] = useState([]);
-  const [pieData, setPieData] = useState([]);
-  const [outstanding, setOutstanding] = useState({
+  
+  const lineData = data?.lineData || [];
+  const pieData = data?.pieData || [];
+  const outstanding = data?.outstanding || {
     debtors: 0,
     creditors: 0,
     othersReceivable: 0,
     othersPayable: 0,
     net: 0
-  });
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    // --- BYPASS API FOR TESTING START ---
-    setTimeout(() => {
-      setLineData([
-        { name: 'Jan', sales: 45, purchase: 30 },
-        { name: 'Feb', sales: 52, purchase: 35 },
-        { name: 'Mar', sales: 38, purchase: 25 },
-        { name: 'Apr', sales: 65, purchase: 40 },
-        { name: 'May', sales: 58, purchase: 45 },
-        { name: 'Jun', sales: 75, purchase: 50 },
-      ]);
-      setPieData([
-        { name: 'Salaries', value: 450000, color: '#f87171' },
-        { name: 'Rent', value: 120000, color: '#fb923c' },
-        { name: 'Utilities', value: 80000, color: '#facc15' },
-        { name: 'Marketing', value: 150000, color: '#4ade80' },
-        { name: 'Others', value: 50000, color: '#a78bfa' }
-      ]);
-      setOutstanding({
-        debtors: 25.5, creditors: 15.2, othersReceivable: 5.0, othersPayable: 2.5, net: 12.8
-      });
-      setIsLoading(false);
-    }, 800);
-    // --- BYPASS API FOR TESTING END ---
   };
+
+  const isLoading = loading;
 
   const totalExpenses = pieData.reduce((acc, curr) => acc + curr.value, 0);
 

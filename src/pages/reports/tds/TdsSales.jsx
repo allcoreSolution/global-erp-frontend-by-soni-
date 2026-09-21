@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
-import { FileText, Filter, Download, Printer, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PackageCheck, Download, Printer, Filter, ShieldCheck, CheckCircle, FileText } from 'lucide-react';
+import api from '../../../api';
 
 const TdsSales = () => {
   const [period, setPeriod] = useState('This Month');
-  const [tdsRecords, setTdsRecords] = useState([
-    { client: 'Aditya Enterprises', sec: '194J (Professional)', invVal: 100000, tdsRate: '10%', tdsDeducted: 10000, certStatus: 'Received', matched26as: 'Yes' },
-    { client: 'Choudhary Logistics', sec: '194C (Contractor)', invVal: 250000, tdsRate: '2%', tdsDeducted: 5000, certStatus: 'Pending', matched26as: 'No' },
-    { client: 'Vardhaman Steels', sec: '194Q (Goods Purchase)', invVal: 500000, tdsRate: '0.1%', tdsDeducted: 500, certStatus: 'Received', matched26as: 'Yes' }
-  ]);
+  const [tdsRecords, setTdsRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/reports/tds/sales')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setTdsRecords(res.data.data.tdsRecords);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="p-6 text-center text-slate-500">Loading tds/TdsSales.jsx...</div>;
 
   const handlePrint = () => {
     window.print();

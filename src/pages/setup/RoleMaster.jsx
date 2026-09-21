@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Download, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import api from '../../api';
+import { ShieldCheck, Download, Printer, Plus, Check, X, Shield, Star, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const RoleMaster = () => {
@@ -8,23 +9,13 @@ const RoleMaster = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newRole, setNewRole] = useState({ name: '', description: '' });
-
-  const [permissions, setPermissions] = useState({
-    Sales: { view: false, add: false, edit: false, delete: false },
-    Purchases: { view: false, add: false, edit: false, delete: false },
-    Accounts: { view: false, add: false, edit: false, delete: false },
-    Settings: { view: false, add: false, edit: false, delete: false }
-  });
-
-  React.useEffect(() => {
+  useEffect(() => {
     fetchRoles();
   }, []);
 
   const fetchRoles = async () => {
     try {
-      const response = await window.api.get('/roles');
+      const response = await api.get('/roles');
       setRoles(response.data);
       if (response.data.length > 0) {
         setSelectedRole(response.data[0]);
@@ -36,201 +27,136 @@ const RoleMaster = () => {
     }
   };
 
-  const handleCreateRole = async (e) => {
-    e.preventDefault();
-    try {
-      await window.api.post('/roles', {
-        name: newRole.name,
-        description: newRole.description,
-        permissions: [] // Default empty, can be updated later
-      });
-      setShowAddModal(false);
-      setNewRole({ name: '', description: '' });
-      fetchRoles();
-    } catch (error) {
-      alert(error.response?.data?.message || 'Error creating role');
-    }
-  };
-
-  const togglePermission = (module, action) => {
-    setPermissions(prev => ({
-      ...prev,
-      [module]: {
-        ...prev[module],
-        [action]: !prev[module][action]
-      }
-    }));
-  };
-
-  const handleSavePermissions = () => {
-    alert(`Permissions configuration for role "${selectedRole}" saved successfully!`);
-  };
-
-  // CSV Export for permission matrix
-  const handleExportCSV = () => {
-    const headers = ['Module Name', 'View Permission', 'Add Permission', 'Edit Permission', 'Delete Permission'];
-    const rows = Object.keys(permissions).map(module => [
-      module,
-      permissions[module].view ? 'Enabled' : 'Disabled',
-      permissions[module].add ? 'Enabled' : 'Disabled',
-      permissions[module].edit ? 'Enabled' : 'Disabled',
-      permissions[module].delete ? 'Enabled' : 'Disabled'
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Role_Permissions_Matrix_${selectedRole}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handlePrint = () => {
     window.print();
   };
 
+  const renderPermissionTable = (title, icon, permissions) => {
+    if (!permissions || permissions.length === 0) return null;
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden mb-6">
+        <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-3 flex items-center gap-2">
+          {icon}
+          <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{title}</h3>
+        </div>
+        <div className="p-0 overflow-auto max-h-[300px]">
+          <table className="w-full text-left text-xs relative">
+            <thead className="bg-slate-50 border-b text-slate-500 sticky top-0 z-10">
+              <tr>
+                <th className="px-5 py-3 font-bold">Permission</th>
+                <th className="px-3 py-3 font-bold text-center">View</th>
+                <th className="px-3 py-3 font-bold text-center">Create</th>
+                <th className="px-3 py-3 font-bold text-center">Edit</th>
+                <th className="px-3 py-3 font-bold text-center">Delete</th>
+                <th className="px-3 py-3 font-bold text-center">Approve</th>
+                <th className="px-3 py-3 font-bold text-center">Export</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {permissions.map((mod, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/50">
+                  <td className="px-5 py-2.5 font-bold text-slate-700">{mod.name || mod.module}</td>
+                  <td className="px-3 py-2.5 text-center">{mod.view ? <Check className="inline w-4 h-4 text-emerald-500" /> : <X className="inline w-4 h-4 text-slate-300" />}</td>
+                  <td className="px-3 py-2.5 text-center">{mod.create ? <Check className="inline w-4 h-4 text-emerald-500" /> : <X className="inline w-4 h-4 text-slate-300" />}</td>
+                  <td className="px-3 py-2.5 text-center">{mod.edit ? <Check className="inline w-4 h-4 text-emerald-500" /> : <X className="inline w-4 h-4 text-slate-300" />}</td>
+                  <td className="px-3 py-2.5 text-center">{mod.delete ? <Check className="inline w-4 h-4 text-emerald-500" /> : <X className="inline w-4 h-4 text-slate-300" />}</td>
+                  <td className="px-3 py-2.5 text-center">{mod.approve ? <Check className="inline w-4 h-4 text-emerald-500" /> : <X className="inline w-4 h-4 text-slate-300" />}</td>
+                  <td className="px-3 py-2.5 text-center">{mod.export ? <Check className="inline w-4 h-4 text-emerald-500" /> : <X className="inline w-4 h-4 text-slate-300" />}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6">
+    <div className="bg-slate-50 p-4 sm:p-6 rounded-lg min-h-screen space-y-6 pb-20">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
             <ShieldCheck className="text-indigo-600" size={22} /> Role Master & Permissions Settings
           </h1>
-          <p className="text-[11px] sm:text-xs text-gray-500">
-            Define corporate job roles and configure feature-wise permissions (view, add, edit, delete).
+          <p className="text-[11px] sm:text-xs text-gray-500 mt-1">
+            Define corporate job roles and configure feature-wise permissions.
           </p>
         </div>
         
-        {/* Actions header group */}
         <div className="flex items-center gap-2 no-print">
           <button 
             onClick={() => navigate('/setup/role-master/add')}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded shadow-sm transition"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition"
           >
-            + Create Role
-          </button>
-          <button 
-            onClick={handleExportCSV}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border rounded transition"
-          >
-            <Download size={14} /> Export CSV
+            <Plus size={14} /> Create Role
           </button>
           <button 
             onClick={handlePrint}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-sm transition"
           >
             <Printer size={14} /> Print
           </button>
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Roles List */}
-        <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 h-fit">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Defined Roles</h3>
-          <div className="space-y-2">
-            {roles.map((r, idx) => (
+        <div className="lg:col-span-3 border border-slate-200 rounded-2xl p-5 bg-white space-y-4 h-fit shadow-sm">
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b pb-2">Defined Roles</h3>
+          <div className="space-y-2 max-h-[600px] overflow-auto pr-1">
+            {isLoading ? <p className="text-xs text-slate-400">Loading roles...</p> : roles.length === 0 ? <p className="text-xs text-slate-400">No roles found.</p> : roles.map((r, idx) => (
               <div
                 key={idx}
                 onClick={() => setSelectedRole(r)}
-                className={`p-3 border rounded-xl cursor-pointer transition flex flex-col justify-between ${
-                  selectedRole?._id === r._id ? 'border-blue-500 bg-blue-50/10' : 'hover:bg-slate-50/50'
+                className={`p-4 border rounded-xl cursor-pointer transition flex flex-col justify-between ${
+                  selectedRole?._id === r._id ? 'border-indigo-500 bg-indigo-50 shadow-sm ring-1 ring-indigo-500' : 'border-slate-100 hover:bg-slate-50 hover:border-slate-200'
                 }`}
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-800">{r.name}</span>
+                  <span className={`text-xs font-bold ${selectedRole?._id === r._id ? 'text-indigo-700' : 'text-slate-700'}`}>{r.name}</span>
+                  {r.roleType && <span className="text-[9px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">{r.roleType}</span>}
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">{r.description || 'No description provided.'}</p>
+                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed line-clamp-2">{r.description || 'No description provided.'}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Permissions Matrix */}
-        <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4 lg:col-span-2">
-          <div className="flex justify-between items-center border-b pb-2">
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Permissions Matrix: {selectedRole?.name}</h3>
-              <p className="text-[10px] text-gray-400">Configure what actions this role can perform.</p>
-            </div>
-            <button 
-              onClick={handleSavePermissions}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-slate-800 font-bold text-[10px] rounded shadow-xs transition"
-            >
-              Save Permissions
-            </button>
-          </div>
-          
-          <div className="space-y-4 pt-2">
-            {Object.keys(permissions).map((module) => (
-              <div key={module} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-center border-b pb-3">
-                <span className="text-xs font-bold text-slate-800 sm:col-span-1">{module}</span>
-                <div className="grid grid-cols-4 gap-2 sm:col-span-4 text-center">
-                  {['view', 'add', 'edit', 'delete'].map((action) => (
-                    <label 
-                      key={action}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1.5 cursor-pointer p-2 bg-slate-50/50 hover:bg-slate-100 border rounded-lg transition select-none"
-                    >
-                      <input 
-                        type="checkbox"
-                        checked={permissions[module][action]}
-                        onChange={() => togglePermission(module, action)}
-                        className="rounded text-indigo-600 focus:ring-blue-500 self-center sm:self-auto"
-                      />
-                      <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">{action}</span>
-                    </label>
-                  ))}
+        {/* Permissions Details View */}
+        <div className="lg:col-span-9 space-y-4">
+          {selectedRole ? (
+            <>
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">{selectedRole.name} <span className="text-xs text-slate-400 font-normal ml-2">{selectedRole.roleCode || ''}</span></h2>
+                  <p className="text-xs text-slate-500 mt-1">{selectedRole.description}</p>
+                </div>
+                <div className="flex gap-4 text-xs font-semibold text-slate-600">
+                  <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1 rounded-lg">Status: {selectedRole.status || 'Active'}</span>
+                  <span className="bg-indigo-50 text-indigo-600 border border-indigo-100 px-3 py-1 rounded-lg">Company Access: {selectedRole.companyAccess || 'All'}</span>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {renderPermissionTable('Module Permissions', <Shield size={14} className="text-indigo-500" />, selectedRole.modulePermissions)}
+              {renderPermissionTable('Approval Permissions', <CheckSquare size={14} className="text-purple-500" />, selectedRole.approvalPermissions)}
+              {renderPermissionTable('Special Permissions', <Star size={14} className="text-rose-500" />, selectedRole.specialPermissions)}
+              
+              {(!selectedRole.modulePermissions?.length && !selectedRole.approvalPermissions?.length && !selectedRole.specialPermissions?.length) && (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 text-center text-slate-500 text-sm">
+                  No detailed permissions configured for this role yet. Please edit the role or recreate it.
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 text-center text-slate-500 text-sm">
+              Select a role from the list to view its permissions.
+            </div>
+          )}
         </div>
 
       </div>
-
-      {/* Add Role Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-50/50 shadow-inner flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl border w-full max-w-md overflow-hidden">
-            <div className="bg-slate-50 px-4 py-3 border-b">
-              <span className="text-xs font-bold text-slate-800 uppercase">Create Custom Role</span>
-            </div>
-            <form onSubmit={handleCreateRole} className="p-4 space-y-4 text-xs font-semibold">
-              <div>
-                <label className="block text-gray-600 mb-1">Role Name</label>
-                <input 
-                  type="text" 
-                  value={newRole.name}
-                  onChange={(e) => setNewRole({...newRole, name: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. Junior Accountant"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-1">Description</label>
-                <textarea 
-                  value={newRole.description}
-                  onChange={(e) => setNewRole({...newRole, description: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                  placeholder="What does this role do?"
-                  rows={2}
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <button type="button" onClick={() => setShowAddModal(false)} className="px-3 py-1.5 border rounded text-gray-600">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-indigo-600 text-white rounded font-bold">Save Role</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

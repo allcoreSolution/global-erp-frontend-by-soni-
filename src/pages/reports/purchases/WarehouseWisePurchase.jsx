@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, Search, Filter, Download, Box, KeySquare, Shield } from 'lucide-react';
+import api from '../../../api';
 
 const WarehouseWisePurchase = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const warehouses = [
-    { id: 1, name: 'Central Depot - Mumbai', type: 'Main Hub', capacity: '95%', deliveries: 450, stockValue: 8500000, status: 'Critical' },
-    { id: 2, name: 'North Zone Station - NCR', type: 'Regional', capacity: '65%', deliveries: 320, stockValue: 4200000, status: 'Optimal' },
-    { id: 3, name: 'South Transit - Bangalore', type: 'Transit', capacity: '88%', deliveries: 850, stockValue: 6500000, status: 'Warning' },
-    { id: 4, name: 'East Storage - Kolkata', type: 'Regional', capacity: '42%', deliveries: 120, stockValue: 1200000, status: 'Optimal' },
-    { id: 5, name: 'Port Customs Bonded - JNPT', type: 'Customs', capacity: '78%', deliveries: 95, stockValue: 15400000, status: 'Optimal' },
-  ];
+  const [warehouses, setWarehouses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/analysis/warehouse-wise');
+        if (response.data.success) {
+          setWarehouses(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

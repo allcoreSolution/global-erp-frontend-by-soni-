@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
   ChevronLeft, ChevronRight, AlertCircle, X, CheckCircle 
 } from 'lucide-react';
+import api from '../../api';
 
 const CourierList = () => {
   const navigate = useNavigate();
-  // Empty data table setup as requested: "No data available in table"
   const [couriers, setCouriers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,41 +19,33 @@ const CourierList = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedCourier, setSelectedCourier] = useState(null);
 
-  // Form State for Add Courier
-  const [form, setForm] = useState({
-    name: '',
-    type: 'Express Delivery',
-    phone: '',
-    address: ''
-  });
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    if (!form.name || !form.phone) {
-      alert("Name and Phone Number are required.");
-      return;
+  const fetchCouriers = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/couriers');
+      if (data.success) {
+        setCouriers(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching couriers", error);
+    } finally {
+      setLoading(false);
     }
-    const newRecord = {
-      id: couriers.length + 1,
-      name: form.name,
-      type: form.type,
-      phone: form.phone,
-      address: form.address || '-'
-    };
-    setCouriers([...couriers, newRecord]);
-    setIsAddModalOpen(false);
-    // Reset Form
-    setForm({
-      name: '',
-      type: 'Express Delivery',
-      phone: '',
-      address: ''
-    });
   };
 
-  const handleDelete = (id) => {
+  useEffect(() => {
+    fetchCouriers();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this Courier?")) {
-      setCouriers(couriers.filter(c => c.id !== id));
+      try {
+        await api.delete(`/couriers/${id}`);
+        setCouriers(couriers.filter(c => c._id !== id));
+      } catch (error) {
+        console.error("Error deleting courier", error);
+        alert('Failed to delete courier');
+      }
     }
   };
 
@@ -178,11 +171,11 @@ const CourierList = () => {
           <tbody className="divide-y divide-blue-500 bg-white">
             {currentRecords.length > 0 ? (
               currentRecords.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50/70 transition-colors">
+                <tr key={c._id} className="hover:bg-gray-50/70 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{c.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{c.type}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">{c.phone}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">{c.address}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">{c.addressLine1 || c.city || '-'}</td>
                   
                   {/* Action buttons (View, Edit, Delete) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -196,7 +189,7 @@ const CourierList = () => {
                       </button>
                       <button
                         onClick={() => {
-                          alert(`Edit Courier details: ${c.name}`);
+                          navigate(`/sales/edit-courier/${c._id}`);
                         }}
                         className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
                         title="Edit details"
@@ -204,7 +197,7 @@ const CourierList = () => {
                         <Edit size={15} />
                       </button>
                       <button
-                        onClick={() => handleDelete(c.id)}
+                        onClick={() => handleDelete(c._id)}
                         className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                         title="Delete Courier"
                       >

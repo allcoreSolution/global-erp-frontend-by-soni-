@@ -4,66 +4,26 @@ import {
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
   Check, X, Printer, Calendar, Database, Filter, ArrowRightLeft, MoveRight
 } from 'lucide-react';
+import api from '../../api';
 
 const TransferList = () => {
   const navigate = useNavigate();
 
-  // Mock Stock Transfers
-  const [transfers, setTransfers] = useState(() => {
-    const saved = localStorage.getItem('stock_transfers');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [
-      {
-        id: 'ST-2024-001',
-        date: '2024-05-22',
-        fromWarehouse: 'Central Warehouse',
-        toWarehouse: 'North Branch Warehouse',
-        reference: 'REF-TR-442',
-        reason: 'Restocking retail branch inventories',
-        status: 'Received',
-        items: [
-          { product: 'Logitech Wireless Mouse', qty: 30, unit: 'Nos', batch: 'BT-LOG-90', serial: 'SN-8890-045' },
-          { product: 'Wireless Keyboard', qty: 15, unit: 'Nos', batch: 'BT-WKY-12', serial: 'SN-WKY-902' }
-        ],
-        totalQty: 45,
-        remarks: 'Shipped via DTDC cargo logistics services'
-      },
-      {
-        id: 'ST-2024-002',
-        date: '2024-05-24',
-        fromWarehouse: 'Central Warehouse',
-        toWarehouse: 'East Side Storage',
-        reference: 'REF-TR-456',
-        reason: 'Bulk stock shift to secondary warehouse',
-        status: 'Sent',
-        items: [
-          { product: 'Dell 24" Monitor', qty: 8, unit: 'Nos', batch: 'BT-DEL-24', serial: 'SN-DELL-812' }
-        ],
-        totalQty: 8,
-        remarks: 'Driver: Ram Singh (Challan #88902)'
-      },
-      {
-        id: 'ST-2024-003',
-        date: '2024-05-25',
-        fromWarehouse: 'North Branch Warehouse',
-        toWarehouse: 'Central Warehouse',
-        reference: 'REF-TR-490',
-        reason: 'Excess inventory return to head office',
-        status: 'Pending',
-        items: [
-          { product: 'HDMI Cables 1.5m', qty: 10, unit: 'Nos', batch: 'BT-CAB-01', serial: 'SN-CAB-150' }
-        ],
-        totalQty: 10,
-        remarks: 'Draft entry waiting for dispatch confirmation'
-      }
-    ];
-  });
+  const [transfers, setTransfers] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem('stock_transfers', JSON.stringify(transfers));
-  }, [transfers]);
+    const fetchTransfers = async () => {
+      try {
+        const res = await api.get('/stock-transfers');
+        if (res.data?.data) {
+          setTransfers(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stock transfers", err);
+      }
+    };
+    fetchTransfers();
+  }, []);
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,25 +47,37 @@ const TransferList = () => {
 
   // Filter Logic
   const filteredTransfers = transfers.filter(st => {
-    const matchesSearch = st.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          st.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          st.reference.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (st.transferNo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (st.reason || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (st.reference || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFrom = fromFilter ? st.fromWarehouse === fromFilter : true;
     const matchesTo = toFilter ? st.toWarehouse === toFilter : true;
     const matchesStatus = statusFilter ? st.status === statusFilter : true;
-    const matchesStartDate = startDate ? st.date >= startDate : true;
-    const matchesEndDate = endDate ? st.date <= endDate : true;
+    const matchesStartDate = startDate ? (st.date || '') >= startDate : true;
+    const matchesEndDate = endDate ? (st.date || '') <= endDate : true;
     return matchesSearch && matchesFrom && matchesTo && matchesStatus && matchesStartDate && matchesEndDate;
   });
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete stock transfer voucher ${id}?`)) {
-      setTransfers(transfers.filter(st => st.id !== id));
+  const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete stock transfer voucher?`)) {
+      try {
+        await api.delete(`/stock-transfers/${id}`);
+        setTransfers(transfers.filter(st => st._id !== id));
+      } catch (err) {
+        console.error("Failed to delete", err);
+        alert('Failed to delete stock transfer');
+      }
     }
   };
 
-  const handleApproveStatus = (id, newStatus) => {
-    setTransfers(transfers.map(st => st.id === id ? { ...st, status: newStatus } : st));
+  const handleApproveStatus = async (id, newStatus) => {
+    try {
+      await api.put(`/stock-transfers/${id}`, { status: newStatus });
+      setTransfers(transfers.map(st => st._id === id ? { ...st, status: newStatus } : st));
+    } catch (err) {
+      console.error("Failed to update status", err);
+      alert('Failed to update status');
+    }
   };
 
   const handlePrint = (st) => {
@@ -120,16 +92,19 @@ const TransferList = () => {
   // Export Filtered List to CSV
   const handleExportCSV = () => {
     const headers = ['Voucher No', 'Date', 'From Warehouse', 'To Warehouse', 'Reference', 'Reason', 'Total Qty', 'Status'];
-    const csvRows = filteredTransfers.map(st => [
-      `"${st.id}"`,
-      `"${st.date}"`,
-      `"${st.fromWarehouse}"`,
-      `"${st.toWarehouse}"`,
-      `"${st.reference || ''}"`,
-      `"${st.reason.replace(/"/g, '""')}"`,
-      st.totalQty,
-      `"${st.status}"`
-    ].join(','));
+    const csvRows = filteredTransfers.map(st => {
+      const totalQty = (st.items || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
+      return [
+        `"${st.transferNo}"`,
+        `"${st.date}"`,
+        `"${st.fromWarehouse}"`,
+        `"${st.toWarehouse}"`,
+        `"${st.reference || ''}"`,
+        `"${(st.reason || '').replace(/"/g, '""')}"`,
+        totalQty,
+        `"${st.status}"`
+      ].join(',');
+    });
 
     const csvString = [headers.join(','), ...csvRows].join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
@@ -339,80 +314,83 @@ const TransferList = () => {
             </thead>
             <tbody>
               {filteredTransfers.length > 0 ? (
-                filteredTransfers.map((st) => (
-                  <tr key={st.id} className="border-b border-gray-100 dark:border-slate-200/60 hover:bg-gray-50 dark:hover:bg-slate-800/40 text-gray-700 dark:text-slate-300 transition-colors">
-                    <td className="py-3 px-4 font-bold text-indigo-600 dark:text-blue-400">{st.id}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{st.date}</td>
-                    <td className="py-3 px-4 font-semibold">{st.fromWarehouse}</td>
-                    <td className="py-3 px-4 text-center text-gray-400">
-                      <MoveRight size={14} />
-                    </td>
-                    <td className="py-3 px-4 font-semibold">{st.toWarehouse}</td>
-                    <td className="py-3 px-4">{st.reference || <span className="text-gray-400">-</span>}</td>
-                    <td className="py-3 px-4 max-w-xs truncate" title={st.reason}>{st.reason}</td>
-                    <td className="py-3 px-4 text-center font-bold">{st.totalQty}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
-                        ${st.status === 'Received' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
-                          st.status === 'Sent' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 
-                          st.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400' : 
-                          'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'}`}
-                      >
-                        {st.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center no-print">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {st.status === 'Pending' && (
+                filteredTransfers.map((st) => {
+                  const totalQty = (st.items || []).reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+                  return (
+                    <tr key={st._id} className="border-b border-gray-100 dark:border-slate-200/60 hover:bg-gray-50 dark:hover:bg-slate-800/40 text-gray-700 dark:text-slate-300 transition-colors">
+                      <td className="py-3 px-4 font-bold text-indigo-600 dark:text-blue-400">{st.transferNo}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">{st.date}</td>
+                      <td className="py-3 px-4 font-semibold">{st.fromWarehouse}</td>
+                      <td className="py-3 px-4 text-center text-gray-400">
+                        <MoveRight size={14} />
+                      </td>
+                      <td className="py-3 px-4 font-semibold">{st.toWarehouse}</td>
+                      <td className="py-3 px-4">{st.reference || <span className="text-gray-400">-</span>}</td>
+                      <td className="py-3 px-4 max-w-xs truncate" title={st.reason}>{st.reason}</td>
+                      <td className="py-3 px-4 text-center font-bold">{totalQty}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
+                          ${st.status === 'Received' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
+                            st.status === 'Sent' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 
+                            st.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400' : 
+                            'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'}`}
+                        >
+                          {st.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center no-print">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {st.status === 'Pending' && (
+                            <button
+                              onClick={() => handleApproveStatus(st._id, 'Sent')}
+                              title="Dispatch Stock (Set Sent)"
+                              className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-indigo-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 text-[9px] rounded font-bold transition-all"
+                            >
+                              Dispatch
+                            </button>
+                          )}
+                          {st.status === 'Sent' && (
+                            <button
+                              onClick={() => handleApproveStatus(st._id, 'Received')}
+                              title="Receive Stock (Set Received)"
+                              className="px-2 py-0.5 bg-green-50 dark:bg-green-950/30 hover:bg-green-100 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900/40 text-[9px] rounded font-bold transition-all"
+                            >
+                              Receive
+                            </button>
+                          )}
+                          {st.status === 'Received' && (
+                            <span className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold italic">Settled</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right no-print">
+                        <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => handleApproveStatus(st.id, 'Sent')}
-                            title="Dispatch Stock (Set Sent)"
-                            className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-indigo-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 text-[9px] rounded font-bold transition-all"
+                            onClick={() => handlePrint(st)}
+                            title="Print Delivery Challan"
+                            className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded"
                           >
-                            Dispatch
+                            <Printer size={15} />
                           </button>
-                        )}
-                        {st.status === 'Sent' && (
                           <button
-                            onClick={() => handleApproveStatus(st.id, 'Received')}
-                            title="Receive Stock (Set Received)"
-                            className="px-2 py-0.5 bg-green-50 dark:bg-green-950/30 hover:bg-green-100 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900/40 text-[9px] rounded font-bold transition-all"
+                            onClick={() => navigate(`/stock-transfer/edit/${st._id}`)}
+                            title="Edit Transfer"
+                            className="p-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded"
                           >
-                            Receive
+                            <Edit size={15} />
                           </button>
-                        )}
-                        {st.status === 'Received' && (
-                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold italic">Settled</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right no-print">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handlePrint(st)}
-                          title="Print Delivery Challan"
-                          className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded"
-                        >
-                          <Printer size={15} />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/stock-transfer/edit/${st.id}`)}
-                          title="Edit Transfer"
-                          className="p-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded"
-                        >
-                          <Edit size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(st.id)}
-                          title="Delete Transfer"
-                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <button
+                            onClick={() => handleDelete(st._id)}
+                            title="Delete Transfer"
+                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="11" className="py-8 text-center text-gray-500 dark:text-gray-400">
@@ -458,7 +436,7 @@ const TransferList = () => {
                 {/* Voucher Meta details */}
                 <div className="grid grid-cols-2 gap-4 py-4 text-xs">
                   <div>
-                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Challan No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedTransfer.id}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Challan No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedTransfer.transferNo}</span></div>
                     <div className="flex py-1"><span className="text-gray-500 font-medium w-24">From Warehouse:</span> <span className="font-bold text-red-600">{selectedTransfer.fromWarehouse}</span></div>
                     <div className="flex py-1"><span className="text-gray-500 font-medium w-24">To Warehouse:</span> <span className="font-bold text-green-600">{selectedTransfer.toWarehouse}</span></div>
                   </div>
@@ -500,7 +478,7 @@ const TransferList = () => {
                       {/* Total Qty Row */}
                       <tr className="bg-slate-50 dark:bg-slate-850 font-bold border-t border-gray-300 dark:border-slate-200">
                         <td colSpan="3" className="py-3 px-3 text-right uppercase">Total Transfer Quantity:</td>
-                        <td className="py-3 px-3 text-center font-mono">{selectedTransfer.totalQty} Units</td>
+                        <td className="py-3 px-3 text-center font-mono">{(selectedTransfer.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)} Units</td>
                       </tr>
                     </tbody>
                   </table>

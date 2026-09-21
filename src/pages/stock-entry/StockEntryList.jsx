@@ -5,65 +5,26 @@ import {
   Check, X, Printer, Calendar, Database, Filter, ArrowRightLeft
 } from 'lucide-react';
 
+import api from '../../api';
+
 const StockEntryList = () => {
   const navigate = useNavigate();
 
-  // Mock Stock Entries
-  const [stockEntries, setStockEntries] = useState(() => {
-    const saved = localStorage.getItem('stock_entries');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [
-      {
-        id: 'SE-2024-001',
-        type: 'Stock In',
-        date: '2024-05-21',
-        warehouse: 'Central Warehouse',
-        reference: 'REF-IN-908',
-        reason: 'Opening stock count adjustments',
-        status: 'Approved',
-        items: [
-          { product: 'Logitech Wireless Mouse', qty: 50, unit: 'Nos', batch: 'BT-LOG-90', serial: 'SN-8890-001', reason: 'Initial Count' },
-          { product: 'Dell 24" Monitor', qty: 10, unit: 'Nos', batch: 'BT-DEL-24', serial: 'SN-DELL-802', reason: 'Initial Count' }
-        ],
-        totalQty: 60,
-        remarks: 'Voucher posted after year-end stock audits'
-      },
-      {
-        id: 'SE-2024-002',
-        type: 'Damage/Loss',
-        date: '2024-05-23',
-        warehouse: 'North Branch Warehouse',
-        reference: 'DMG-8809',
-        reason: 'Water leakage damage in aisle 4',
-        status: 'Pending',
-        items: [
-          { product: 'Keyboards USB', qty: 8, unit: 'Nos', batch: 'BT-KEY-02', serial: 'SN-KEY-390', reason: 'Water Damage' }
-        ],
-        totalQty: 8,
-        remarks: 'Physical damaged inventory removed from active stock ledgers'
-      },
-      {
-        id: 'SE-2024-003',
-        type: 'Transfer',
-        date: '2024-05-24',
-        warehouse: 'Central Warehouse',
-        reference: 'TRF-WH-02',
-        reason: 'Inter-branch inventory transfer',
-        status: 'Draft',
-        items: [
-          { product: 'HDMI Cables 1.5m', qty: 25, unit: 'Nos', batch: 'BT-CAB-01', serial: 'SN-CAB-120', reason: 'Stock requisition' }
-        ],
-        totalQty: 25,
-        remarks: 'Transferring to East Side Storage branch'
-      }
-    ];
-  });
+  const [stockEntries, setStockEntries] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem('stock_entries', JSON.stringify(stockEntries));
-  }, [stockEntries]);
+    const fetchStockEntries = async () => {
+      try {
+        const res = await api.get('/stock-entries');
+        if (res.data?.data) {
+          setStockEntries(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stock entries", err);
+      }
+    };
+    fetchStockEntries();
+  }, []);
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,25 +48,37 @@ const StockEntryList = () => {
 
   // Filter Logic
   const filteredEntries = stockEntries.filter(se => {
-    const matchesSearch = se.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          se.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          se.reference.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter ? se.type === typeFilter : true;
-    const matchesWarehouse = warehouseFilter ? se.warehouse === warehouseFilter : true;
+    const matchesSearch = (se.stockNo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (se.remarks || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (se.referenceNo || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter ? se.stockType === typeFilter : true;
+    const matchesWarehouse = warehouseFilter ? se.warehouseBase === warehouseFilter : true;
     const matchesStatus = statusFilter ? se.status === statusFilter : true;
-    const matchesStartDate = startDate ? se.date >= startDate : true;
-    const matchesEndDate = endDate ? se.date <= endDate : true;
+    const matchesStartDate = startDate ? (se.stockDate || '') >= startDate : true;
+    const matchesEndDate = endDate ? (se.stockDate || '') <= endDate : true;
     return matchesSearch && matchesType && matchesWarehouse && matchesStatus && matchesStartDate && matchesEndDate;
   });
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete stock entry voucher ${id}?`)) {
-      setStockEntries(stockEntries.filter(se => se.id !== id));
+  const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete stock entry?`)) {
+      try {
+        await api.delete(`/stock-entries/${id}`);
+        setStockEntries(stockEntries.filter(se => se._id !== id));
+      } catch (err) {
+        console.error('Failed to delete', err);
+        alert('Failed to delete entry');
+      }
     }
   };
 
-  const handleApprove = (id, newStatus) => {
-    setStockEntries(stockEntries.map(se => se.id === id ? { ...se, status: newStatus } : se));
+  const handleApprove = async (id, newStatus) => {
+    try {
+      await api.put(`/stock-entries/${id}`, { status: newStatus });
+      setStockEntries(stockEntries.map(se => se._id === id ? { ...se, status: newStatus } : se));
+    } catch (err) {
+      console.error('Failed to change status', err);
+      alert('Failed to change status');
+    }
   };
 
   const handlePrint = (se) => {
@@ -121,14 +94,14 @@ const StockEntryList = () => {
   const handleExportCSV = () => {
     const headers = ['Voucher No', 'Type', 'Date', 'Warehouse', 'Reference', 'Reason', 'Total Qty', 'Status'];
     const csvRows = filteredEntries.map(se => [
-      `"${se.id}"`,
-      `"${se.type}"`,
-      `"${se.date}"`,
-      `"${se.warehouse}"`,
-      `"${se.reference || ''}"`,
-      `"${se.reason.replace(/"/g, '""')}"`,
-      se.totalQty,
-      `"${se.status}"`
+      `"${se.stockNo}"`,
+      `"${se.stockType}"`,
+      `"${se.stockDate}"`,
+      `"${se.warehouseBase || ''}"`,
+      `"${se.referenceNo || ''}"`,
+      `"${(se.remarks || '').replace(/"/g, '""')}"`,
+      se.summary?.totalQty || 0,
+      `"${se.status || ''}"`
     ].join(','));
 
     const csvString = [headers.join(','), ...csvRows].join('\n');
@@ -340,38 +313,38 @@ const StockEntryList = () => {
             <tbody>
               {filteredEntries.length > 0 ? (
                 filteredEntries.map((se) => (
-                  <tr key={se.id} className="border-b border-gray-100 dark:border-slate-200/60 hover:bg-gray-50 dark:hover:bg-slate-800/40 text-gray-700 dark:text-slate-300 transition-colors">
-                    <td className="py-3 px-4 font-bold text-indigo-600 dark:text-blue-400">{se.id}</td>
+                  <tr key={se._id} className="border-b border-gray-100 dark:border-slate-200/60 hover:bg-gray-50 dark:hover:bg-slate-800/40 text-gray-700 dark:text-slate-300 transition-colors">
+                    <td className="py-3 px-4 font-bold text-indigo-600 dark:text-blue-400">{se.stockNo}</td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold 
-                        ${se.type === 'Stock In' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400' : 
-                          se.type === 'Stock Out' ? 'bg-orange-100 text-orange-850 dark:bg-orange-950/20 dark:text-orange-400' : 
-                          se.type === 'Transfer' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/20 dark:text-purple-400' :
-                          se.type === 'Damage/Loss' ? 'bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-400' :
+                        ${se.stockType === 'Stock In' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400' : 
+                          se.stockType === 'Stock Out' ? 'bg-orange-100 text-orange-850 dark:bg-orange-950/20 dark:text-orange-400' : 
+                          se.stockType === 'Transfer' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/20 dark:text-purple-400' :
+                          se.stockType === 'Damage/Loss' ? 'bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-400' :
                           'bg-blue-100 text-blue-800 dark:bg-blue-950/20 dark:text-blue-400'}`}
                       >
-                        {se.type}
+                        {se.stockType}
                       </span>
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">{se.date}</td>
-                    <td className="py-3 px-4">{se.warehouse}</td>
-                    <td className="py-3 px-4">{se.reference || <span className="text-gray-400">-</span>}</td>
-                    <td className="py-3 px-4 max-w-xs truncate" title={se.reason}>{se.reason}</td>
-                    <td className="py-3 px-4 text-center font-bold">{se.totalQty}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{se.stockDate}</td>
+                    <td className="py-3 px-4">{se.warehouseBase || <span className="text-gray-400">-</span>}</td>
+                    <td className="py-3 px-4">{se.referenceNo || <span className="text-gray-400">-</span>}</td>
+                    <td className="py-3 px-4 max-w-xs truncate" title={se.remarks}>{se.remarks}</td>
+                    <td className="py-3 px-4 text-center font-bold">{se.summary?.totalQty || 0}</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
                         ${se.status === 'Approved' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
                           se.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400' : 
                           'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'}`}
                       >
-                        {se.status}
+                        {se.status || 'Pending'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center no-print">
                       <div className="flex items-center justify-center gap-1">
                         {se.status !== 'Approved' && (
                           <button
-                            onClick={() => handleApprove(se.id, 'Approved')}
+                            onClick={() => handleApprove(se._id, 'Approved')}
                             title="Approve Voucher"
                             className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 rounded transition-colors"
                           >
@@ -380,7 +353,7 @@ const StockEntryList = () => {
                         )}
                         {se.status === 'Approved' && (
                           <button
-                            onClick={() => handleApprove(se.id, 'Pending')}
+                            onClick={() => handleApprove(se._id, 'Pending')}
                             title="Revert to Pending"
                             className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
                           >
@@ -399,14 +372,14 @@ const StockEntryList = () => {
                           <Printer size={15} />
                         </button>
                         <button
-                          onClick={() => navigate(`/stock-entry/edit/${se.id}`)}
+                          onClick={() => navigate(`/stock-entry/edit/${se._id}`)}
                           title="Edit Entry"
                           className="p-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded"
                         >
                           <Edit size={15} />
                         </button>
                         <button
-                          onClick={() => handleDelete(se.id)}
+                          onClick={() => handleDelete(se._id)}
                           title="Delete Entry"
                           className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
                         >
@@ -461,14 +434,14 @@ const StockEntryList = () => {
                 {/* Voucher Meta details */}
                 <div className="grid grid-cols-2 gap-4 py-4 text-xs">
                   <div>
-                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedEntry.id}</span></div>
-                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher Type:</span> <span className="font-bold text-indigo-600">{selectedEntry.type}</span></div>
-                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Warehouse:</span> <span className="text-gray-700 dark:text-slate-200 font-medium">{selectedEntry.warehouse}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedEntry.stockNo}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Voucher Type:</span> <span className="font-bold text-indigo-600">{selectedEntry.stockType}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Warehouse:</span> <span className="text-gray-700 dark:text-slate-200 font-medium">{selectedEntry.warehouseBase || '-'}</span></div>
                   </div>
                   <div className="text-right">
-                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Voucher Date:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedEntry.date}</span></div>
-                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Reference:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedEntry.reference || 'N/A'}</span></div>
-                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Status:</span> <span className="font-bold text-green-600">{selectedEntry.status}</span></div>
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Voucher Date:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedEntry.stockDate}</span></div>
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Reference:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedEntry.referenceNo || 'N/A'}</span></div>
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Status:</span> <span className="font-bold text-green-600">{selectedEntry.status || 'Pending'}</span></div>
                   </div>
                 </div>
 
@@ -485,7 +458,7 @@ const StockEntryList = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedEntry.items.map((item, idx) => (
+                      {(selectedEntry.products || []).map((item, idx) => (
                         <tr key={idx} className="border-b border-gray-100 dark:border-slate-200/60 text-gray-750 dark:text-slate-300">
                           <td className="py-2.5 px-3 border-r border-gray-200 dark:border-slate-200 font-bold">
                             {item.product}
@@ -494,20 +467,20 @@ const StockEntryList = () => {
                             {item.batch || <span className="text-gray-400">-</span>}
                           </td>
                           <td className="py-2.5 px-3 border-r border-gray-200 dark:border-slate-200 font-mono">
-                            {item.serial || <span className="text-gray-400">-</span>}
+                            {item.sku || <span className="text-gray-400">-</span>}
                           </td>
                           <td className="py-2.5 px-3 text-center border-r border-gray-200 dark:border-slate-200 font-semibold font-mono">
-                            {item.qty} {item.unit}
+                            {item.qty} {item.unit || 'Units'}
                           </td>
                           <td className="py-2.5 px-3 italic text-gray-600 dark:text-slate-500">
-                            {item.reason || <span className="text-gray-400">-</span>}
+                            {item.remarks || <span className="text-gray-400">-</span>}
                           </td>
                         </tr>
                       ))}
                       {/* Total Qty Row */}
                       <tr className="bg-slate-50 dark:bg-slate-850 font-bold border-t border-gray-300 dark:border-slate-200">
                         <td colSpan="3" className="py-3 px-3 text-right uppercase">Total Adjusted Qty:</td>
-                        <td className="py-3 px-3 text-center font-mono">{selectedEntry.totalQty} Units</td>
+                        <td className="py-3 px-3 text-center font-mono">{selectedEntry.summary?.totalQty || 0} Units</td>
                         <td className="py-3 px-3"></td>
                       </tr>
                     </tbody>
@@ -516,13 +489,9 @@ const StockEntryList = () => {
 
                 {/* Purpose and Remarks */}
                 <div className="grid grid-cols-2 gap-4 mt-6 text-xs text-gray-700 dark:text-slate-350">
-                  <div>
-                    <div className="font-bold">Main Reason / Purpose:</div>
-                    <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200">{selectedEntry.reason}</p>
-                  </div>
-                  <div>
+                  <div className="col-span-2">
                     <div className="font-bold">Remarks / Internal Comments:</div>
-                    <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200">{selectedEntry.remarks}</p>
+                    <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200">{selectedEntry.remarks || 'No remarks provided.'}</p>
                   </div>
                 </div>
 

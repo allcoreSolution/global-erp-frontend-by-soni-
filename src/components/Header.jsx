@@ -20,6 +20,7 @@ import {
   Plus,
   Keyboard
 } from 'lucide-react';
+import api from '../api';
 
 export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   const navigate = useNavigate();
@@ -41,21 +42,28 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   const [calDate, setCalDate] = useState(new Date());
 
   const [isReminderOpen, setIsReminderOpen] = useState(false);
-  const [reminders, setReminders] = useState([
-    { id: 1, text: 'Low stock alert for 5 products', time: '10 mins ago' },
-    { id: 2, text: 'GSTR-1 tax filings due in 3 days', time: '1 hour ago' },
-    { id: 3, text: 'New voucher backup completed', time: 'Today, 9:30 AM' },
-    { id: 4, text: 'Audit logs check required', time: 'Yesterday' },
-  ]);
+  const [reminders, setReminders] = useState([]);
 
   const [isMessageOpen, setIsMessageOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 1, text: 'From Manager: Sales report updated', time: '5m ago' },
-    { id: 2, text: 'From Client: Invoice request #982', time: '20m ago' },
-    { id: 3, text: 'Support: Database sync completed', time: '1h ago' },
-    { id: 4, text: 'HR: Monthly team meeting scheduled', time: '2h ago' },
-    { id: 5, text: 'Accountant: Tax summary prepared', time: '3h ago' },
-  ]);
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await api.get('/notifications');
+        if (response.data && response.data.success) {
+          setMessages(response.data.data.messages || []);
+          setReminders(response.data.data.reminders || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      }
+    };
+    fetchNotifications();
+    // Optional: set up polling here
+    // const interval = setInterval(fetchNotifications, 60000);
+    // return () => clearInterval(interval);
+  }, []);
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isShortcutManagerOpen, setIsShortcutManagerOpen] = useState(false);
@@ -169,7 +177,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
       {/* Quick Actions & User Profile */}
       <div className="flex items-center gap-6 ml-4">
         {/* Actions - Scrollable on Mobile */}
-        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 max-w-[150px] sm:max-w-[320px] md:max-w-[480px] lg:max-w-none py-1 overflow-x-auto no-scrollbar shrink-0">
+        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 py-1 shrink-0 lg:flex-nowrap">
 
           {/* Calculator Popup */}
           <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={calcRef}>

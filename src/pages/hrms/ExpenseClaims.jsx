@@ -1,16 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, X, Wallet, Check, Ban, DollarSign, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const ExpenseClaims = () => {
   const navigate = useNavigate();
-  const [claims, setClaims] = useState([
-    { id: 'EXP-101', name: 'Vikram Singh', type: 'Travel Expense', date: '2026-08-10', amount: 3500, desc: 'Client onsite visit travel tickets', status: 'Pending' },
-    { id: 'EXP-102', name: 'Neha Gupta', type: 'Client Meeting', date: '2026-08-08', amount: 2400, desc: 'Dinner with Delhi key accounts client', status: 'Approved' },
-    { id: 'EXP-103', name: 'Priya Patel', type: 'Office Stationery', date: '2026-08-05', amount: 850, desc: 'Notebooks and whiteboard markers', status: 'Approved' },
-    { id: 'EXP-104', name: 'Amit Sharma', type: 'Miscellaneous', date: '2026-08-04', amount: 1500, desc: 'Office team monthly refreshment tea/snacks', status: 'Approved' },
-    { id: 'EXP-105', name: 'Rajesh Kumar', type: 'Travel Expense', date: '2026-08-02', amount: 1200, desc: 'Local conveyance auto charges', status: 'Rejected' }
-  ]);
+  const [claims, setClaims] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchClaims();
+  }, []);
+
+  const fetchClaims = async () => {
+    try {
+      const response = await api.get('/expense-claims');
+      if (response.data && response.data.success) {
+        const fetchedClaims = response.data.data.map(c => ({
+          id: c.claimNo || c._id,
+          name: c.employee?.fullName || c.employee || 'Unknown',
+          type: c.purpose || (c.expenses && c.expenses[0]?.category) || 'Expense',
+          date: c.claimDate || c.createdAt?.split('T')[0] || '-',
+          amount: c.finalPayable || c.totalExpense || 0,
+          desc: c.expenses?.[0]?.desc || 'No description',
+          status: c.approvalStatus || c.status || 'Pending',
+          _id: c._id
+        }));
+        setClaims(fetchedClaims);
+      }
+    } catch (error) {
+      console.error("Error fetching claims:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newClaim, setNewClaim] = useState({
@@ -21,41 +44,73 @@ const ExpenseClaims = () => {
     desc: ''
   });
 
-  const handleAddClaim = (e) => {
+  const handleAddClaim = async (e) => {
     e.preventDefault();
     if (!newClaim.name || !newClaim.amount) {
       alert("Name and Amount are required!");
       return;
     }
-    const nextId = `EXP-${String(claims.length + 101).padStart(3, '0')}`;
-    const added = {
-      id: nextId,
-      name: newClaim.name,
-      type: newClaim.type,
-      date: newClaim.date,
-      amount: Number(newClaim.amount),
-      desc: newClaim.desc || 'No description',
-      status: 'Pending'
-    };
-
-    setClaims([added, ...claims]);
-    setShowAddModal(false);
-    setNewClaim({
-      name: '',
-      type: 'Travel Expense',
-      date: new Date().toISOString().slice(0, 10),
-      amount: '',
-      desc: ''
-    });
+    try {
+      const payload = {
+        employee: newClaim.name,
+        purpose: newClaim.type,
+        claimDate: newClaim.date,
+        totalExpense: Number(newClaim.amount),
+        finalPayable: Number(newClaim.amount),
+        expenses: [{
+          category: newClaim.type,
+          desc: newClaim.desc || 'No description',
+          amount: Number(newClaim.amount),
+          date: newClaim.date
+        }],
+        status: 'Pending',
+        approvalStatus: 'Pending'
+      };
+      
+      const res = await api.post('/expense-claims', payload);
+      if (res.data && res.data.success) {
+        setShowAddModal(false);
+        setNewClaim({
+          name: '',
+          type: 'Travel Expense',
+          date: new Date().toISOString().slice(0, 10),
+          amount: '',
+          desc: ''
+        });
+        fetchClaims(); // Refresh list
+      }
+    } catch (error) {
+      console.error("Error adding claim:", error);
+      alert("Failed to add claim");
+    }
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setClaims(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      // Find the raw _id for the api call
+      const claimToUpdate = claims.find(c => c.id === id);
+      if(!claimToUpdate || !claimToUpdate._id) return;
+      
+      await api.put(`/expense-claims/${claimToUpdate._id}`, { approvalStatus: newStatus, status: newStatus });
+      fetchClaims(); // Refresh list
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("Failed to update status");
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this claim log?")) {
-      setClaims(claims.filter(c => c.id !== id));
+      try {
+        const claimToDelete = claims.find(c => c.id === id);
+        if(!claimToDelete || !claimToDelete._id) return;
+
+        await api.delete(`/expense-claims/${claimToDelete._id}`);
+        fetchClaims(); // Refresh list
+      } catch (error) {
+        console.error("Error deleting claim:", error);
+        alert("Failed to delete claim");
+      }
     }
   };
 

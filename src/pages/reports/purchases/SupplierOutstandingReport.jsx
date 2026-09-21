@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Search, Filter, Download, AlertCircle, Calendar, UserCheck } from 'lucide-react';
+import api from '../../../api';
 
 const SupplierOutstandingReport = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const payables = [
-    { id: 1, vendor: 'TechDistro Inc.', balance: 145000, overdue: 45000, daysOverdue: 15, status: 'Overdue' },
-    { id: 2, vendor: 'OfficeDepot', balance: 32000, overdue: 0, daysOverdue: 0, status: 'On Track' },
-    { id: 3, vendor: 'Global Logistics', balance: 85000, overdue: 85000, daysOverdue: 42, status: 'Critical' },
-    { id: 4, vendor: 'RawMaterials Inc', balance: 12000, overdue: 5000, daysOverdue: 5, status: 'Overdue' },
-    { id: 5, vendor: 'Alpha Builders', balance: 250000, overdue: 0, daysOverdue: 0, status: 'On Track' },
-  ];
+  const [payables, setPayables] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/financial/supplier-outstanding');
+        if (response.data.success) {
+          setPayables(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

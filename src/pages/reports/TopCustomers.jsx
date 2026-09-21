@@ -1,20 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserCheck, Search, Filter, Download, ArrowUpRight, TrendingUp, DollarSign } from 'lucide-react';
+import api from '../../api';
 
 const TopCustomers = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const customers = [
-    { id: 1, name: 'Acme Corp', contact: 'John Doe', orders: 145, revenue: 245000, margin: '22%', status: 'VIP' },
-    { id: 2, name: 'Global Tech', contact: 'Jane Smith', orders: 98, revenue: 185000, margin: '18%', status: 'Active' },
-    { id: 3, name: 'Apex Solutions', contact: 'Mike Johnson', orders: 76, revenue: 134000, margin: '25%', status: 'VIP' },
-    { id: 4, name: 'Quantum Ltd', contact: 'Sarah Williams', orders: 54, revenue: 98000, margin: '15%', status: 'Active' },
-    { id: 5, name: 'Stark Industries', contact: 'Tony Stark', orders: 42, revenue: 76000, margin: '28%', status: 'Active' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/sales/analysis/customer-wise');
+        if (response.data.success) {
+          // Sort by revenue descending and add rank
+          const sorted = response.data.data.sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0)).map((item, index) => ({
+            ...item,
+            revenue: item.totalSpent, // Map totalSpent to revenue
+            rank: index + 1,
+            margin: '22%' // mock
+          }));
+          setData(sorted);
+        }
+      } catch (error) {
+        console.error("Error fetching top customers:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const formatCurrency = (value) => {
+    const num = Number(value) || 0;
+    return `₹ ${num.toLocaleString('en-IN')}`;
+  };
+
+  const filteredData = data.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -32,7 +56,6 @@ const TopCustomers = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-emerald-50 rounded-lg text-emerald-600">
@@ -40,7 +63,9 @@ const TopCustomers = () => {
           </div>
           <div>
             <p className="text-[11px] font-bold text-slate-500 uppercase">Total Revenue (Top 5)</p>
-            <h3 className="text-xl font-bold text-slate-800">$738,000</h3>
+            <h3 className="text-xl font-bold text-slate-800">
+              {formatCurrency(data.slice(0, 5).reduce((acc, curr) => acc + curr.revenue, 0))}
+            </h3>
           </div>
         </div>
         <div className="bg-white p-5 rounded-xl border border-blue-100 shadow-sm flex items-center gap-4">
@@ -58,12 +83,13 @@ const TopCustomers = () => {
           </div>
           <div>
             <p className="text-[11px] font-bold text-slate-500 uppercase">Total Orders</p>
-            <h3 className="text-xl font-bold text-slate-800">415</h3>
+            <h3 className="text-xl font-bold text-slate-800">
+              {data.reduce((acc, curr) => acc + curr.orders, 0)}
+            </h3>
           </div>
         </div>
       </div>
 
-      {/* Data Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
           <h2 className="text-sm font-bold text-slate-800">Customer Rankings</h2>
@@ -92,9 +118,11 @@ const TopCustomers = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {customers.map((c, i) => (
+              {loading ? (
+                <tr><td colSpan="7" className="p-4 text-center text-slate-500">Loading data...</td></tr>
+              ) : filteredData.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50/50 transition">
-                  <td className="px-6 py-4 font-bold text-slate-700">#{i + 1}</td>
+                  <td className="px-6 py-4 font-bold text-slate-700">#{c.rank}</td>
                   <td className="px-6 py-4 font-bold text-indigo-600">{c.name}</td>
                   <td className="px-6 py-4 text-slate-600">{c.contact}</td>
                   <td className="px-6 py-4">
@@ -105,7 +133,7 @@ const TopCustomers = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-600 text-right font-medium">{c.orders}</td>
-                  <td className="px-6 py-4 font-bold text-slate-800 text-right">${c.revenue.toLocaleString()}</td>
+                  <td className="px-6 py-4 font-bold text-slate-800 text-right">{formatCurrency(c.revenue)}</td>
                   <td className="px-6 py-4 text-emerald-600 font-bold text-right">{c.margin}</td>
                 </tr>
               ))}

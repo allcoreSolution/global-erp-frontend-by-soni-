@@ -1,16 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Search, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const JournalRegister = () => {
-  const [transactions] = useState([
-    { id: 'JR-2026-001', date: '2026-09-02', particulars: 'Depreciation A/c', refNo: 'JV-01', debit: 5000, credit: 0, user: 'Admin' },
-    { id: 'JR-2026-002', date: '2026-09-02', particulars: 'Machinery A/c', refNo: 'JV-01', debit: 0, credit: 5000, user: 'Admin' },
-    { id: 'JR-2026-003', date: '2026-09-03', particulars: 'Salary A/c', refNo: 'JV-02', debit: 25000, credit: 0, user: 'Manager-02' },
-    { id: 'JR-2026-004', date: '2026-09-03', particulars: 'Outstanding Salary', refNo: 'JV-02', debit: 0, credit: 25000, user: 'Manager-02' }
-  ]);
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
-  const totalDebit = transactions.reduce((acc, curr) => acc + curr.debit, 0);
-  const totalCredit = transactions.reduce((acc, curr) => acc + curr.credit, 0);
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
+  const [vouchers, setVouchers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchJournals();
+  }, []);
+
+  const fetchJournals = async () => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams();
+      if (fromDate) queryParams.append('fromDate', fromDate);
+      if (toDate) queryParams.append('toDate', toDate);
+      queryParams.append('voucherType', 'Journal');
+      
+      const res = await api.get(`/vouchers?${queryParams.toString()}`);
+      if (res.data && res.data.success) {
+        setVouchers(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching journal vouchers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const entries = vouchers.flatMap(v => {
+    return v.entries.map((entry, index) => ({
+      id: `${v._id}-${index}`,
+      date: new Date(v.date).toLocaleDateString(),
+      voucherNo: v.voucherNo || v._id.slice(-6),
+      particulars: entry.account?.accountName || 'Unknown',
+      debit: entry.debitAmount > 0 ? entry.debitAmount : null,
+      credit: entry.creditAmount > 0 ? entry.creditAmount : null,
+      user: 'Admin', // In real app, could be v.createdBy
+      refNo: '-'
+    }));
+  });
+
+  const totalDebit = entries.reduce((sum, entry) => sum + (entry.debit || 0), 0);
+  const totalCredit = entries.reduce((sum, entry) => sum + (entry.credit || 0), 0);
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -33,10 +72,10 @@ const JournalRegister = () => {
 
       <div className="bg-slate-50 p-4 border border-slate-200 rounded-lg flex items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-slate-600" />
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-01" />
+        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-slate-500" />
         <span className="text-gray-400">to</span>
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-30" />
-        <button className="px-3 py-1.5 bg-slate-600 text-white rounded hover:bg-slate-700">Apply Filter</button>
+        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-slate-500" />
+        <button onClick={fetchJournals} className="px-3 py-1.5 bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors">Apply Filter</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -64,17 +103,27 @@ const JournalRegister = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {transactions.map((t, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3">{t.date}</td>
-                <td className="p-3 font-mono font-bold text-slate-600">{t.id}</td>
-                <td className="p-3 font-semibold text-gray-800">{t.particulars}</td>
-                <td className="p-3 text-gray-500">{t.refNo}</td>
-                <td className="p-3 text-gray-500">{t.user}</td>
-                <td className="p-3 text-right font-bold text-blue-700">{t.debit > 0 ? t.debit.toLocaleString() : '-'}</td>
-                <td className="p-3 text-right font-bold text-rose-700">{t.credit > 0 ? t.credit.toLocaleString() : '-'}</td>
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 italic">Loading journals...</td>
               </tr>
-            ))}
+            ) : entries.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 italic">No journal entries found.</td>
+              </tr>
+            ) : (
+              entries.map((t, idx) => (
+                <tr key={t.id || idx} className="hover:bg-slate-50">
+                  <td className="p-3">{t.date}</td>
+                  <td className="p-3 font-mono font-bold text-slate-600">{t.voucherNo}</td>
+                  <td className="p-3 font-semibold text-gray-800">{t.particulars}</td>
+                  <td className="p-3 text-gray-500">{t.refNo}</td>
+                  <td className="p-3 text-gray-500">{t.user}</td>
+                  <td className="p-3 text-right font-bold text-blue-700">{t.debit > 0 ? t.debit.toLocaleString() : '-'}</td>
+                  <td className="p-3 text-right font-bold text-rose-700">{t.credit > 0 ? t.credit.toLocaleString() : '-'}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

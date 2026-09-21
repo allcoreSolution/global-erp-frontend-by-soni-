@@ -5,6 +5,7 @@ import {
   Trash2, Edit, ChevronLeft, ChevronRight, AlertCircle, X, CheckCircle 
 } from 'lucide-react';
 import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const DriverList = () => {
   const navigate = useNavigate();
@@ -385,14 +386,14 @@ const DriverList = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Gender</label>
-                    <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                    <DynamicSelect
+                      category="Gender"
+                      name="gender"
+                      value={form.gender}
+                      onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                      defaultOptions={["Select", "Male", "Female", "Other"]}
                       className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                    >
-                      <option value="Select">Select</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Blood Group</label>
@@ -515,12 +516,14 @@ const DriverList = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Driver Type</label>
-                    <select value={form.driverType} onChange={(e) => setForm({ ...form, driverType: e.target.value })}
+                    <DynamicSelect
+                      category="DriverType"
+                      name="driverType"
+                      value={form.driverType}
+                      onChange={(e) => setForm({ ...form, driverType: e.target.value })}
+                      defaultOptions={["Permanent", "Contract"]}
                       className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                    >
-                      <option value="Permanent">Permanent</option>
-                      <option value="Contract">Contract</option>
-                    </select>
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Department</label>
@@ -545,13 +548,14 @@ const DriverList = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Payment Type</label>
-                    <select value={form.paymentMode} onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
+                    <DynamicSelect
+                      category="PaymentMode"
+                      name="paymentMode"
+                      value={form.paymentMode}
+                      onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
+                      defaultOptions={["Bank Transfer", "Cash", "Cheque"]}
                       className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
-                    >
-                      <option value="Bank Transfer">Bank Transfer</option>
-                      <option value="Cash">Cash</option>
-                      <option value="Cheque">Cheque</option>
-                    </select>
+                    />
                   </div>
                 </div>
               </div>

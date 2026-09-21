@@ -1,24 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X, Download, Upload, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const DepartmentList = () => {
   const navigate = useNavigate();
-  const [departments, setDepartments] = useState([
-    { id: 'DEPT-01', name: 'IT & Systems', code: 'ITS', head: 'Vikram Malhotra', branch: 'Jaipur HQ Office', desc: 'Hardware, ERP and core network maintenance', empCount: 8, budget: 1200000 },
-    { id: 'DEPT-02', name: 'HR & Admin', code: 'HRA', head: 'Anjali Desai', branch: 'Jaipur HQ Office', desc: 'Recruitment, payroll and staff management', empCount: 3, budget: 500000 }
-  ]);
+  const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [currentDept, setCurrentDept] = useState({
-    id: '', name: '', code: '', head: '', branch: 'Jaipur HQ Office', desc: '', empCount: 0, budget: 0
+    _id: '', deptName: '', deptCode: '', deptHead: '', branch: 'Jaipur HQ Office', description: '', budget: 0
   });
 
+  const fetchDepartments = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/departments');
+      if (res.data.success) {
+        setDepartments(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to fetch departments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
   const filtered = departments.filter(d =>
-    d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (d.deptName && d.deptName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (d.deptCode && d.deptCode.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleOpenAdd = () => {
@@ -31,19 +49,37 @@ const DepartmentList = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isEdit) {
-      setDepartments(departments.map(d => d.id === currentDept.id ? { ...currentDept } : d));
+      try {
+        const res = await api.put(`/departments/${currentDept._id}`, currentDept);
+        if (res.data.success) {
+          fetchDepartments();
+          setIsModalOpen(false);
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.message || 'Failed to update department');
+      }
     } else {
-      setDepartments([...departments, { ...currentDept }]);
+      // In this app, Add is handled in a separate page (AddDepartment.jsx)
+      // but just in case this modal is ever used for add:
+      alert('Adding is done on a separate page.');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete department ${id}?`)) {
-      setDepartments(departments.filter(d => d.id !== id));
+  const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete this department?`)) {
+      try {
+        const res = await api.delete(`/departments/${id}`);
+        if (res.data.success) {
+          fetchDepartments();
+        }
+      } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.message || 'Failed to delete department');
+      }
     }
   };
 
@@ -51,12 +87,12 @@ const DepartmentList = () => {
   const handleExport = () => {
     const headers = ['Department Code', 'Department Name', 'Branch', 'Head', 'Employees', 'Budget (₹)'];
     const rows = departments.map(d => [
-      d.code,
-      `"${d.name.replace(/"/g, '""')}"`,
-      d.branch,
-      `"${d.head.replace(/"/g, '""')}"`,
-      d.empCount,
-      d.budget
+      d.deptCode,
+      `"${(d.deptName || '').replace(/"/g, '""')}"`,
+      d.branch || '',
+      `"${(d.deptHead || '').replace(/"/g, '""')}"`,
+      '0', // empCount not tracked in DB yet
+      d.budget || 0
     ]);
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -184,29 +220,39 @@ const DepartmentList = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.map(d => (
-              <tr key={d.id} className="hover:bg-slate-50 transition-colors">
-                <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono">{d.code}</td>
-                <td className="p-2.5 sm:p-3">
-                  <div className="font-medium text-gray-900">{d.name}</div>
-                  <div className="text-[10px] text-gray-400 truncate max-w-[150px]">{d.desc}</div>
-                </td>
-                <td className="p-2.5 sm:p-3 text-gray-650">{d.branch}</td>
-                <td className="p-2.5 sm:p-3 text-gray-800 font-medium">{d.head}</td>
-                <td className="p-2.5 sm:p-3 text-right">{d.empCount} Staff</td>
-                <td className="p-2.5 sm:p-3 text-right font-semibold">₹ {d.budget.toLocaleString()}</td>
-                <td className="p-2.5 sm:p-3 text-center no-print">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <button onClick={() => handleOpenEdit(d)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
-                      <Edit size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(d.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-slate-500">Loading departments...</td>
               </tr>
-            ))}
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-slate-500">No departments found.</td>
+              </tr>
+            ) : (
+              filtered.map(d => (
+                <tr key={d._id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono">{d.deptCode}</td>
+                  <td className="p-2.5 sm:p-3">
+                    <div className="font-medium text-gray-900">{d.deptName}</div>
+                    <div className="text-[10px] text-gray-400 truncate max-w-[150px]">{d.description}</div>
+                  </td>
+                  <td className="p-2.5 sm:p-3 text-gray-650">{d.branch}</td>
+                  <td className="p-2.5 sm:p-3 text-gray-800 font-medium">{d.deptHead}</td>
+                  <td className="p-2.5 sm:p-3 text-right">0 Staff</td>
+                  <td className="p-2.5 sm:p-3 text-right font-semibold">₹ {Number(d.budget || 0).toLocaleString()}</td>
+                  <td className="p-2.5 sm:p-3 text-center no-print">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button onClick={() => handleOpenEdit(d)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
+                        <Edit size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(d._id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -227,8 +273,8 @@ const DepartmentList = () => {
                     type="text"
                     required
                     placeholder="e.g. ITS"
-                    value={currentDept.code}
-                    onChange={(e) => setCurrentDept({ ...currentDept, code: e.target.value })}
+                    value={currentDept.deptCode || ''}
+                    onChange={(e) => setCurrentDept({ ...currentDept, deptCode: e.target.value })}
                     className="w-full border p-2 rounded focus:outline-none text-xs font-mono"
                   />
                 </div>
@@ -238,8 +284,8 @@ const DepartmentList = () => {
                     type="text"
                     required
                     placeholder="e.g. IT & Systems"
-                    value={currentDept.name}
-                    onChange={(e) => setCurrentDept({ ...currentDept, name: e.target.value })}
+                    value={currentDept.deptName || ''}
+                    onChange={(e) => setCurrentDept({ ...currentDept, deptName: e.target.value })}
                     className="w-full border p-2 rounded focus:outline-none text-xs"
                   />
                 </div>
@@ -248,8 +294,8 @@ const DepartmentList = () => {
                   <input
                     type="text"
                     required
-                    value={currentDept.head}
-                    onChange={(e) => setCurrentDept({ ...currentDept, head: e.target.value })}
+                    value={currentDept.deptHead || ''}
+                    onChange={(e) => setCurrentDept({ ...currentDept, deptHead: e.target.value })}
                     className="w-full border p-2 rounded focus:outline-none text-xs"
                   />
                 </div>
@@ -271,7 +317,7 @@ const DepartmentList = () => {
                   <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Budget Allocation (₹)</label>
                   <input
                     type="number"
-                    value={currentDept.budget}
+                    value={currentDept.budget || ''}
                     onChange={(e) => setCurrentDept({ ...currentDept, budget: Number(e.target.value) })}
                     className="w-full border p-2 rounded focus:outline-none text-xs"
                   />
@@ -280,9 +326,9 @@ const DepartmentList = () => {
                   <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Employees Count</label>
                   <input
                     type="number"
-                    value={currentDept.empCount}
-                    onChange={(e) => setCurrentDept({ ...currentDept, empCount: Number(e.target.value) })}
-                    className="w-full border p-2 rounded focus:outline-none text-xs"
+                    value={0}
+                    disabled
+                    className="w-full border p-2 rounded focus:outline-none text-xs bg-slate-50"
                   />
                 </div>
               </div>
@@ -291,8 +337,8 @@ const DepartmentList = () => {
                 <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Description</label>
                 <textarea
                   rows="2"
-                  value={currentDept.desc}
-                  onChange={(e) => setCurrentDept({ ...currentDept, desc: e.target.value })}
+                  value={currentDept.description || ''}
+                  onChange={(e) => setCurrentDept({ ...currentDept, description: e.target.value })}
                   className="w-full border p-2 rounded focus:outline-none text-xs"
                 />
               </div>

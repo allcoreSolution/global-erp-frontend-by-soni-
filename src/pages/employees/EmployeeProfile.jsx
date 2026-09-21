@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, UploadCloud, UserPlus, Image as ImageIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, CheckCircle, UploadCloud, UserPlus, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const EmployeeProfile = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Form State
   const [form, setForm] = useState({
     // Personal Information
-    employeeId: 'EMP-001',
+    employeeId: `EMP-${Date.now()}`,
     employeeName: '',
     dob: '',
     gender: '',
@@ -63,9 +66,29 @@ const EmployeeProfile = () => {
     role: '',
     loginStatus: 'Active',
     
+    // Profile Photo
+    profilePhotoFile: null,
+
     // Remarks
     remarks: ''
   });
+
+  // Fetch employee if id exists
+  useEffect(() => {
+    if (id) {
+      const fetchEmployee = async () => {
+        try {
+          const { data } = await api.get(`/employees/${id}`);
+          if (data.success) {
+            setForm(data.data);
+          }
+        } catch (error) {
+          console.error("Error fetching employee data", error);
+        }
+      };
+      fetchEmployee();
+    }
+  }, [id]);
 
   // Calculate Gross Salary whenever salary components change
   useEffect(() => {
@@ -101,10 +124,35 @@ const EmployeeProfile = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Employee Profile Created successfully!');
-    navigate('/employees/records'); // Assuming there is an employee list route
+    try {
+      const payload = {
+        ...form,
+        basicSalary: Number(form.basicSalary) || 0,
+        hra: Number(form.hra) || 0,
+        allowance: Number(form.allowance) || 0,
+        grossSalary: Number(form.grossSalary) || 0,
+        netSalary: Number(form.netSalary) || 0
+      };
+
+      // Remove File object before sending as JSON payload
+      delete payload.profilePhotoFile;
+      delete payload.documentFiles;
+      
+      if (id) {
+        await api.put(`/employees/${id}`, payload);
+        alert('Employee Profile Updated successfully!');
+      } else {
+        await api.post('/employees', payload);
+        alert('Employee Profile Created successfully!');
+      }
+      navigate('/employees/records');
+    } catch (error) {
+      console.error('Error saving employee', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      alert('Failed to save employee. Error: ' + errorMessage);
+    }
   };
 
   return (
@@ -157,12 +205,22 @@ const EmployeeProfile = () => {
                 
                 <div className="flex flex-col md:flex-row gap-6">
                    {/* Photo Upload Area */}
-                   <div className="w-32 h-32 flex-shrink-0 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-violet-400 hover:text-violet-500 transition-colors cursor-pointer relative overflow-hidden group">
-                      <ImageIcon size={32} className="mb-2" />
-                      <span className="text-xs font-medium px-2 text-center">Upload Photo</span>
-                      <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs font-bold">
-                         Click to Change
-                      </div>
+                   <div className="flex flex-col gap-2">
+                     <label className="w-32 h-32 flex-shrink-0 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-violet-400 hover:text-violet-500 transition-colors cursor-pointer relative overflow-hidden group">
+                        <ImageIcon size={32} className="mb-2" />
+                        <span className="text-xs font-medium px-2 text-center truncate w-full">
+                          {form.profilePhotoFile ? form.profilePhotoFile.name : 'Upload Photo'}
+                        </span>
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setForm(prev => ({...prev, profilePhotoFile: e.target.files[0]}))} />
+                        <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs font-bold">
+                           Click to Change
+                        </div>
+                     </label>
+                     {form.profilePhotoFile && (
+                       <button type="button" onClick={() => setForm(prev => ({...prev, profilePhotoFile: null}))} className="w-32 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-xs font-semibold flex items-center justify-center gap-1">
+                         <Trash2 size={12} /> Remove
+                       </button>
+                     )}
                    </div>
 
                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -215,34 +273,40 @@ const EmployeeProfile = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                    <select name="company" value={form.company} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option value="">Select Company</option>
-                      <option>Main Corp</option>
-                    </select>
+                    <input type="text" name="company" value={form.company} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" placeholder="Enter Company" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                    <select name="branch" value={form.branch} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option value="">Select Branch</option>
-                      <option>HQ</option>
-                    </select>
+                    <DynamicSelect
+                      category="Branch"
+                      name="branch"
+                      value={form.branch}
+                      onChange={handleChange}
+                      defaultOptions={['HQ']}
+                      className="w-full text-sm"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Department *</label>
-                    <select name="department" value={form.department} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option value="">Select Dept</option>
-                      <option>IT</option>
-                      <option>Sales</option>
-                      <option>HR</option>
-                    </select>
+                    <DynamicSelect
+                      category="Department"
+                      name="department"
+                      value={form.department}
+                      onChange={handleChange}
+                      defaultOptions={['IT', 'Sales', 'HR']}
+                      className="w-full text-sm"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Designation *</label>
-                    <select name="designation" value={form.designation} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option value="">Select Desig</option>
-                      <option>Manager</option>
-                      <option>Developer</option>
-                    </select>
+                    <DynamicSelect
+                      category="Designation"
+                      name="designation"
+                      value={form.designation}
+                      onChange={handleChange}
+                      defaultOptions={['Manager', 'Developer']}
+                      className="w-full text-sm"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Employee Type</label>
@@ -265,18 +329,25 @@ const EmployeeProfile = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Reporting Manager</label>
-                    <select name="reportingManager" value={form.reportingManager} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option value="">Select Manager</option>
-                      <option>John Doe</option>
-                    </select>
+                    <DynamicSelect
+                      category="Manager"
+                      name="reportingManager"
+                      value={form.reportingManager}
+                      onChange={handleChange}
+                      defaultOptions={['John Doe']}
+                      className="w-full text-sm"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Shift</label>
-                    <select name="shift" value={form.shift} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option value="">Select Shift</option>
-                      <option>General</option>
-                      <option>Night</option>
-                    </select>
+                    <DynamicSelect
+                      category="Shift"
+                      name="shift"
+                      value={form.shift}
+                      onChange={handleChange}
+                      defaultOptions={['General', 'Night']}
+                      className="w-full text-sm"
+                    />
                   </div>
                 </div>
               </div>
@@ -454,11 +525,24 @@ const EmployeeProfile = () => {
               {/* SECTION: DOCUMENTS & REMARKS */}
               <div className="border border-slate-200 rounded-lg p-5">
                  <div className="space-y-4">
-                    <div>
+                     <div>
                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Documents</label>
-                       <button type="button" className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-violet-400 hover:text-violet-600 transition-colors text-sm font-medium text-slate-500">
+                       <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-violet-400 hover:text-violet-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">
                           <UploadCloud size={18} /> Upload Documents (Aadhar, PAN, etc.)
-                       </button>
+                          <input type="file" className="hidden" multiple accept=".pdf,.doc,.docx,image/*" onChange={(e) => setForm(prev => ({ ...prev, documentFiles: [...(prev.documentFiles || []), ...Array.from(e.target.files)] }))} />
+                       </label>
+                       {(form.documentFiles?.length > 0) && (
+                         <div className="mt-3 space-y-2">
+                           {form.documentFiles.map((file, index) => (
+                             <div key={index} className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded text-xs">
+                               <span className="truncate max-w-[200px] text-slate-600 font-medium">{file.name}</span>
+                               <button type="button" onClick={() => setForm(prev => ({ ...prev, documentFiles: prev.documentFiles.filter((_, i) => i !== index) }))} className="text-red-500 hover:text-red-700 p-1">
+                                 <Trash2 size={14} />
+                               </button>
+                             </div>
+                           ))}
+                         </div>
+                       )}
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Remarks</label>

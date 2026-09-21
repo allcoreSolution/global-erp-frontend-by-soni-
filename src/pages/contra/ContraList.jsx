@@ -1,30 +1,48 @@
-import React, { useState } from 'react';
-import { Search, Download, Upload, Printer, CheckCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const ContraList = () => {
-  const [contraEntries, setContraEntries] = useState([
-    { id: 'CNTR-001', fromAccount: 'Cash Account', toAccount: 'ICICI Current A/C', amount: 20000, date: '2024-05-11', mode: 'Cash Deposit', refNo: 'DEP44511' },
-    { id: 'CNTR-002', fromAccount: 'ICICI Current A/C', toAccount: 'Cash Account', amount: 5000, date: '2024-05-14', mode: 'Cash Withdrawal', refNo: 'WTH99001' }
-  ]);
-
+  const navigate = useNavigate();
+  const [contraEntries, setContraEntries] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
+
+  useEffect(() => {
+    fetchContras();
+  }, []);
+
+  const fetchContras = async () => {
+    try {
+      const res = await api.get('/contras');
+      setContraEntries(res.data?.data || []);
+      addLog('Fetched contra entries from server.');
+    } catch (error) {
+      addLog('Error fetching contra entries.');
+    }
+  };
 
   const addLog = (msg) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete contra entry ${id}?`)) {
-      setContraEntries(prev => prev.filter(c => c.id !== id));
-      addLog(`Deleted contra entry ${id}`);
+  const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete contra entry?`)) {
+      try {
+        await api.delete(`/contras/${id}`);
+        setContraEntries(prev => prev.filter(c => c._id !== id));
+        addLog(`Deleted contra entry successfully`);
+      } catch (error) {
+        addLog(`Error deleting contra entry`);
+      }
     }
   };
 
   const filtered = contraEntries.filter(c =>
-    c.fromAccount.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.toAccount.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.id.toLowerCase().includes(searchTerm.toLowerCase())
+    (c.fromAccount || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.toAccount || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.contraNo || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Real CSV Export
@@ -32,13 +50,13 @@ const ContraList = () => {
     addLog("Exporting contra vouchers registers to CSV...");
     const headers = ['Contra ID', 'From Account', 'To Account', 'Amount (₹)', 'Date', 'Transfer Mode', 'Reference No'];
     const rows = contraEntries.map(c => [
-      c.id,
+      c.contraNo,
       c.fromAccount,
       c.toAccount,
       c.amount,
-      c.date,
-      c.mode,
-      c.refNo
+      c.contraDate,
+      c.transferMode,
+      c.referenceNo
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -177,16 +195,19 @@ const ContraList = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map(c => (
-                <tr key={c.id} className="hover:bg-slate-50">
-                  <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{c.id}</td>
+                <tr key={c._id} className="hover:bg-slate-50">
+                  <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{c.contraNo}</td>
                   <td className="p-2 font-medium text-gray-850">{c.fromAccount}</td>
                   <td className="p-2 text-gray-850 font-medium">{c.toAccount}</td>
-                  <td className="p-2 text-right font-bold text-slate-800">₹ {c.amount.toLocaleString()}</td>
-                  <td className="p-2 text-gray-500 whitespace-nowrap">{c.date}</td>
-                  <td className="p-2 text-gray-600 font-semibold">{c.mode}</td>
-                  <td className="p-2 font-mono text-gray-550">{c.refNo}</td>
-                  <td className="p-2 text-center no-print">
-                    <button onClick={() => handleDelete(c.id)} className="p-1 hover:bg-red-50 rounded text-red-600">
+                  <td className="p-2 text-right font-bold text-slate-800">₹ {(c.amount || 0).toLocaleString()}</td>
+                  <td className="p-2 text-gray-500 whitespace-nowrap">{c.contraDate}</td>
+                  <td className="p-2 text-gray-600 font-semibold">{c.transferMode}</td>
+                  <td className="p-2 font-mono text-gray-550">{c.referenceNo}</td>
+                  <td className="p-2 text-center no-print flex gap-2 justify-center">
+                    <button onClick={() => navigate(`/contra/edit/${c._id}`)} className="p-1 hover:bg-blue-50 rounded text-blue-600">
+                      <Edit size={13} />
+                    </button>
+                    <button onClick={() => handleDelete(c._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
                       <Trash2 size={13} />
                     </button>
                   </td>

@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RefreshCcw, Save, Search, Upload, Plus, Trash2, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const AddSaleReturn = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   const [form, setForm] = useState({
     returnNumber: 'RET-2023-001',
@@ -15,12 +18,52 @@ const AddSaleReturn = () => {
     refundMethod: 'Original Payment Method',
     restockingFee: '0',
     totalRefundAmount: '0',
-    remarks: ''
+    remarks: '',
+    company: 'Select'
   });
 
   const [items, setItems] = useState([
     { id: 1, product: '', quantity: 1, unitPrice: 0, condition: 'Good', returnTotal: 0 }
   ]);
+
+  useEffect(() => {
+    if (id) {
+      const fetchSaleReturn = async () => {
+        try {
+          const { data } = await api.get(`/sale-returns/${id}`);
+          if (data.success && data.data) {
+            const sr = data.data;
+            setForm({
+              returnNumber: sr.returnNumber || '',
+              returnDate: sr.returnDate || '',
+              customerName: sr.customerName || '',
+              invoiceNumber: sr.invoiceNumber || '',
+              returnReason: sr.returnReason || 'Defective Product',
+              status: sr.status || 'Pending',
+              refundMethod: sr.refundMethod || 'Original Payment Method',
+              restockingFee: sr.restockingFee || '0',
+              totalRefundAmount: sr.totalRefundAmount || '0',
+              remarks: sr.remarks || '',
+              company: sr.company || 'Select'
+            });
+            if (sr.items && sr.items.length > 0) {
+              setItems(sr.items.map((item, idx) => ({
+                id: idx + 1,
+                product: item.product || '',
+                condition: item.condition || 'Good',
+                quantity: item.quantity || 1,
+                unitPrice: item.unitPrice || 0,
+                returnTotal: item.returnTotal || 0
+              })));
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching sale return', error);
+        }
+      };
+      fetchSaleReturn();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,6 +72,8 @@ const AddSaleReturn = () => {
       [name]: value
     }));
   };
+
+
 
   const handleItemChange = (id, field, value) => {
     setItems(prevItems => prevItems.map(item => {
@@ -55,10 +100,42 @@ const AddSaleReturn = () => {
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Sale Return processed successfully!');
-    navigate('/sales/sale-return');
+    try {
+      const payload = {
+        returnNumber: form.returnNumber,
+        returnDate: form.returnDate,
+        customerName: form.customerName,
+        invoiceNumber: form.invoiceNumber,
+        returnReason: form.returnReason,
+        status: form.status,
+        refundMethod: form.refundMethod,
+        restockingFee: Number(form.restockingFee) || 0,
+        totalRefundAmount: finalRefund >= 0 ? Number(finalRefund) : 0,
+        remarks: form.remarks,
+        company: form.company,
+        items: items.map(item => ({
+          product: item.product,
+          condition: item.condition,
+          quantity: Number(item.quantity) || 1,
+          unitPrice: Number(item.unitPrice) || 0,
+          returnTotal: Number(item.returnTotal) || 0
+        }))
+      };
+
+      if (id) {
+        await api.put(`/sale-returns/${id}`, payload);
+        alert('Sale Return updated successfully!');
+      } else {
+        await api.post('/sale-returns', payload);
+        alert('Sale Return processed successfully!');
+      }
+      navigate('/sales/sale-return');
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Error saving sale return');
+    }
   };
 
   // Calculate Subtotal dynamically
@@ -118,13 +195,15 @@ const AddSaleReturn = () => {
                   <input type="text" name="invoiceNumber" value={form.invoiceNumber} onChange={handleChange} required placeholder="e.g. INV-10293" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Pending</option>
-                    <option>Approved</option>
-                    <option>Processed</option>
-                    <option>Rejected</option>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
+                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
+                    <option>Select</option>
+                    <option>Allcore Solutions</option>
                   </select>
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -135,22 +214,11 @@ const AddSaleReturn = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Return Reason *</label>
-                  <select name="returnReason" value={form.returnReason} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Defective Product</option>
-                    <option>Wrong Item Shipped</option>
-                    <option>Not as Expected</option>
-                    <option>Damaged in Transit</option>
-                    <option>Other</option>
-                  </select>
+                  <DynamicSelect category="ReturnReason" name="returnReason" value={form.returnReason} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Refund Method</label>
-                  <select name="refundMethod" value={form.refundMethod} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Original Payment Method</option>
-                    <option>Store Credit / Wallet</option>
-                    <option>Bank Transfer</option>
-                    <option>Cash</option>
-                  </select>
+                  <DynamicSelect category="RefundMethod" name="refundMethod" value={form.refundMethod} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Restocking Fee (₹)</label>
@@ -192,12 +260,12 @@ const AddSaleReturn = () => {
                         <input type="text" required placeholder="Select Product" value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none" />
                       </td>
                       <td className="px-4 py-3">
-                        <select value={item.condition} onChange={(e) => handleItemChange(item.id, 'condition', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white">
-                          <option>Good</option>
-                          <option>Damaged</option>
-                          <option>Defective</option>
-                          <option>Opened Box</option>
-                        </select>
+                        <DynamicSelect 
+                          category="ItemCondition" 
+                          name="condition" 
+                          value={item.condition} 
+                          onChange={(name, value) => handleItemChange(item.id, name, value)} 
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <input type="number" min="1" required value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none" />
@@ -247,12 +315,12 @@ const AddSaleReturn = () => {
               </div>
               <div className="flex flex-col justify-center">
                 <label className="block text-xs font-semibold text-slate-700 mb-2">Upload Photos/Documents (Optional)</label>
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+                <label className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group w-full">
                   <Upload size={24} className="text-slate-400 group-hover:text-indigo-500 mb-2 transition-colors" />
                   <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600">Click to upload files</span>
                   <span className="text-xs text-slate-400 mt-1">PNG, JPG, PDF up to 5MB</span>
                   <input type="file" className="hidden" multiple />
-                </div>
+                </label>
               </div>
             </div>
           </div>

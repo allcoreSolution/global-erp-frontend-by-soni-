@@ -1,37 +1,63 @@
 import React, { useState } from 'react';
 import { Layers, Trash2, Archive, RefreshCcw, ShieldAlert, CheckCircle2, Server } from 'lucide-react';
+import api from '../../api';
 
 const Utilities = () => {
   const [log, setLog] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const addLog = (msg) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleClearCache = () => {
+  const handleClearCache = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
     addLog("Initiating local storage and API session cache cleanup...");
-    setTimeout(() => {
-      addLog("Success: System cache cleared. 14.8 MB storage reclaimed.");
+    try {
+      const { data } = await api.post('/utilities/clear-cache');
+      addLog(`Success: ${data.message}`);
       alert("System application cache cleared successfully!");
-    }, 1000);
-  };
-
-  const handleArchiveData = () => {
-    if (window.confirm("Archive transactional data older than 2 years? This keeps active listings lightweight and improves database query speed.")) {
-      addLog("Initializing historical sales & purchase voucher archiving...");
-      setTimeout(() => {
-        addLog("Success: 1,482 records archived to secure offline database store.");
-        alert("Old transactional data archived successfully!");
-      }, 1500);
+    } catch (error) {
+      console.error(error);
+      addLog("Error: Failed to clear cache.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRecalculateBalances = () => {
+  const handleArchiveData = async () => {
+    if (window.confirm("Archive transactional data older than 2 years? This keeps active listings lightweight and improves database query speed.")) {
+      if (isLoading) return;
+      setIsLoading(true);
+      addLog("Initializing historical sales & purchase voucher archiving...");
+      try {
+        const { data } = await api.post('/utilities/archive-data');
+        addLog(`Success: ${data.message}`);
+        alert("Old transactional data archived successfully!");
+      } catch (error) {
+        console.error(error);
+        addLog("Error: Failed to archive data.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleRecalculateBalances = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
     addLog("Scanning database ledger entries for currency rounding or decimal deviations...");
-    setTimeout(() => {
-      addLog("Success: Outstanding balance indexes matched and verified.");
+    try {
+      const { data } = await api.post('/utilities/recalculate-ledger');
+      addLog(`Success: ${data.message}`);
       alert("Ledger balances matched and recalculated successfully!");
-    }, 1200);
+    } catch (error) {
+      console.error(error);
+      addLog("Error: Failed to recalculate balances.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -60,9 +86,10 @@ const Utilities = () => {
           </div>
           <button 
             onClick={handleClearCache}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-slate-800 font-bold rounded-lg text-xs shadow-xs transition"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs shadow-xs transition disabled:opacity-50"
           >
-            <Trash2 size={15} /> Clear Cache
+            <Trash2 size={15} /> {isLoading ? 'Processing...' : 'Clear Cache'}
           </button>
         </div>
 
@@ -77,9 +104,10 @@ const Utilities = () => {
           </div>
           <button 
             onClick={handleArchiveData}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-gray-700 font-bold rounded-lg text-xs border transition"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-gray-700 font-bold rounded-lg text-xs border transition disabled:opacity-50"
           >
-            <Archive size={15} /> Archive Database
+            <Archive size={15} /> {isLoading ? 'Processing...' : 'Archive Database'}
           </button>
         </div>
 
@@ -94,9 +122,10 @@ const Utilities = () => {
           </div>
           <button 
             onClick={handleRecalculateBalances}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-gray-700 font-bold rounded-lg text-xs border transition"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-gray-700 font-bold rounded-lg text-xs border transition disabled:opacity-50"
           >
-            <RefreshCcw size={15} /> Match Balances
+            <RefreshCcw size={15} /> {isLoading ? 'Processing...' : 'Match Balances'}
           </button>
         </div>
 

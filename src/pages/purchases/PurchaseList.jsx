@@ -1,26 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
   ChevronLeft, ChevronRight, AlertCircle, X, Calendar, Filter, DollarSign 
 } from 'lucide-react';
+import api from '../../api';
 
 const PurchaseList = () => {
   const navigate = useNavigate();
 
-  // Mock Purchase Invoices Database
-  const [purchases, setPurchases] = useState([
-    { id: 1, date: '28/05/2026', reference: 'pr-20260528-043900', createdBy: 'mummakidz', supplier: 'Apple Global Corp', status: 'Received', grandTotal: 1.00, returnedAmount: 0.00, paid: 1.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 2, date: '28/05/2026', reference: 'pr-20260528-043837', createdBy: 'mummakidz', supplier: 'Dell Trading Co', status: 'Received', grandTotal: 16.00, returnedAmount: 0.00, paid: 16.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 3, date: '28/05/2026', reference: 'pr-20260528-043748', createdBy: 'mummakidz', supplier: 'HP India Logistics', status: 'Received', grandTotal: 18.00, returnedAmount: 0.00, paid: 18.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 4, date: '28/05/2026', reference: 'pr-20260528-043554', createdBy: 'mummakidz', supplier: 'Logitech Distribution', status: 'Received', grandTotal: 15.00, returnedAmount: 0.00, paid: 15.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 5, date: '28/05/2026', reference: 'pr-20260528-043525', createdBy: 'mummakidz', supplier: 'Apple Global Corp', status: 'Received', grandTotal: 8.00, returnedAmount: 0.00, paid: 8.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 6, date: '28/05/2026', reference: 'pr-20260528-043442', createdBy: 'mummakidz', supplier: 'Dell Trading Co', status: 'Received', grandTotal: 23.00, returnedAmount: 0.00, paid: 23.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 7, date: '28/05/2026', reference: 'pr-20260528-043407', createdBy: 'mummakidz', supplier: 'HP India Logistics', status: 'Received', grandTotal: 7.00, returnedAmount: 0.00, paid: 7.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 8, date: '28/05/2026', reference: 'pr-20260528-043258', createdBy: 'mummakidz', supplier: 'Logitech Distribution', status: 'Received', grandTotal: 3.00, returnedAmount: 0.00, paid: 3.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 9, date: '28/05/2026', reference: 'pr-20260528-043214', createdBy: 'mummakidz', supplier: 'Apple Global Corp', status: 'Received', grandTotal: 4.00, returnedAmount: 0.00, paid: 4.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-    { id: 10, date: '28/05/2026', reference: 'pr-20260528-043142', createdBy: 'mummakidz', supplier: 'Dell Trading Co', status: 'Received', grandTotal: 5.00, returnedAmount: 0.00, paid: 5.00, due: 0.00, paymentTerm: '-', dueDate: '-', paymentStatus: 'Paid' },
-  ]);
+  const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPurchases();
+  }, []);
+
+  const fetchPurchases = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/purchases');
+      if (data.success) {
+        setPurchases(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching purchases', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateGrandTotal = (p) => {
+    if (!p.orderItems) return 0;
+    const sub = p.orderItems.reduce((sum, item) => {
+      const rawCost = item.netUnitCost - item.discount;
+      const taxAmt = rawCost * (item.taxPercent / 100);
+      return sum + (rawCost + taxAmt) * item.quantity;
+    }, 0);
+    let orderTaxPercent = 0;
+    if (p.orderTax === '5%') orderTaxPercent = 5;
+    else if (p.orderTax === '10%') orderTaxPercent = 10;
+    else if (p.orderTax === '18%') orderTaxPercent = 18;
+    const tax = sub * (orderTaxPercent / 100);
+    return sub + tax + (p.shippingCost || 0) - (p.discountValue || 0);
+  };
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,10 +56,9 @@ const PurchaseList = () => {
 
   // Search Filter
   const filteredPurchases = purchases.filter(p => {
-    const matchesSearch = p.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.createdBy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'All' || p.status === selectedStatus || p.paymentStatus === selectedStatus;
+    const matchesSearch = (p.referenceNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (p.supplier || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'All' || p.purchaseStatus === selectedStatus || p.paymentStatus === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -51,9 +73,14 @@ const PurchaseList = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleDeletePurchase = (id) => {
+  const handleDeletePurchase = async (id) => {
     if (window.confirm("Are you sure you want to delete this purchase invoice?")) {
-      setPurchases(purchases.filter(p => p.id !== id));
+      try {
+        await api.delete(`/purchases/${id}`);
+        setPurchases(purchases.filter(p => p._id !== id));
+      } catch (error) {
+        console.error('Error deleting purchase', error);
+      }
     }
   };
 
@@ -199,22 +226,26 @@ const PurchaseList = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
-            {currentRecords.length > 0 ? (
-              currentRecords.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-medium">{p.date}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.reference}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{p.createdBy}</td>
+            {loading ? (
+              <tr><td colSpan="13" className="px-4 py-8 text-center">Loading...</td></tr>
+            ) : currentRecords.length > 0 ? (
+              currentRecords.map((p) => {
+                const grandTotal = calculateGrandTotal(p);
+                return (
+                <tr key={p._id} className="hover:bg-gray-50/70 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-medium">{p.purchaseDate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.referenceNo}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">Admin</td>
                   <td className="px-4 py-3 text-sm text-gray-800 font-medium">{p.supplier}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
                     <span className="inline-flex px-2.5 py-0.5 rounded text-xs font-bold bg-green-50 text-green-700 border border-green-100">
-                      {p.status}
+                      {p.purchaseStatus}
                     </span>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${p.grandTotal.toFixed(2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">${p.returnedAmount.toFixed(2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">${p.paid.toFixed(2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">${p.due.toFixed(2)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${grandTotal.toFixed(2)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">$0.00</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">$0.00</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">${grandTotal.toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{p.paymentTerm}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{p.dueDate}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
@@ -236,17 +267,14 @@ const PurchaseList = () => {
                         <Eye size={15} />
                       </button>
                       <button
-                        onClick={() => {
-                          alert(`Redirecting to edit purchase: ${p.reference}`);
-                          navigate('/purchases/add-purchase');
-                        }}
+                        onClick={() => navigate(`/purchases/edit-purchase/${p._id}`)}
                         className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
                         title="Edit Purchase Invoice"
                       >
                         <Edit size={15} />
                       </button>
                       <button
-                        onClick={() => handleDeletePurchase(p.id)}
+                        onClick={() => handleDeletePurchase(p._id)}
                         className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                         title="Delete Invoice"
                       >
@@ -255,7 +283,8 @@ const PurchaseList = () => {
                     </div>
                   </td>
                 </tr>
-              ))
+              )}
+              )
             ) : (
               <tr>
                 <td colSpan="13" className="px-4 py-10 text-center text-sm text-gray-500 bg-white">
@@ -332,15 +361,15 @@ const PurchaseList = () => {
             <div className="space-y-4 py-2 text-sm">
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Reference No:</span>
-                <span className="font-bold text-gray-900">{selectedPurchase.reference}</span>
+                <span className="font-bold text-gray-900">{selectedPurchase.referenceNo}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Date:</span>
-                <span className="text-gray-900 font-semibold">{selectedPurchase.date}</span>
+                <span className="text-gray-900 font-semibold">{selectedPurchase.purchaseDate}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Created By:</span>
-                <span className="text-gray-900">{selectedPurchase.createdBy}</span>
+                <span className="text-gray-900">Admin</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Supplier:</span>
@@ -348,19 +377,19 @@ const PurchaseList = () => {
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Grand Total:</span>
-                <span className="font-bold text-gray-900">${selectedPurchase.grandTotal.toFixed(2)}</span>
+                <span className="font-bold text-gray-900">${calculateGrandTotal(selectedPurchase).toFixed(2)}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Paid Amount:</span>
-                <span className="font-semibold text-emerald-700">${selectedPurchase.paid.toFixed(2)}</span>
+                <span className="font-semibold text-emerald-700">$0.00</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Due Amount:</span>
-                <span className="font-semibold text-red-700">${selectedPurchase.due.toFixed(2)}</span>
+                <span className="font-semibold text-red-700">${calculateGrandTotal(selectedPurchase).toFixed(2)}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Purchase Status:</span>
-                <span className="font-bold text-blue-700">{selectedPurchase.status}</span>
+                <span className="font-bold text-blue-700">{selectedPurchase.purchaseStatus}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-semibold text-gray-600">Payment Status:</span>

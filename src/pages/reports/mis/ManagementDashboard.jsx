@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../../api';
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -26,111 +27,34 @@ const ManagementDashboard = () => {
   const [branch, setBranch] = useState('All');
 
   // Stats data mapped to the sections requested
-  const summaries = {
-    sales: {
-      title: 'Sales Summary',
-      total: '₹18,45,200',
-      mtd: '₹4,20,500',
-      transactions: 342,
-      growth: '+14.2%',
-      isPositive: true,
-      data: [
-        { label: 'Retail sales', val: '₹12,45,200' },
-        { label: 'Wholesale sales', val: '₹6,00,000' }
-      ]
-    },
-    purchase: {
-      title: 'Purchase Summary',
-      total: '₹11,20,400',
-      mtd: '₹2,90,100',
-      orders: 124,
-      growth: '+8.6%',
-      isPositive: true,
-      data: [
-        { label: 'Imported', val: '₹4,50,000' },
-        { label: 'Domestic Raw Mat', val: '₹6,70,400' }
-      ]
-    },
-    profit: {
-      title: 'Profit Summary',
-      total: '₹7,24,800',
-      margin: '39.2%',
-      growth: '+12.5%',
-      isPositive: true,
-      data: [
-        { label: 'Gross Margin', val: '₹10,50,000' },
-        { label: 'Net Profit Margin', val: '₹7,24,800' }
-      ]
-    },
-    expense: {
-      title: 'Expense Summary',
-      total: '₹3,95,600',
-      opex: '₹2,80,000',
-      capex: '₹1,15,600',
-      growth: '-2.4%',
-      isPositive: true,
-      data: [
-        { label: 'HR & Salaries', val: '₹2,10,000' },
-        { label: 'Rent & Admin', val: '₹1,85,600' }
-      ]
-    },
-    cashBank: {
-      title: 'Cash & Bank Position',
-      total: '₹14,50,000',
-      cash: '₹1,20,000',
-      bank: '₹13,30,000',
-      data: [
-        { label: 'ICICI Bank Current', val: '₹8,50,000' },
-        { label: 'HDFC Bank Current', val: '₹4,80,000' },
-        { label: 'Cash in Safe', val: '₹1,20,000' }
-      ]
-    },
-    receivablesPayables: {
-      title: 'Receivable / Payable',
-      receivable: '₹6,40,000',
-      payable: '₹4,10,200',
-      netStatus: 'Creditor Deficit',
-      data: [
-        { label: 'Receivables (Due)', val: '₹6,40,000' },
-        { label: 'Payables (Due)', val: '₹4,10,200' }
-      ]
-    },
-    stock: {
-      title: 'Stock Position',
-      totalValue: '₹24,80,000',
-      totalQty: '18,500 units',
-      alerts: '3 items low stock',
-      data: [
-        { label: 'Main Warehouse', val: '₹18,30,000' },
-        { label: 'Transit / Branch', val: '₹6,50,000' }
-      ]
-    }
-  };
+  
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    api.get('/reports/mis/management-dashboard')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setApiData(res.data.data);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !apiData) {
+    return <div className="p-6 text-center text-slate-500">Loading mis/ManagementDashboard.jsx...</div>;
+  }
+
+  const { summaries } = apiData;
+
+  // Added missing handlers
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportCSV = () => {
-    const headers = ['Metric Title', 'Primary Value', 'Secondary Indicator/Breakdown'];
-    const rows = [
-      ['Sales Total', summaries.sales.total, `MTD: ${summaries.sales.mtd}`],
-      ['Purchase Total', summaries.purchase.total, `MTD: ${summaries.purchase.mtd}`],
-      ['Net Profit', summaries.profit.total, `Margin: ${summaries.profit.margin}`],
-      ['Expense Total', summaries.expense.total, `Opex: ${summaries.expense.opex}`],
-      ['Cash & Bank Balance', summaries.cashBank.total, `Bank: ${summaries.cashBank.bank}, Cash: ${summaries.cashBank.cash}`],
-      ['Receivables / Payables', `Rec: ${summaries.receivablesPayables.receivable}`, `Pay: ${summaries.receivablesPayables.payable}`],
-      ['Stock Valuation', summaries.stock.totalValue, `Qty: ${summaries.stock.totalQty}`]
-    ];
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Executive_Management_Dashboard_${financialYear}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert("Export CSV functionality will be implemented here.");
   };
 
   return (

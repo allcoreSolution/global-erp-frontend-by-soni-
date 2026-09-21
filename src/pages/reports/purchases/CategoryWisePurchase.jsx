@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, Search, Filter, Download, Box, LayoutGrid, PieChart } from 'lucide-react';
+import api from '../../../api';
 
 const CategoryWisePurchase = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const categories = [
-    { id: 1, name: 'IT Infrastructure', items: 1250, value: 850000, share: 45 },
-    { id: 2, name: 'Office Furniture', items: 340, value: 220000, share: 12 },
-    { id: 3, name: 'Raw Materials', items: 5500, value: 650000, share: 34 },
-    { id: 4, name: 'Stationery', items: 12000, value: 45000, share: 2 },
-    { id: 5, name: 'Cleaning Supplies', items: 850, value: 125000, share: 7 },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/analysis/category-wise');
+        if (response.data.success) {
+          setCategories(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

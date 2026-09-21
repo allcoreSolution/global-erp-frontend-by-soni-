@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle, Save, X, Building2, Users, Phone, FileText, Settings, Info, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const AddDepartment = () => {
   const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [form, setForm] = useState({
     // Basic Information
@@ -48,15 +52,73 @@ const AddDepartment = () => {
     internalNotes: ''
   });
 
+  // Local Dropdown States
+  const [parentDepts, setParentDepts] = useState(['Operations', 'Finance']);
+  const [deptTypes, setDeptTypes] = useState(['Internal', 'External', 'Cross-Functional']);
+  const [branches, setBranches] = useState(['HQ - Mumbai']);
+  const [companies, setCompanies] = useState(['Acme Corp']);
+  const [statuses, setStatuses] = useState(['Active', 'Inactive']);
+  const [costCenters, setCostCenters] = useState(['CC-01']);
+  const [profitCenters, setProfitCenters] = useState(['PC-01']);
+  const [deptHeads, setDeptHeads] = useState(['Rohan Sharma', 'Priya Patel']);
+  const [assistantManagers, setAssistantManagers] = useState(['Amit Singh']);
+  const [reportingDepts, setReportingDepts] = useState(['Board of Directors']);
+  const [workingDaysList, setWorkingDaysList] = useState(['Mon-Sat', 'Mon-Fri']);
+  const [defaultShifts, setDefaultShifts] = useState(['General Shift (09:00 - 18:00)']);
+  const [attendanceReqs, setAttendanceReqs] = useState(['Yes', 'No']);
+  const [leaveApprovals, setLeaveApprovals] = useState(['Manager', 'HR', 'Both']);
+  const [expenseApprovals, setExpenseApprovals] = useState(['Manager', 'Finance', 'Both']);
+
+  const [modalType, setModalType] = useState(null);
+  const [modalData, setModalData] = useState({ name: '' });
+
+  const handleQuickAdd = (e) => {
+    e.preventDefault();
+    if (!modalData.name) return;
+    
+    if (modalType === 'Parent Department') setParentDepts([...parentDepts, modalData.name]);
+    if (modalType === 'Department Type') setDeptTypes([...deptTypes, modalData.name]);
+    if (modalType === 'Branch') setBranches([...branches, modalData.name]);
+    if (modalType === 'Company') setCompanies([...companies, modalData.name]);
+    if (modalType === 'Status') setStatuses([...statuses, modalData.name]);
+    if (modalType === 'Cost Center') setCostCenters([...costCenters, modalData.name]);
+    if (modalType === 'Profit Center') setProfitCenters([...profitCenters, modalData.name]);
+    if (modalType === 'Department Head') setDeptHeads([...deptHeads, modalData.name]);
+    if (modalType === 'Assistant Manager') setAssistantManagers([...assistantManagers, modalData.name]);
+    if (modalType === 'Reporting Dept.') setReportingDepts([...reportingDepts, modalData.name]);
+    if (modalType === 'Working Days') setWorkingDaysList([...workingDaysList, modalData.name]);
+    if (modalType === 'Default Shift') setDefaultShifts([...defaultShifts, modalData.name]);
+    if (modalType === 'Attendance Required') setAttendanceReqs([...attendanceReqs, modalData.name]);
+    if (modalType === 'Leave Approval') setLeaveApprovals([...leaveApprovals, modalData.name]);
+    if (modalType === 'Expense Approval') setExpenseApprovals([...expenseApprovals, modalData.name]);
+
+    const tempType = modalType;
+    setModalType(null);
+    setModalData({ name: '' });
+    alert(`${tempType} added successfully!`);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Department Created Successfully!');
-    navigate('/department/list');
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post('/departments', form);
+      if (response.data.success) {
+        alert('Department Created Successfully!');
+        navigate('/department/list');
+      }
+    } catch (err) {
+      console.error('Error creating department:', err);
+      setError(err.response?.data?.message || 'Failed to create department.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,14 +132,14 @@ const AddDepartment = () => {
         >
           <ArrowLeft size={18} /> Back to Department List
         </button>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-sm hover:bg-indigo-700">
-            <Plus size={16} /> Add Department
-          </button>
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto space-y-6">
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg border border-red-200 text-sm font-semibold">
+            {error}
+          </div>
+        )}
         <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           <div className="lg:col-span-8 space-y-6">
@@ -99,40 +161,51 @@ const AddDepartment = () => {
                   <input type="text" name="deptName" value={form.deptName} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="e.g. Sales" />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department Type *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Department Type *</label>
+                    <button type="button" onClick={() => setModalType('Department Type')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="deptType" value={form.deptType} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    <option>Internal</option>
-                    <option>External</option>
-                    <option>Cross-Functional</option>
+                    {deptTypes.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Parent Department</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Parent Department</label>
+                    <button type="button" onClick={() => setModalType('Parent Department')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="parentDept" value={form.parentDept} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Department</option>
-                    <option>Operations</option>
-                    <option>Finance</option>
+                    {parentDepts.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Company *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Company *</label>
+                    <button type="button" onClick={() => setModalType('Company')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="company" value={form.company} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Company</option>
-                    <option>Acme Corp</option>
+                    {companies.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Branch</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Branch</label>
+                    <button type="button" onClick={() => setModalType('Branch')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="branch" value={form.branch} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Branch</option>
-                    <option>HQ - Mumbai</option>
+                    {branches.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Status *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Status *</label>
+                    <button type="button" onClick={() => setModalType('Status')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none text-emerald-600 font-bold">
-                    <option>Active</option>
-                    <option>Inactive</option>
+                    {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
@@ -189,17 +262,23 @@ const AddDepartment = () => {
                   <textarea name="responsibilities" value={form.responsibilities} onChange={handleChange} rows="2" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none resize-none"></textarea>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Cost Center</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Cost Center</label>
+                    <button type="button" onClick={() => setModalType('Cost Center')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="costCenter" value={form.costCenter} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Cost Center</option>
-                    <option>CC-01</option>
+                    {costCenters.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Profit Center</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Profit Center</label>
+                    <button type="button" onClick={() => setModalType('Profit Center')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="profitCenter" value={form.profitCenter} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Profit Center</option>
-                    <option>PC-01</option>
+                    {profitCenters.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div className="md:col-span-2">
@@ -224,73 +303,90 @@ const AddDepartment = () => {
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department Head *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Department Head *</label>
+                    <button type="button" onClick={() => setModalType('Department Head')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="deptHead" value={form.deptHead} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Employee</option>
-                    <option>Rohan Sharma</option>
-                    <option>Priya Patel</option>
+                    {deptHeads.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Assistant Manager</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Assistant Manager</label>
+                    <button type="button" onClick={() => setModalType('Assistant Manager')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="assistantManager" value={form.assistantManager} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Employee</option>
-                    <option>Amit Singh</option>
+                    {assistantManagers.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Reporting Dept.</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Reporting Dept.</label>
+                    <button type="button" onClick={() => setModalType('Reporting Dept.')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="reportingDept" value={form.reportingDept} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Department</option>
-                    <option>Board of Directors</option>
+                    {reportingDepts.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
               </div>
             </div>
 
             {/* 5. WORKING CONFIGURATION */}
-            <div className="bg-slate-800 rounded-2xl shadow-xl shadow-slate-200 overflow-hidden text-white border border-slate-700">
-              <div className="bg-slate-900 border-b border-slate-700 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                  <Settings size={14} className="text-emerald-400" /> Working Configuration
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <Settings size={14} className="text-emerald-500" /> Working Configuration
                 </h3>
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Working Days</label>
-                  <select name="workingDays" value={form.workingDays} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
-                    <option>Mon-Sat</option>
-                    <option>Mon-Fri</option>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Working Days</label>
+                    <button type="button" onClick={() => setModalType('Working Days')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="workingDays" value={form.workingDays} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                    {workingDaysList.map(w => <option key={w} value={w}>{w}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Default Shift</label>
-                  <select name="defaultShift" value={form.defaultShift} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Default Shift</label>
+                    <button type="button" onClick={() => setModalType('Default Shift')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="defaultShift" value={form.defaultShift} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Shift</option>
-                    <option>General Shift (09:00 - 18:00)</option>
+                    {defaultShifts.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Attendance Required</label>
-                  <select name="attendanceRequired" value={form.attendanceRequired} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
-                    <option>Yes</option>
-                    <option>No</option>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Attendance Required</label>
+                    <button type="button" onClick={() => setModalType('Attendance Required')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="attendanceRequired" value={form.attendanceRequired} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                    {attendanceReqs.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Leave Approval</label>
-                  <select name="leaveApproval" value={form.leaveApproval} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
-                    <option>Manager</option>
-                    <option>HR</option>
-                    <option>Both</option>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Leave Approval</label>
+                    <button type="button" onClick={() => setModalType('Leave Approval')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="leaveApproval" value={form.leaveApproval} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                    {leaveApprovals.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Expense Approval</label>
-                  <select name="expenseApproval" value={form.expenseApproval} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
-                    <option>Manager</option>
-                    <option>Finance</option>
-                    <option>Both</option>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Expense Approval</label>
+                    <button type="button" onClick={() => setModalType('Expense Approval')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="expenseApproval" value={form.expenseApproval} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                    {expenseApprovals.map(e => <option key={e} value={e}>{e}</option>)}
                   </select>
                 </div>
               </div>
@@ -329,13 +425,46 @@ const AddDepartment = () => {
             <button type="button" className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm shadow-sm hover:bg-slate-900 flex items-center gap-2">
               <Save size={16} /> Save Draft
             </button>
-            <button type="submit" className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-              <CheckCircle size={16} /> Create Department
+            <button type="submit" disabled={loading} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <CheckCircle size={16} /> {loading ? 'Saving...' : 'Create Department'}
             </button>
           </div>
 
         </form>
       </div>
+
+      {/* QUICK ADD MODAL */}
+      {modalType && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 uppercase tracking-wider text-xs">
+                Add New {modalType}
+              </h3>
+              <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleQuickAdd} className="p-5 space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">{modalType} Name *</label>
+                <input 
+                  type="text" 
+                  value={modalData.name} 
+                  onChange={(e) => setModalData({...modalData, name: e.target.value})} 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" 
+                  placeholder={`Enter ${modalType} Name`}
+                  required 
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setModalType(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-colors shadow-md shadow-indigo-200">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

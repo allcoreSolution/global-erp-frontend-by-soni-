@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Save, X, Plus, Target, Users, Settings, Calendar, BarChart, CheckSquare, Paperclip, Activity } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../../api';
 
 const AddEmployeeTarget = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(editData || {
     // Basic Info
-    targetNo: 'TGT-1001',
+    targetNo: `TGT-${Math.floor(Math.random() * 90000) + 10000}`,
     targetName: '',
     targetType: 'Individual',
     company: '',
@@ -56,15 +59,136 @@ const AddEmployeeTarget = () => {
     notes: ''
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+  const [employees, setEmployees] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [departments, setDepartments] = useState([]);
+
+  // Local Dropdown States
+  const [units, setUnits] = useState(['Number', 'Percentage', 'Currency']);
+  const [priorities, setPriorities] = useState(['High', 'Medium', 'Low']);
+  const [reviewFreqs, setReviewFreqs] = useState(['Monthly', 'Quarterly']);
+  const [reviewers, setReviewers] = useState(['Reporting Manager', 'HR Manager']);
+  const [measurements, setMeasurements] = useState(['Manual', 'Automatic']);
+  const [frequencies, setFrequencies] = useState(['Monthly', 'Quarterly', 'Yearly']);
+  const [milestoneBaseds, setMilestoneBaseds] = useState(['No', 'Yes']);
+  const [statuses, setStatuses] = useState(['Pending', 'Approved']);
+
+  // Modal State
+  const [modalType, setModalType] = useState(null); // 'company', 'branch', 'department', 'unit', etc.
+  const [modalData, setModalData] = useState({ name: '', code: '' });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [empRes, compRes, branchRes, deptRes] = await Promise.all([
+          api.get('/employees').catch(() => ({ data: { data: [] } })),
+          api.get('/companies/profile').catch(() => ({ data: {} })), // Fetch own company profile
+          api.get('/branches').catch(() => ({ data: { data: [] } })),
+          api.get('/departments').catch(() => ({ data: { data: [] } }))
+        ]);
+        
+        if (empRes.data?.data) setEmployees(empRes.data.data);
+        if (compRes.data) setCompanies([compRes.data]); // Put single company in array
+        if (branchRes.data?.data) setBranches(branchRes.data.data);
+        if (deptRes.data?.data) setDepartments(deptRes.data.data);
+      } catch (err) {
+        console.error("Error fetching lookup data:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleQuickAdd = async (e) => {
+    e.preventDefault();
+    if (!modalData.name) return;
+    
+    try {
+      if (modalType === 'branch') {
+        const res = await api.post('/branches', { name: modalData.name, id: modalData.code || `BR-${Math.floor(Math.random()*1000)}` });
+        if (res.data?.success || res.status === 201) setBranches([...branches, res.data.data || res.data]);
+      } else if (modalType === 'department') {
+        const res = await api.post('/departments', { deptName: modalData.name, deptCode: modalData.code || `DP-${Math.floor(Math.random()*1000)}` });
+        if (res.data?.success || res.status === 201) setDepartments([...departments, res.data.data || res.data]);
+      } else if (modalType === 'unit') {
+        setUnits([...units, modalData.name]);
+      } else if (modalType === 'priority') {
+        setPriorities([...priorities, modalData.name]);
+      } else if (modalType === 'reviewFreq') {
+        setReviewFreqs([...reviewFreqs, modalData.name]);
+      } else if (modalType === 'reviewer') {
+        setReviewers([...reviewers, modalData.name]);
+      } else if (modalType === 'measurement') {
+        setMeasurements([...measurements, modalData.name]);
+      } else if (modalType === 'frequency') {
+        setFrequencies([...frequencies, modalData.name]);
+      } else if (modalType === 'milestoneBased') {
+        setMilestoneBaseds([...milestoneBaseds, modalData.name]);
+      } else if (modalType === 'status') {
+        setStatuses([...statuses, modalData.name]);
+      }
+
+      const tempType = modalType;
+      setModalType(null);
+      setModalData({ name: '', code: '' });
+      alert(`${tempType} added successfully!`);
+      
+      // Re-fetch APIs if it was an API call
+      if (['branch', 'department'].includes(tempType)) {
+        const [branchRes, deptRes] = await Promise.all([
+          api.get('/branches').catch(() => ({ data: { data: [] } })),
+          api.get('/departments').catch(() => ({ data: { data: [] } }))
+        ]);
+        if (branchRes.data?.data) setBranches(branchRes.data.data);
+        if (deptRes.data?.data) setDepartments(deptRes.data.data);
+      }
+    } catch (err) {
+      console.error("Quick add failed", err);
+      alert("Failed to add record.");
+    }
   };
 
-  const handleSave = (e) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'employee') {
+      const selectedEmp = employees.find(emp => emp._id === value);
+      setForm(prev => ({ 
+        ...prev, 
+        [name]: value,
+        empId: selectedEmp?.employeeId || '',
+        designation: selectedEmp?.designation || '',
+        manager: selectedEmp?.reportingManager || '',
+        department: selectedEmp?.department || prev.department
+      }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Target Assigned Successfully!');
-    navigate('/hrms/performance/targets');
+    if (!form.targetName || !form.employee || !form.targetValue) {
+      alert("Please fill required fields (Target Name, Employee, Target Value).");
+      return;
+    }
+    try {
+      let res;
+      if (editData?._id) {
+        res = await api.put(`/employee-targets/${editData._id}`, form);
+      } else {
+        res = await api.post('/employee-targets', form);
+      }
+      
+      if (res.data?.success || res.status === 201 || res.status === 200) {
+        alert(`Target ${editData?._id ? 'Updated' : 'Assigned'} Successfully!`);
+        navigate('/hrms/performance/targets');
+      } else {
+        alert(res.data?.message || 'Failed to save target.');
+      }
+    } catch (err) {
+      console.error("Error saving target:", err);
+      alert(err.response?.data?.message || 'An error occurred while saving the target.');
+    }
   };
 
   // Auto Calculations
@@ -89,11 +213,6 @@ const AddEmployeeTarget = () => {
         >
           <ArrowLeft size={18} /> Back to Assign Target
         </button>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-sm hover:bg-indigo-700">
-            <Plus size={16} /> Assign Target
-          </button>
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto space-y-6">
@@ -126,26 +245,32 @@ const AddEmployeeTarget = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Company *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Company *</label>
+                  </div>
                   <select name="company" value={form.company} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Company</option>
-                    <option>Acme Corp</option>
+                    {companies.map(c => <option key={c._id || c.id} value={c._id || c.id}>{c.companyName || c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Branch *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Branch *</label>
+                    <button type="button" onClick={() => setModalType('branch')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="branch" value={form.branch} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Branch</option>
-                    <option>HQ - Mumbai</option>
+                    {branches.map(b => <option key={b._id || b.id} value={b._id || b.id}>{b.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Department</label>
+                    <button type="button" onClick={() => setModalType('department')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
                   <select name="department" value={form.department} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Department</option>
-                    <option>Sales</option>
-                    <option>Marketing</option>
-                    <option>IT</option>
+                    {departments.map(d => <option key={d._id || d.id} value={d._id || d.id}>{d.deptName}</option>)}
                   </select>
                 </div>
                 <div className="md:col-span-2">
@@ -167,30 +292,30 @@ const AddEmployeeTarget = () => {
               </div>
               <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Employee *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Employee *</label>
+                    <button type="button" onClick={() => navigate('/hrms/employee/add')} className="text-emerald-600 hover:text-emerald-800"><Plus size={14} /></button>
+                  </div>
                   <select name="employee" value={form.employee} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
                     <option value="">Select Employee</option>
-                    <option>Vikram Singh</option>
-                    <option>Neha Gupta</option>
+                    {employees.map(emp => (
+                      <option key={emp._id} value={emp._id}>{emp.employeeName}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Employee ID</label>
-                  <input type="text" value={form.empId || 'Auto'} disabled className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500" />
+                  <input type="text" name="empId" value={form.empId} onChange={handleChange} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Designation</label>
-                  <input type="text" value={form.designation || 'Auto'} disabled className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500" />
+                  <input type="text" name="designation" value={form.designation} onChange={handleChange} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Reporting Manager</label>
-                  <input type="text" value={form.manager || 'Auto'} disabled className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500" />
+                  <input type="text" name="manager" value={form.manager} onChange={handleChange} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                 </div>
-                <div className="md:col-span-2 pt-2">
-                  <button type="button" className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-colors bg-emerald-50 px-3 py-1.5 rounded-lg">
-                    <Plus size={14} /> Add Employee
-                  </button>
-                </div>
+
               </div>
             </div>
 
@@ -223,21 +348,23 @@ const AddEmployeeTarget = () => {
                     <input type="number" name="targetValue" value={form.targetValue} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Unit *</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Unit *</label>
+                      <button type="button" onClick={() => setModalType('unit')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="unit" value={form.unit} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>Number</option>
-                      <option>Percentage</option>
-                      <option>Currency</option>
+                      {units.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Priority</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Priority</label>
+                      <button type="button" onClick={() => setModalType('priority')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="priority" value={form.priority} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>High</option>
-                      <option>Medium</option>
-                      <option>Low</option>
+                      {priorities.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
                   <div>
@@ -304,18 +431,21 @@ const AddEmployeeTarget = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Frequency</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Frequency</label>
+                      <button type="button" onClick={() => setModalType('frequency')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="frequency" value={form.frequency} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>Monthly</option>
-                      <option>Quarterly</option>
-                      <option>Yearly</option>
+                      {frequencies.map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Milestone Based</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Milestone Based</label>
+                      <button type="button" onClick={() => setModalType('milestoneBased')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="milestoneBased" value={form.milestoneBased} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>No</option>
-                      <option>Yes</option>
+                      {milestoneBaseds.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                 </div>
@@ -323,50 +453,52 @@ const AddEmployeeTarget = () => {
             </div>
 
             {/* 5. ACHIEVEMENT & MEASUREMENT */}
-            <div className="bg-slate-800 rounded-2xl shadow-xl shadow-slate-200 overflow-hidden text-white border border-slate-700">
-              <div className="bg-slate-900 border-b border-slate-700 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                  <Activity size={14} className="text-emerald-400" /> Achievement & Measurement
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <Activity size={14} className="text-emerald-500" /> Achievement & Measurement
                 </h3>
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Measurement</label>
-                  <select name="measurement" value={form.measurement} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none">
-                    <option>Manual</option>
-                    <option>Automatic</option>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Measurement</label>
+                    <button type="button" onClick={() => setModalType('measurement')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                  </div>
+                  <select name="measurement" value={form.measurement} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
+                    {measurements.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Baseline</label>
-                    <input type="number" name="baseline" value={form.baseline} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Baseline</label>
+                    <input type="number" name="baseline" value={form.baseline} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Target</label>
-                    <input type="number" name="targetValue" value={form.targetValue} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Target</label>
+                    <input type="number" name="targetValue" value={form.targetValue} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Achieved</label>
-                    <input type="number" name="achieved" value={form.achieved} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none font-bold" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Achieved</label>
+                    <input type="number" name="achieved" value={form.achieved} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none font-bold" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rating</label>
-                    <input type="text" name="rating" value={form.rating} onChange={handleChange} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-400 outline-none" placeholder="e.g. 4/5" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Rating</label>
+                    <input type="text" name="rating" value={form.rating} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="e.g. 4/5" />
                   </div>
                 </div>
 
-                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 mt-2 space-y-3">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-2 space-y-3">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400 font-medium">Achievement %</span>
-                    <span className="font-bold text-emerald-400">{progress}%</span>
+                    <span className="text-slate-600 font-medium">Achievement %</span>
+                    <span className="font-bold text-emerald-600">{progress}%</span>
                   </div>
-                  <div className="w-full bg-slate-700 rounded-full h-1.5">
-                    <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, progress)}%` }}></div>
+                  <div className="w-full bg-slate-200 rounded-full h-1.5">
+                    <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, progress)}%` }}></div>
                   </div>
-                  <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-700/50">
-                    <span className="text-slate-400 font-medium">Remaining</span>
-                    <span className="font-bold text-rose-400">{remaining}</span>
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-200">
+                    <span className="text-slate-600 font-medium">Remaining</span>
+                    <span className="font-bold text-rose-500">{remaining}</span>
                   </div>
                 </div>
               </div>
@@ -383,27 +515,33 @@ const AddEmployeeTarget = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Assigned By</label>
-                    <input type="text" value={form.assignedBy} disabled className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500" />
+                    <input type="text" name="assignedBy" value={form.assignedBy} onChange={handleChange} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Reviewer</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Reviewer</label>
+                      <button type="button" onClick={() => setModalType('reviewer')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="reviewer" value={form.reviewer} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>Reporting Manager</option>
-                      <option>HR Manager</option>
+                      {reviewers.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Review Freq.</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Review Freq.</label>
+                      <button type="button" onClick={() => setModalType('reviewFreq')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="reviewFrequency" value={form.reviewFrequency} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                      <option>Monthly</option>
-                      <option>Quarterly</option>
+                      {reviewFreqs.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Status</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Status</label>
+                      <button type="button" onClick={() => setModalType('status')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    </div>
                     <select name="approvalStatus" value={form.approvalStatus} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none text-amber-600 font-bold">
-                      <option>Pending</option>
-                      <option>Approved</option>
+                      {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                 </div>
@@ -425,12 +563,56 @@ const AddEmployeeTarget = () => {
               <Save size={16} /> Save Draft
             </button>
             <button type="submit" className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-              <CheckCircle size={16} /> Assign Target
+              <CheckCircle size={16} /> {editData ? 'Update Target' : 'Assign Target'}
             </button>
           </div>
 
         </form>
       </div>
+
+      {/* QUICK ADD MODAL */}
+      {modalType && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 uppercase tracking-wider text-xs">
+                Add New {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
+              </h3>
+              <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleQuickAdd} className="p-5 space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">{modalType} Code *</label>
+                <input 
+                  type="text" 
+                  value={modalData.code} 
+                  onChange={(e) => setModalData({...modalData, code: e.target.value})} 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" 
+                  placeholder={`Enter Code (e.g. ${modalType === 'branch' ? 'BR' : 'DP'}-001)`}
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">{modalType} Name *</label>
+                <input 
+                  type="text" 
+                  value={modalData.name} 
+                  onChange={(e) => setModalData({...modalData, name: e.target.value})} 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" 
+                  placeholder="Enter Name"
+                  required 
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setModalType(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-colors shadow-md shadow-indigo-200">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

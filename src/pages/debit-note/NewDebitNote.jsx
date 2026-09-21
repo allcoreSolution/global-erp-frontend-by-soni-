@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud, FileMinus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud, FileMinus, X } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewDebitNote = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
 
   // Form State
   const [form, setForm] = useState({
@@ -50,6 +54,9 @@ const NewDebitNote = () => {
     remarks: ''
   });
 
+  const fileInputRef = useRef(null);
+  const [attachment, setAttachment] = useState(null);
+
   // Debit Note Items Rows
   const [items, setItems] = useState([
     { id: 1, product: '', batch: '', qty: 0, rate: 0, taxPercent: 0, amount: 0 }
@@ -60,6 +67,68 @@ const NewDebitNote = () => {
     subTotal: 0,
     grandTotal: 0
   });
+
+  useEffect(() => {
+    if (isEditMode) {
+      const fetchDebitNote = async () => {
+        try {
+          const res = await api.get(`/debit-notes/${id}`);
+          if (res.data?.data) {
+            const data = res.data.data;
+            setForm({
+              debitNoteNo: data.debitNoteNo || '',
+              date: data.date || '',
+              company: data.company || '',
+              branch: data.branch || '',
+              type: data.type || 'Purchase Return',
+              status: data.status || 'Draft',
+              supplier: data.supplier || '',
+              supplierCode: data.supplierCode || '',
+              contact: data.contact || '',
+              mobile: data.mobile || '',
+              originalInvoiceNo: data.originalInvoiceNo || '',
+              originalInvoiceDate: data.originalInvoiceDate || '',
+              poNo: data.poNo || '',
+              grnNo: data.grnNo || '',
+              discount: data.discount || 0,
+              cgst: data.cgst || 0,
+              sgst: data.sgst || 0,
+              igst: data.igst || 0,
+              roundOff: data.roundOff || 0,
+              adjustmentType: data.adjustmentType || 'Adjust Against Invoice',
+              adjustInvoiceNo: data.adjustInvoiceNo || '',
+              adjustAmount: data.adjustAmount || 0,
+              remainingAmount: data.remainingAmount || 0,
+              supplierLedger: data.supplierLedger || '',
+              purchaseReturnLedger: data.purchaseReturnLedger || '',
+              taxAccount: data.taxAccount || '',
+              costCenter: data.costCenter || '',
+              remarks: data.remarks || ''
+            });
+            if (data.items && data.items.length > 0) {
+              setItems(data.items.map((it, idx) => ({ ...it, id: idx + 1 })));
+            }
+            if (data.summary) {
+              setSummary({
+                subTotal: data.summary.subTotal || 0,
+                grandTotal: data.summary.grandTotal || 0
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching debit note", err);
+          alert("Debit note not found!");
+          navigate('/debit-note/list');
+        }
+      };
+      fetchDebitNote();
+    } else {
+      setForm(prev => ({
+        ...prev,
+        debitNoteNo: `DN-${Math.floor(Math.random() * 90000) + 10000}`
+      }));
+    }
+  }, [id, isEditMode, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,10 +190,65 @@ const NewDebitNote = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachment(e.target.files[0]);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Debit Note Posted successfully!');
-    navigate('/debit-note/list');
+    
+    try {
+      // The file object (attachment) is omitted from the JSON payload
+      // In a real scenario, you'd use FormData to send files.
+      const payload = {
+        ...form,
+        voucherNo: form.debitNoteNo, // Protect from duplicate unique index
+        
+        // Deep Casting numbers
+        discount: Number(form.discount) || 0,
+        cgst: Number(form.cgst) || 0,
+        sgst: Number(form.sgst) || 0,
+        igst: Number(form.igst) || 0,
+        roundOff: Number(form.roundOff) || 0,
+        adjustAmount: Number(form.adjustAmount) || 0,
+        remainingAmount: Number(form.remainingAmount) || 0,
+
+        items: items.map(item => ({
+          product: item.product,
+          batch: item.batch,
+          qty: Number(item.qty) || 0,
+          rate: Number(item.rate) || 0,
+          taxPercent: Number(item.taxPercent) || 0,
+          amount: Number(item.amount) || 0,
+        })),
+
+        summary: {
+          subTotal: Number(summary.subTotal) || 0,
+          grandTotal: Number(summary.grandTotal) || 0
+        }
+      };
+
+      if (isEditMode) {
+        await api.put(`/debit-notes/${id}`, payload);
+        alert('Debit Note Updated successfully!');
+      } else {
+        await api.post('/debit-notes', payload);
+        alert('Debit Note Posted successfully!');
+      }
+      navigate('/debit-note/list');
+    } catch (err) {
+      console.error("Failed to save debit note", err);
+      alert('Failed to save debit note: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   return (
@@ -185,32 +309,47 @@ const NewDebitNote = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect 
+                    name="company" 
+                    category="Company" 
+                    value={form.company} 
+                    onChange={handleChange} 
+                    defaultOptions={['Main Corp']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect 
+                    name="branch" 
+                    category="Branch" 
+                    value={form.branch} 
+                    onChange={handleChange} 
+                    defaultOptions={['HQ']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Type *</label>
-                  <select name="type" value={form.type} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                    <option>Purchase Return</option>
-                    <option>Price Difference</option>
-                    <option>Discount Received</option>
-                  </select>
+                  <DynamicSelect 
+                    name="type" 
+                    category="Debit Note Type" 
+                    value={form.type} 
+                    onChange={handleChange} 
+                    defaultOptions={['Purchase Return', 'Price Difference', 'Discount Received']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                    <option>Draft</option>
-                    <option>Approved</option>
-                  </select>
+                  <DynamicSelect 
+                    name="status" 
+                    category="Status" 
+                    value={form.status} 
+                    onChange={handleChange} 
+                    defaultOptions={['Draft', 'Approved']} 
+                    className="w-full text-sm"
+                  />
                 </div>
               </div>
             </div>
@@ -221,10 +360,14 @@ const NewDebitNote = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier *</label>
-                  <select name="supplier" value={form.supplier} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                    <option value="">Select Supplier</option>
-                    <option>Global Electronics</option>
-                  </select>
+                  <DynamicSelect 
+                    name="supplier" 
+                    category="Supplier" 
+                    value={form.supplier} 
+                    onChange={handleChange} 
+                    defaultOptions={['Global Electronics']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Code</label>
@@ -247,10 +390,14 @@ const NewDebitNote = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No. *</label>
-                  <select name="originalInvoiceNo" value={form.originalInvoiceNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                    <option value="">Select Invoice</option>
-                    <option>INV-2023-445</option>
-                  </select>
+                  <DynamicSelect 
+                    name="originalInvoiceNo" 
+                    category="Invoice" 
+                    value={form.originalInvoiceNo} 
+                    onChange={handleChange} 
+                    defaultOptions={['INV-2023-445']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Date</label>
@@ -294,11 +441,14 @@ const NewDebitNote = () => {
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-2 py-2">
-                        <select value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-red-500 outline-none bg-white">
-                          <option value="">Select Product</option>
-                          <option>Item A</option>
-                          <option>Item B</option>
-                        </select>
+                        <DynamicSelect 
+                          name="product" 
+                          category="Product" 
+                          value={item.product} 
+                          onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} 
+                          defaultOptions={['Item A', 'Item B']} 
+                          className="w-full text-sm"
+                        />
                       </td>
                       <td className="px-2 py-2">
                         <input type="text" value={item.batch} onChange={(e) => handleItemChange(item.id, 'batch', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-red-500 outline-none bg-white" />
@@ -345,11 +495,14 @@ const NewDebitNote = () => {
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                    <div className="col-span-2 md:col-span-4">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                     <select name="adjustmentType" value={form.adjustmentType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                       <option>Adjust Against Invoice</option>
-                       <option>Keep on Account / Advance</option>
-                       <option>Cash Refund</option>
-                     </select>
+                     <DynamicSelect 
+                       name="adjustmentType" 
+                       category="Adjustment Type" 
+                       value={form.adjustmentType} 
+                       onChange={handleChange} 
+                       defaultOptions={['Adjust Against Invoice', 'Keep on Account / Advance', 'Cash Refund']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div className="col-span-2 text-slate-500">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice</label>
@@ -372,31 +525,47 @@ const NewDebitNote = () => {
                  <div className="grid grid-cols-2 gap-4">
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier Ledger</label>
-                     <select name="supplierLedger" value={form.supplierLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                       <option value="">Select Ledger</option>
-                       <option>Creditors - Global Electronics</option>
-                     </select>
+                     <DynamicSelect 
+                       name="supplierLedger" 
+                       category="Supplier Ledger" 
+                       value={form.supplierLedger} 
+                       onChange={handleChange} 
+                       defaultOptions={['Creditors - Global Electronics']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Return Ledger</label>
-                     <select name="purchaseReturnLedger" value={form.purchaseReturnLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                       <option value="">Select Ledger</option>
-                       <option>Purchase Returns A/C</option>
-                     </select>
+                     <DynamicSelect 
+                       name="purchaseReturnLedger" 
+                       category="Return Ledger" 
+                       value={form.purchaseReturnLedger} 
+                       onChange={handleChange} 
+                       defaultOptions={['Purchase Returns A/C']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Account</label>
-                     <select name="taxAccount" value={form.taxAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                       <option value="">Select</option>
-                       <option>Input GST A/C</option>
-                     </select>
+                     <DynamicSelect 
+                       name="taxAccount" 
+                       category="Tax Account" 
+                       value={form.taxAccount} 
+                       onChange={handleChange} 
+                       defaultOptions={['Input GST A/C']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Center</label>
-                     <select name="costCenter" value={form.costCenter} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-white">
-                       <option value="">Select</option>
-                       <option>Main Branch Operations</option>
-                     </select>
+                     <DynamicSelect 
+                       name="costCenter" 
+                       category="Cost Center" 
+                       value={form.costCenter} 
+                       onChange={handleChange} 
+                       defaultOptions={['Main Branch Operations']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                  </div>
                </div>
@@ -410,10 +579,31 @@ const NewDebitNote = () => {
                     </div>
                     <div>
                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attachment</label>
-                       <button type="button" className="flex flex-col items-center justify-center gap-1 w-full h-[76px] border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-red-400 hover:text-red-600 transition-colors text-sm font-medium text-slate-500">
-                          <UploadCloud size={20} />
-                          <span className="text-xs">Upload Document</span>
-                       </button>
+                       
+                       <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          className="hidden" 
+                       />
+
+                       {!attachment ? (
+                         <button 
+                            type="button" 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex flex-col items-center justify-center gap-1 w-full h-[76px] border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-red-400 hover:text-red-600 transition-colors text-sm font-medium text-slate-500"
+                         >
+                            <UploadCloud size={20} />
+                            <span className="text-xs">Upload Document</span>
+                         </button>
+                       ) : (
+                         <div className="flex items-center justify-between w-full h-[76px] border border-slate-200 rounded px-4 bg-slate-50 text-sm">
+                            <span className="truncate max-w-[200px] font-medium text-slate-700">{attachment.name}</span>
+                            <button type="button" onClick={removeAttachment} className="text-red-500 hover:bg-red-100 p-1.5 rounded transition-colors">
+                              <X size={16} />
+                            </button>
+                         </div>
+                       )}
                     </div>
                   </div>
                </div>

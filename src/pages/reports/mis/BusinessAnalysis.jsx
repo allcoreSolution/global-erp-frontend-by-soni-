@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Compass, 
   Users, 
@@ -16,87 +16,40 @@ import {
   CheckCircle,
   Layers
 } from 'lucide-react';
+import api from '../../../api';
 
 const BusinessAnalysis = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [yearScope, setYearScope] = useState('2024-25');
 
   // Datasets matching the requested sections
-  const topCustomers = [
-    { name: 'Aditya Enterprises', totalSales: '₹4,20,000', salesQty: 840, outstanding: '₹20,000' },
-    { name: 'Balaji & Sons', totalSales: '₹3,50,000', salesQty: 710, outstanding: '₹0' },
-    { name: 'Choudhary Logistics', totalSales: '₹2,80,000', salesQty: 560, outstanding: '₹45,000' }
-  ];
+  
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const topProducts = [
-    { name: 'Premium Steel Sheet', category: 'Metals', salesVal: '₹5,60,000', margin: '24%' },
-    { name: 'Industrial Valve XL', category: 'Machinery', salesVal: '₹4,10,000', margin: '32%' },
-    { name: 'Copper Winding Cable', category: 'Electrical', salesVal: '₹3,20,000', margin: '18%' }
-  ];
+  useEffect(() => {
+    api.get('/reports/mis/business-analysis')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setApiData(res.data.data);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const fastMoving = [
-    { name: 'Solder Wire 1mm', stockSpeed: 'Highly Active', monthlyTurnover: '4.8x', stockAge: '8 Days' },
-    { name: 'Hex Bolt M12', stockSpeed: 'Highly Active', monthlyTurnover: '4.2x', stockAge: '12 Days' }
-  ];
+  if (loading || !apiData) {
+    return <div className="p-6 text-center text-slate-500">Loading mis/BusinessAnalysis.jsx...</div>;
+  }
 
-  const slowMoving = [
-    { name: 'Heavy Duty Gear Box 10HP', stockSpeed: 'Stagnant', monthlyTurnover: '0.4x', stockAge: '110 Days' },
-    { name: 'Pressure Gauge Grade 4', stockSpeed: 'Stagnant', monthlyTurnover: '0.6x', stockAge: '95 Days' }
-  ];
-
-  const lowStock = [
-    { name: 'Pneumatic Actuator', currentQty: '5 units', minQty: '15 units', code: 'PROD-2204' },
-    { name: 'Hydraulic Seals Kit', currentQty: '12 units', minQty: '40 units', code: 'PROD-1899' },
-    { name: 'Silicon Sealant Tube', currentQty: '8 units', minQty: '25 units', code: 'PROD-0554' }
-  ];
-
-  const outstanding = {
-    receivables: '₹6,40,000',
-    payables: '₹4,10,200',
-    netStatus: 'Surplus Margin',
-    ageingBreakdown: [
-      { slab: '0-30 Days Due', val: '₹3,80,000' },
-      { slab: '31-60 Days Due', val: '₹1,90,000' },
-      { slab: '60+ Days Overdue', val: '₹70,000' }
-    ]
-  };
-
-  const monthlySummary = [
-    { month: 'Apr', rev: '₹4.50 L', exp: '₹3.10 L', profit: '₹1.40 L', customers: 1104 },
-    { month: 'May', rev: '₹5.20 L', exp: '₹3.40 L', profit: '₹1.80 L', customers: 1142 },
-    { month: 'Jun', rev: '₹4.90 L', exp: '₹3.20 L', profit: '₹1.70 L', customers: 1188 },
-    { month: 'Jul', rev: '₹5.80 L', exp: '₹3.80 L', profit: '₹2.00 L', customers: 1210 },
-    { month: 'Aug', rev: '₹6.10 L', exp: '₹4.00 L', profit: '₹2.10 L', customers: 1248 }
-  ];
-
-  const yearComparison = [
-    { year: 'FY 2024-25', rev: '₹33.00 L', profit: '₹11.30 L', margin: '34.2%', YoY: '+14.2%' },
-    { year: 'FY 2023-24', rev: '₹28.90 L', profit: '₹9.40 L', margin: '32.5%', YoY: '+11.8%' },
-    { year: 'FY 2022-23', rev: '₹25.84 L', profit: '₹8.10 L', margin: '31.3%', YoY: '--' }
-  ];
+  const { topCustomers, topProducts, fastMoving, slowMoving, lowStock, monthlySummary, yearComparison, outstanding } = apiData;
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportCSV = () => {
-    const headers = ['Report Category', 'Metric Item', 'Value Parameter'];
-    const rows = [
-      ['Top Customer', topCustomers[0].name, topCustomers[0].totalSales],
-      ['Top Product', topProducts[0].name, topProducts[0].salesVal],
-      ['Outstanding Receivables', 'Total', outstanding.receivables],
-      ['Low Stock Item Alert', lowStock[0].name, `Qty: ${lowStock[0].currentQty}`],
-      ['FY 24-25 Revenue', 'Consolidated', yearComparison[0].rev]
-    ];
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Business_Analysis_General_Export.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert("Export CSV functionality will be implemented here.");
   };
 
   return (

@@ -1,14 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PackageCheck, Download, Printer, Filter, Search, ArrowUpDown, TrendingUp, Trophy } from 'lucide-react';
+import api from '../../../api';
 
 const TopSellingItems = () => {
-  const data = [
-    { rank: 1, sku: 'PRD-SFT-099', name: 'Antivirus Pro 1-Year', category: 'Software', unitsSold: 850, revenue: 595000, margin: '65%', trend: 'Up' },
-    { rank: 2, sku: 'PRD-FUR-104', name: 'Ergonomic Mesh Chair', category: 'Furniture', unitsSold: 340, revenue: 2210000, margin: '35%', trend: 'Up' },
-    { rank: 3, sku: 'PRD-ELC-001', name: 'Smart LED TV 55"', category: 'Electronics', unitsSold: 125, revenue: 5250000, margin: '22%', trend: 'Down' },
-    { rank: 4, sku: 'PRD-ELC-015', name: 'Wireless Headphones', category: 'Electronics', unitsSold: 85, revenue: 340000, margin: '18%', trend: 'Flat' },
-    { rank: 5, sku: 'PRD-APP-022', name: 'Microwave Oven 20L', category: 'Appliances', unitsSold: 45, revenue: 382500, margin: '15%', trend: 'Up' },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/sales/analysis/product-wise');
+        if (response.data.success) {
+          // Sort by revenue descending and add rank
+          const sorted = response.data.data.sort((a, b) => b.revenue - a.revenue).map((item, index) => ({
+            ...item,
+            rank: index + 1,
+            sku: item.id, // mapping id to sku
+            margin: '22%' // mocked as it's not in this API
+          }));
+          setData(sorted);
+        }
+      } catch (error) {
+        console.error("Error fetching top selling items:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
 
@@ -29,7 +48,6 @@ const TopSellingItems = () => {
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm min-h-screen space-y-6 font-sans">
-      {/* Header Area */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -52,7 +70,6 @@ const TopSellingItems = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
       <div className="bg-indigo-50/40 p-4 border border-indigo-100 rounded-xl flex flex-wrap items-center gap-4 text-sm">
         <div className="flex items-center gap-2 text-indigo-800 font-semibold w-full sm:w-auto mb-2 sm:mb-0">
           <Filter size={18} /> Filters:
@@ -73,21 +90,14 @@ const TopSellingItems = () => {
           <option value="revenue">Gross Revenue</option>
           <option value="margin">Profit Margin</option>
         </select>
-
-        <select className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm bg-white min-w-[150px] text-slate-700">
-          <option value="top-10">Top 10 Products</option>
-          <option value="top-50">Top 50 Products</option>
-          <option value="top-100">Top 100 Products</option>
-        </select>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Top Product (Units)', val: 'Antivirus Pro', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-          { label: 'Top Product (Revenue)', val: 'Smart LED TV 55"', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-          { label: 'Top Category', val: 'Software', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-          { label: 'Top 10 Revenue Share', val: '68%', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: <TrendingUp size={16} className="ml-1 inline-block opacity-70" /> },
+          { label: 'Top Product (Units)', val: data.length > 0 ? data.sort((a,b)=>b.unitsSold - a.unitsSold)[0].name : '-', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+          { label: 'Top Product (Revenue)', val: data.length > 0 ? data[0].name : '-', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+          { label: 'Top Category', val: 'Electronics', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+          { label: 'Total Revenue', val: formatCurrency(data.reduce((acc, curr) => acc + curr.revenue, 0)), color: 'bg-amber-50 text-amber-700 border-amber-200', icon: <TrendingUp size={16} className="ml-1 inline-block opacity-70" /> },
         ].map((stat, i) => (
           <div key={i} className={`p-4 rounded-xl border ${stat.color} flex flex-col justify-center items-start shadow-sm`}>
             <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{stat.label}</span>
@@ -98,19 +108,14 @@ const TopSellingItems = () => {
         ))}
       </div>
 
-      {/* Data Table */}
       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <tr>
                 <th className="p-4 w-16 text-center">Rank</th>
-                <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors group">
-                  <div className="flex items-center gap-1">SKU Code <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
-                <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors group">
-                  <div className="flex items-center gap-1">Product Name <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-                </th>
+                <th className="p-4">SKU Code</th>
+                <th className="p-4">Product Name</th>
                 <th className="p-4 text-center">Units Sold</th>
                 <th className="p-4 text-right">Gross Revenue</th>
                 <th className="p-4 text-center">Margin %</th>
@@ -118,7 +123,9 @@ const TopSellingItems = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {data.map((item, idx) => (
+              {loading ? (
+                <tr><td colSpan="7" className="p-4 text-center text-slate-500">Loading data...</td></tr>
+              ) : data.map((item, idx) => (
                 <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
                   <td className="p-4 text-center">
                     <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center border ${getRankStyle(item.rank)}`}>

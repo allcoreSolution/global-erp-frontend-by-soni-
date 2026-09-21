@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calculator, Search, Filter, Download, FileText, FileSpreadsheet, Building2 } from 'lucide-react';
+import api from '../../../api';
 
 const TaxGstPaidReport = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const taxEntries = [
-    { id: 1, vendor: 'RawMaterials Inc', gstin: '29ABCDE1234F1Z5', date: '01-Sep-2026', taxableAmount: 50000, cgst: 4500, sgst: 4500, igst: 0, totalTax: 9000 },
-    { id: 2, vendor: 'TechDistro', gstin: '27XYZDE9874F1Z2', date: '03-Sep-2026', taxableAmount: 120000, cgst: 0, sgst: 0, igst: 21600, totalTax: 21600 },
-    { id: 3, vendor: 'Office World', gstin: '29KJLDE1111F1Z9', date: '10-Sep-2026', taxableAmount: 15000, cgst: 1350, sgst: 1350, igst: 0, totalTax: 2700 },
-    { id: 4, vendor: 'Global Logistics', gstin: '33MHNDE2222F1Z8', date: '12-Sep-2026', taxableAmount: 45000, cgst: 0, sgst: 0, igst: 2250, totalTax: 2250 },
-    { id: 5, vendor: 'Alpha Builders', gstin: '29ABCDE4444F1Z1', date: '15-Sep-2026', taxableAmount: 85000, cgst: 7650, sgst: 7650, igst: 0, totalTax: 15300 },
-  ];
+  const [taxEntries, setTaxEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/financial/tax-gst-paid');
+        if (response.data.success) {
+          setTaxEntries(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

@@ -1,22 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, Filter, Download, Printer, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import api from '../../../api';
 
 const Reconciliation = () => {
   const [period, setPeriod] = useState('This Month');
+  const [reconciliationData, setReconciliationData] = useState({
+    netPosition: { outputTax: '₹0', inputTax: '₹0', netPayable: '₹0' },
+    mismatches: [],
+    invoices: []
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Reconciliation summaries data
-  const reconciliationData = {
-    netPosition: { outputTax: '₹3,33,000', inputTax: '₹2,12,400', netPayable: '₹1,20,600' },
-    mismatches: [
-      { invNo: 'INV-2024-089', type: 'Purchase Match', supplier: 'Choudhary Logistics', bookTax: '₹9,000', portal2B: '₹0', diff: '₹9,000', reason: 'Supplier GSTR-1 not filed' },
-      { invNo: 'INV-2024-114', type: 'Sales Match', client: 'Balaji & Sons', bookTax: '₹18,000', portal2B: '₹18,000', diff: '₹0', reason: 'Fully Matched' }
-    ],
-    invoices: [
-      { invNo: 'INV-2024-001', date: '2024-05-10', partner: 'Aditya Enterprises', taxableVal: '₹1,00,000', cgst: '₹9,000', sgst: '₹9,000', igst: '₹0', status: 'Matched' },
-      { invNo: 'INV-2024-002', date: '2024-05-12', partner: 'Vardhaman Steels', taxableVal: '₹2,00,000', cgst: '₹0', sgst: '₹0', igst: '₹36,000', status: 'Matched' },
-      { invNo: 'INV-2024-003', date: '2024-05-15', partner: 'Choudhary Logistics', taxableVal: '₹50,000', cgst: '₹4,500', sgst: '₹4,500', igst: '₹0', status: 'Pending' }
-    ]
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/gst/reconciliation');
+        if (response.data && response.data.success) {
+          setReconciliationData(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handlePrint = () => {
     window.print();

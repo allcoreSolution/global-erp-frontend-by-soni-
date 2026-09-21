@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scale, Search, Filter, Download, CheckCircle, Clock, Banknote } from 'lucide-react';
+import api from '../../../api';
 
 const PaidVsPendingPurchase = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const settlements = [
-    { id: 1, period: 'Sep 2026', totalPurchases: 450000, paidAmount: 305000, pendingAmount: 145000, paidPct: 67 },
-    { id: 2, period: 'Aug 2026', totalPurchases: 380000, paidAmount: 348000, pendingAmount: 32000, paidPct: 91 },
-    { id: 3, period: 'Jul 2026', totalPurchases: 520000, paidAmount: 435000, pendingAmount: 85000, paidPct: 83 },
-    { id: 4, period: 'Jun 2026', totalPurchases: 410000, paidAmount: 398000, pendingAmount: 12000, paidPct: 97 },
-    { id: 5, period: 'May 2026', totalPurchases: 475000, paidAmount: 475000, pendingAmount: 0, paidPct: 100 },
-  ];
+  const [settlements, setSettlements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/financial/paid-vs-pending');
+        if (response.data.success) {
+          setSettlements(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

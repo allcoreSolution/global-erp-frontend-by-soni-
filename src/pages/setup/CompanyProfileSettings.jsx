@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../api';
 import { Building, Save, Upload, Palette } from 'lucide-react';
 
 const CompanyProfileSettings = () => {
@@ -16,7 +17,7 @@ const CompanyProfileSettings = () => {
 
   const fetchProfile = async () => {
     try {
-      const { data } = await window.api.get('/companies/profile');
+      const { data } = await api.get('/companies/profile');
       setProfile({
         name: data.name || '',
         gstNumber: data.gstNumber || '',
@@ -34,8 +35,37 @@ const CompanyProfileSettings = () => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile(prev => ({ ...prev, logoUrl: reader.result }));
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Compress to JPEG with 0.7 quality to significantly reduce size
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          setProfile(prev => ({ ...prev, logoUrl: dataUrl }));
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -44,7 +74,7 @@ const CompanyProfileSettings = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      await window.api.put('/companies/profile', profile);
+      await api.put('/companies/profile', profile);
       
       // Update local storage so the UI updates immediately without re-login
       const userStr = localStorage.getItem('user');
@@ -62,7 +92,9 @@ const CompanyProfileSettings = () => {
       alert('Company profile saved! The page might need a refresh to fully apply the theme.');
       window.location.reload();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error saving profile');
+      console.error('Error saving profile:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Error saving profile';
+      alert(`Save failed: ${errorMsg}`);
     }
   };
 

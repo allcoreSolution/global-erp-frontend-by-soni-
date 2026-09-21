@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scale, Search, Filter, Download, ArrowDownRight, DollarSign, Activity } from 'lucide-react';
+import api from '../../../api';
 
 const PurchasePriceComparison = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const comparisons = [
-    { id: 1, product: 'Intel Core i7 Processor', defaultVendor: 'TechDistro Inc.', defaultPrice: 245, bestVendor: 'Global Chips Ltd', bestPrice: 220, variance: '-10.2%' },
-    { id: 2, product: 'Samsung 1TB SSD', defaultVendor: 'Storage World', defaultPrice: 85, bestVendor: 'TechDistro Inc.', bestPrice: 82, variance: '-3.5%' },
-    { id: 3, product: 'Office Chair Pro', defaultVendor: 'Furnishings Co', defaultPrice: 150, bestVendor: 'OfficeDepot', bestPrice: 135, variance: '-10.0%' },
-    { id: 4, product: 'Mechanical Keyboard', defaultVendor: 'Peripheral Hub', defaultPrice: 65, bestVendor: 'TechDistro Inc.', bestPrice: 60, variance: '-7.6%' },
-    { id: 5, product: '27" 4K Monitor', defaultVendor: 'Display Tech', defaultPrice: 320, bestVendor: 'Global Displays', bestPrice: 295, variance: '-7.8%' },
-  ];
+  const [comparisons, setComparisons] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/performance/price-comparison');
+        if (response.data.success) {
+          setComparisons(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

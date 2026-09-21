@@ -1,61 +1,62 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Download, Printer, Plus, Trash2, Eye, FileText, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Download, Printer, Plus, Trash2, Eye, Edit, FileText, CheckCircle } from 'lucide-react';
+import api from '../../api';
 
 const CreditNoteList = () => {
-  const [creditNotes, setCreditNotes] = useState([
-    {
-      id: 'CN-2026-001',
-      customerName: 'Amit Sharma (Retail)',
-      originalInvoice: 'INV-2026-1122',
-      date: '2026-08-11',
-      amount: 12000,
-      taxAmount: 2160,
-      totalAmount: 14160,
-      reason: 'Sales Return (Incorrect Spec)',
-      status: 'Approved'
-    },
-    {
-      id: 'CN-2026-002',
-      customerName: 'Superstone Enterprises',
-      originalInvoice: 'INV-2026-1145',
-      date: '2026-08-13',
-      amount: 5000,
-      taxAmount: 900,
-      totalAmount: 5900,
-      reason: 'Rate Adjustment / Trade Discount',
-      status: 'Pending'
-    }
-  ]);
-
+  const navigate = useNavigate();
+  const [creditNotes, setCreditNotes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
-
+  
   const addLog = (msg) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete Credit Note ${id}?`)) {
-      setCreditNotes(prev => prev.filter(item => item.id !== id));
-      addLog(`Deleted Credit Note ${id}`);
+  const fetchCreditNotes = async () => {
+    try {
+      const res = await api.get('/credit-notes');
+      setCreditNotes(res.data?.data || []);
+      addLog("Credit Notes loaded from backend.");
+    } catch (err) {
+      console.error(err);
+      addLog("Failed to load credit notes.");
+    }
+  };
+
+  useEffect(() => {
+    fetchCreditNotes();
+  }, []);
+
+  const handleDelete = async (id, no) => {
+    if (window.confirm(`Are you sure you want to delete Credit Note ${no}?`)) {
+      try {
+        await api.delete(`/credit-notes/${id}`);
+        setCreditNotes(prev => prev.filter(item => item._id !== id));
+        addLog(`Deleted Credit Note ${no}`);
+      } catch (err) {
+        addLog(`Failed to delete Credit Note ${no}`);
+      }
     }
   };
 
   const handleExportCSV = () => {
     addLog("Exporting credit notes registry to CSV...");
     const headers = ['Credit Note ID', 'Customer Name', 'Original Invoice', 'Date', 'Amount (₹)', 'Tax (₹)', 'Total Amount (₹)', 'Reason', 'Status'];
-    const rows = creditNotes.map(item => [
-      item.id,
-      item.customerName,
-      item.originalInvoice,
-      item.date,
-      item.amount,
-      item.taxAmount,
-      item.totalAmount,
-      item.reason,
-      item.status
-    ]);
+    const rows = creditNotes.map(item => {
+      const taxAmount = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+      return [
+        item.creditNoteNo,
+        item.customer,
+        item.originalInvoiceNo,
+        item.date,
+        item.summary?.subTotal || 0,
+        taxAmount,
+        item.summary?.grandTotal || 0,
+        item.remarks,
+        item.status
+      ];
+    });
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -74,9 +75,9 @@ const CreditNoteList = () => {
   };
 
   const filtered = creditNotes.filter(d =>
-    d.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.originalInvoice.toLowerCase().includes(searchTerm.toLowerCase())
+    (d.creditNoteNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.customer || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.originalInvoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -160,33 +161,39 @@ const CreditNoteList = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.length > 0 ? (
-                filtered.map(d => (
-                  <tr key={d.id} className="hover:bg-slate-50">
-                    <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{d.id}</td>
-                    <td className="p-2 font-medium text-gray-800">{d.customerName}</td>
-                    <td className="p-2 font-mono text-gray-600">{d.originalInvoice}</td>
-                    <td className="p-2 text-gray-550 whitespace-nowrap">{d.date}</td>
-                    <td className="p-2 text-right font-semibold text-slate-700">₹ {d.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="p-2 text-right font-medium text-red-655">₹ {d.taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="p-2 text-right font-bold text-emerald-700">₹ {d.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="p-2 text-gray-600 italic max-w-[150px] truncate">{d.reason}</td>
-                    <td className="p-2 text-center whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        d.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' : 'bg-amber-55 text-amber-800 border border-amber-200'
-                      }`}>
-                        {d.status}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center whitespace-nowrap space-x-1 no-print">
-                      <button onClick={() => addLog(`Previewing Credit Note Voucher ${d.id}`)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
-                        <Eye size={12} />
-                      </button>
-                      <button onClick={() => handleDelete(d.id)} className="p-1 hover:bg-red-55 rounded text-red-600">
-                        <Trash2 size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                filtered.map(d => {
+                  const taxAmount = (d.cgst || 0) + (d.sgst || 0) + (d.igst || 0);
+                  return (
+                    <tr key={d._id} className="hover:bg-slate-50">
+                      <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{d.creditNoteNo}</td>
+                      <td className="p-2 font-medium text-gray-800">{d.customer}</td>
+                      <td className="p-2 font-mono text-gray-600">{d.originalInvoiceNo}</td>
+                      <td className="p-2 text-gray-550 whitespace-nowrap">{d.date}</td>
+                      <td className="p-2 text-right font-semibold text-slate-700">₹ {(d.summary?.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td className="p-2 text-right font-medium text-red-655">₹ {taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td className="p-2 text-right font-bold text-emerald-700">₹ {(d.summary?.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td className="p-2 text-gray-600 italic max-w-[150px] truncate">{d.remarks}</td>
+                      <td className="p-2 text-center whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                          d.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' : 'bg-amber-55 text-amber-800 border border-amber-200'
+                        }`}>
+                          {d.status}
+                        </span>
+                      </td>
+                      <td className="p-2 text-center whitespace-nowrap space-x-1 no-print">
+                        <button onClick={() => addLog(`Previewing Credit Note Voucher ${d.creditNoteNo}`)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                          <Eye size={12} />
+                        </button>
+                        <button onClick={() => navigate(`/credit-note/edit/${d._id}`)} className="p-1 hover:bg-blue-50 rounded text-blue-600">
+                          <Edit size={12} />
+                        </button>
+                        <button onClick={() => handleDelete(d._id, d.creditNoteNo)} className="p-1 hover:bg-red-55 rounded text-red-600">
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
               ) : (
                 <tr>
                   <td colSpan="10" className="p-4 text-center text-gray-500 italic">No credit notes found matching parameters.</td>

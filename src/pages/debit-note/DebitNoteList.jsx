@@ -1,32 +1,12 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Download, Printer, Plus, Trash2, Eye, FileText, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Download, Printer, Plus, Trash2, Eye, Edit, FileText, CheckCircle } from 'lucide-react';
+import api from '../../api';
 
 const DebitNoteList = () => {
-  const [debitNotes, setDebitNotes] = useState([
-    {
-      id: 'DN-2026-001',
-      supplierName: 'Acme Distributors',
-      originalInvoice: 'INV-2026-9811',
-      date: '2026-08-10',
-      amount: 15000,
-      taxAmount: 2700,
-      totalAmount: 17700,
-      reason: 'Purchase Return (Damaged Items)',
-      status: 'Approved'
-    },
-    {
-      id: 'DN-2026-002',
-      supplierName: 'Global Tech Corp',
-      originalInvoice: 'INV-2026-8742',
-      date: '2026-08-12',
-      amount: 8000,
-      taxAmount: 1440,
-      totalAmount: 9440,
-      reason: 'Rate Difference / Price Adjustment',
-      status: 'Pending'
-    }
-  ]);
+  const navigate = useNavigate();
+  const [debitNotes, setDebitNotes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -35,10 +15,32 @@ const DebitNoteList = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete Debit Note ${id}?`)) {
-      setDebitNotes(prev => prev.filter(item => item.id !== id));
-      addLog(`Deleted Debit Note ${id}`);
+  const fetchDebitNotes = async () => {
+    try {
+      const res = await api.get('/debit-notes');
+      setDebitNotes(res.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch debit notes", err);
+      addLog("Error fetching debit notes.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDebitNotes();
+  }, []);
+
+  const handleDelete = async (id, debitNoteNo) => {
+    if (window.confirm(`Are you sure you want to delete Debit Note ${debitNoteNo}?`)) {
+      try {
+        await api.delete(`/debit-notes/${id}`);
+        setDebitNotes(prev => prev.filter(item => item._id !== id));
+        addLog(`Deleted Debit Note ${debitNoteNo}`);
+      } catch (err) {
+        console.error("Error deleting", err);
+        addLog(`Failed to delete Debit Note ${debitNoteNo}`);
+      }
     }
   };
 
@@ -46,14 +48,14 @@ const DebitNoteList = () => {
     addLog("Exporting debit notes registry to CSV...");
     const headers = ['Debit Note ID', 'Supplier Name', 'Original Invoice', 'Date', 'Amount (₹)', 'Tax (₹)', 'Total Amount (₹)', 'Reason', 'Status'];
     const rows = debitNotes.map(item => [
-      item.id,
-      item.supplierName,
-      item.originalInvoice,
+      item.debitNoteNo,
+      item.supplier,
+      item.originalInvoiceNo,
       item.date,
-      item.amount,
-      item.taxAmount,
-      item.totalAmount,
-      item.reason,
+      item.summary?.subTotal || 0,
+      (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0),
+      item.summary?.grandTotal || 0,
+      item.remarks,
       item.status
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -74,9 +76,9 @@ const DebitNoteList = () => {
   };
 
   const filtered = debitNotes.filter(d =>
-    d.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.originalInvoice.toLowerCase().includes(searchTerm.toLowerCase())
+    (d.debitNoteNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.originalInvoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -159,17 +161,23 @@ const DebitNoteList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length > 0 ? (
-                filtered.map(d => (
-                  <tr key={d.id} className="hover:bg-slate-50">
-                    <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{d.id}</td>
-                    <td className="p-2 font-medium text-gray-800">{d.supplierName}</td>
-                    <td className="p-2 font-mono text-gray-600">{d.originalInvoice}</td>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="10" className="p-4 text-center text-gray-500 italic">Loading debit notes...</td>
+                </tr>
+              ) : filtered.length > 0 ? (
+                filtered.map(d => {
+                  const taxAmt = (d.cgst || 0) + (d.sgst || 0) + (d.igst || 0);
+                  return (
+                  <tr key={d._id} className="hover:bg-slate-50">
+                    <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{d.debitNoteNo}</td>
+                    <td className="p-2 font-medium text-gray-800">{d.supplier}</td>
+                    <td className="p-2 font-mono text-gray-600">{d.originalInvoiceNo}</td>
                     <td className="p-2 text-gray-550 whitespace-nowrap">{d.date}</td>
-                    <td className="p-2 text-right font-semibold text-slate-700">₹ {d.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="p-2 text-right font-medium text-red-650">₹ {d.taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="p-2 text-right font-bold text-emerald-700">₹ {d.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="p-2 text-gray-600 italic max-w-[150px] truncate">{d.reason}</td>
+                    <td className="p-2 text-right font-semibold text-slate-700">₹ {(d.summary?.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="p-2 text-right font-medium text-red-650">₹ {taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="p-2 text-right font-bold text-emerald-700">₹ {(d.summary?.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="p-2 text-gray-600 italic max-w-[150px] truncate">{d.remarks || d.type}</td>
                     <td className="p-2 text-center whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
                         d.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' : 'bg-amber-55 text-amber-800 border border-amber-200'
@@ -178,15 +186,19 @@ const DebitNoteList = () => {
                       </span>
                     </td>
                     <td className="p-2 text-center whitespace-nowrap space-x-1 no-print">
-                      <button onClick={() => addLog(`Previewing Voucher ${d.id}`)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                      <button onClick={() => addLog(`Previewing Voucher ${d.debitNoteNo}`)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
                         <Eye size={12} />
                       </button>
-                      <button onClick={() => handleDelete(d.id)} className="p-1 hover:bg-red-55 rounded text-red-600">
+                      <button onClick={() => navigate(`/debit-note/edit/${d._id}`)} className="p-1 hover:bg-blue-50 rounded text-blue-600">
+                        <Edit size={12} />
+                      </button>
+                      <button onClick={() => handleDelete(d._id, d.debitNoteNo)} className="p-1 hover:bg-red-55 rounded text-red-600">
                         <Trash2 size={12} />
                       </button>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               ) : (
                 <tr>
                   <td colSpan="10" className="p-4 text-center text-gray-500 italic">No debit notes found matching parameters.</td>

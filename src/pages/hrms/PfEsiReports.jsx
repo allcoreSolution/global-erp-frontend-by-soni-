@@ -1,17 +1,46 @@
-import React, { useState } from 'react';
-import { Landmark, Printer, Download, FileText, Check, ArrowDownToLine, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Landmark, Printer, Download, FileText, Check, ArrowDownToLine, RefreshCw, Loader2 } from 'lucide-react';
+import api from '../../api';
 
 const PfEsiReports = () => {
-  const [selectedMonth, setSelectedMonth] = useState('August');
-  const [selectedYear, setSelectedYear] = useState('2026');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [records] = useState([
-    { id: 'EMP-001', name: 'Vikram Singh', basic: 60000, eePf: 7200, erPf: 7200, eeEsi: 0, erEsi: 0, uan: '100439281726', ipNo: '--' },
-    { id: 'EMP-002', name: 'Neha Gupta', role: 'Sales Lead', basic: 30000, eePf: 3600, erPf: 3600, eeEsi: 225, erEsi: 975, uan: '100230156782', ipNo: '2019482736' },
-    { id: 'EMP-003', name: 'Rajesh Kumar', basic: 15000, eePf: 1800, erPf: 1800, eeEsi: 113, erEsi: 488, uan: '100310492817', ipNo: '2019847291' },
-    { id: 'EMP-004', name: 'Priya Patel', basic: 40000, eePf: 4800, erPf: 4800, eeEsi: 0, erEsi: 0, uan: '100501007826', ipNo: '--' },
-    { id: 'EMP-005', name: 'Amit Sharma', basic: 35000, eePf: 4200, erPf: 4200, eeEsi: 0, erEsi: 0, uan: '100912028736', ipNo: '--' }
-  ]);
+  useEffect(() => {
+    fetchPayslips();
+  }, [selectedMonth, selectedYear]);
+
+  const fetchPayslips = async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/payslips');
+      if (res.data?.success) {
+        const allSlips = res.data.data || [];
+        const filtered = allSlips.filter(slip => slip.month === selectedMonth && slip.year === selectedYear);
+        
+        const mappedRecords = filtered.map(slip => {
+          return {
+            id: slip.employee?.employeeId || slip.employee?._id?.substring(0, 8) || 'Unknown',
+            name: slip.employee?.employeeName || slip.employee?.username || 'Unknown',
+            basic: slip.earnings?.basicSalary || slip.basicSalary || 0,
+            eePf: slip.deductions?.pfDeduction || slip.pfDeduction || 0,
+            erPf: slip.deductions?.pfDeduction || slip.pfDeduction || 0, 
+            eeEsi: slip.deductions?.esiDeduction || slip.esiDeduction || 0,
+            erEsi: (slip.deductions?.esiDeduction || slip.esiDeduction) > 0 ? Math.round(((slip.deductions?.esiDeduction || slip.esiDeduction) / 0.75) * 3.25) : 0,
+            uan: slip.employee?.uan || '--',
+            ipNo: slip.employee?.esicNo || '--'
+          };
+        });
+        setRecords(mappedRecords);
+      }
+    } catch (error) {
+      console.error('Error fetching PF/ESI records:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const stats = {
     totalPf: records.reduce((acc, r) => acc + r.eePf + r.erPf, 0),
@@ -138,7 +167,13 @@ const PfEsiReports = () => {
         <div className="bg-slate-50/50 p-4 border-b border-gray-200">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">PF & ESI Monthly Sheet Ledger: {selectedMonth} {selectedYear}</h3>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[200px] relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+              <Loader2 className="animate-spin text-indigo-600 mb-2" size={24} />
+              <p className="text-xs text-indigo-600 font-medium">Fetching Records...</p>
+            </div>
+          )}
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-100/50 border-b border-gray-200 text-gray-500 font-semibold">
               <tr>
@@ -154,7 +189,7 @@ const PfEsiReports = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {records.map((r) => (
+              {records.length > 0 ? records.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/30 font-medium">
                   <td className="p-3 font-semibold text-gray-800">{r.id}</td>
                   <td className="p-3 text-slate-800 font-bold">{r.name}</td>
@@ -166,7 +201,13 @@ const PfEsiReports = () => {
                   <td className="p-3 text-right font-mono text-purple-600">₹{r.eeEsi.toLocaleString()}</td>
                   <td className="p-3 text-right font-mono text-indigo-600">₹{r.erEsi.toLocaleString()}</td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="9" className="p-8 text-center text-gray-400">
+                    No PF/ESI data available for {selectedMonth} {selectedYear}. Please generate Salary Slips first.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

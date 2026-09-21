@@ -1,7 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../api';
 import { Settings, Save, RotateCcw, ShieldCheck, Mail, FileText, Globe, Key } from 'lucide-react';
 
 const GeneralSettings = () => {
+  
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await api.get('/settings/general-settings');
+        if (data) setFormData(data);
+      } catch (err) {
+        console.error('Failed to fetch general settings', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const [formData, setFormData] = useState({
     companyName: 'AllCore Solutions Private Limited',
     currency: 'INR (₹)',
@@ -15,9 +29,15 @@ const GeneralSettings = () => {
     sessionTimeout: '60 minutes'
   });
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('General settings configurations saved successfully!');
+    try {
+      await api.put('/settings/general-settings', formData);
+      alert('General settings configurations saved successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save general settings');
+    }
   };
 
   const handleReset = () => {

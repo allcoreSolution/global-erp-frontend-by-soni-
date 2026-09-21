@@ -1,17 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Search, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const AccountLedger = () => {
-  const [openingBalance] = useState(15000);
-  const [transactions] = useState([
-    { id: 'JR-001', date: '2026-09-01', particulars: 'Office Rent Payment', refNo: 'INV-889', debit: 5000, credit: 0, balance: 10000 },
-    { id: 'JR-002', date: '2026-09-02', particulars: 'Internet Bill', refNo: 'BILL-442', debit: 1200, credit: 0, balance: 8800 },
-    { id: 'REC-003', date: '2026-09-03', particulars: 'Refund from Vendor', refNo: 'REF-991', debit: 0, credit: 2000, balance: 10800 }
-  ]);
+  const [ledgers, setLedgers] = useState([]);
+  const [accountId, setAccountId] = useState('');
+  
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
 
-  const totalDebit = transactions.reduce((acc, curr) => acc + curr.debit, 0);
-  const totalCredit = transactions.reduce((acc, curr) => acc + curr.credit, 0);
-  const closingBalance = transactions[transactions.length - 1]?.balance || openingBalance;
+  const [statementData, setStatementData] = useState([]);
+  const [accountInfo, setAccountInfo] = useState({
+    openingBalance: 0,
+    closingBalance: 0
+  });
+
+  useEffect(() => {
+    fetchLedgers();
+  }, []);
+
+  useEffect(() => {
+    if (accountId) {
+      fetchStatement();
+    }
+  }, [accountId]);
+
+  const fetchLedgers = async () => {
+    try {
+      const response = await api.get('/account-ledgers');
+      if (response.data && response.data.data) {
+        setLedgers(response.data.data);
+        if (response.data.data.length > 0) {
+          setAccountId(response.data.data[0]._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching ledgers:', error);
+    }
+  };
+
+  const fetchStatement = async () => {
+    if (!accountId) return;
+    try {
+      const response = await api.get(`/vouchers/statement?accountId=${accountId}&fromDate=${fromDate}&toDate=${toDate}`);
+      if (response.data && response.data.success) {
+        setStatementData(response.data.data);
+        setAccountInfo(response.data.accountInfo);
+      }
+    } catch (error) {
+      console.error('Error fetching statement:', error);
+    }
+  };
+
+  const totalDebit = statementData.reduce((acc, curr) => acc + (curr.debit || 0), 0);
+  const totalCredit = statementData.reduce((acc, curr) => acc + (curr.credit || 0), 0);
+  const openingBalance = accountInfo.openingBalance || 0;
+  const closingBalance = accountInfo.closingBalance || 0;
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -34,15 +82,16 @@ const AccountLedger = () => {
 
       <div className="bg-slate-50 p-4 border border-blue-200 rounded-lg flex items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-indigo-600" />
-        <select className="border p-1.5 rounded min-w-[200px]">
-          <option>Office Expenses A/C</option>
-          <option>Salary A/C</option>
-          <option>Marketing A/C</option>
+        <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="border p-1.5 rounded min-w-[200px] outline-none focus:border-indigo-500">
+          <option value="">Select Ledger Account...</option>
+          {ledgers.map(l => (
+            <option key={l._id} value={l._id}>{l.accountName}</option>
+          ))}
         </select>
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-01" />
+        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-indigo-500" />
         <span className="text-gray-400">to</span>
-        <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-30" />
-        <button className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700">Apply Filter</button>
+        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-indigo-500" />
+        <button onClick={fetchStatement} className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">Apply Filter</button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -78,15 +127,22 @@ const AccountLedger = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {transactions.map(t => (
-              <tr key={t.id} className="hover:bg-slate-50">
-                <td className="p-3">{t.date}</td>
-                <td className="p-3 font-mono font-bold text-indigo-600">{t.id}</td>
-                <td className="p-3 font-semibold text-gray-800">{t.particulars}</td>
-                <td className="p-3 text-gray-500">{t.refNo}</td>
+            {statementData.length === 0 && (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 font-medium">No transactions found for this period.</td>
+              </tr>
+            )}
+            {statementData.map((t, idx) => (
+              <tr key={t.voucherId || idx} className="hover:bg-slate-50">
+                <td className="p-3">{new Date(t.date).toLocaleDateString()}</td>
+                <td className="p-3 font-mono font-bold text-indigo-600">{t.voucherNo || t.voucherId.slice(-6)}</td>
+                <td className="p-3 font-semibold text-gray-800">
+                  {t.narration || t.voucherType}
+                </td>
+                <td className="p-3 text-gray-500">-</td>
                 <td className="p-3 text-right font-bold text-blue-700">{t.debit > 0 ? t.debit.toLocaleString() : '-'}</td>
                 <td className="p-3 text-right font-bold text-rose-700">{t.credit > 0 ? t.credit.toLocaleString() : '-'}</td>
-                <td className="p-3 text-right font-bold text-gray-800">{t.balance.toLocaleString()}</td>
+                <td className="p-3 text-right font-bold text-gray-800">{t.runningBalance.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>

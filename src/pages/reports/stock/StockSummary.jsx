@@ -1,17 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const StockSummary = () => {
-  const [data] = useState([
-    { group: 'Electronics', item: 'LED TV 55 Inch', qty: 45, unit: 'Nos', value: 1350000 },
-    { group: 'Electronics', item: 'Air Conditioner 1.5 Ton', qty: 22, unit: 'Nos', value: 770000 },
-    { group: 'Furniture', item: 'Ergonomic Office Chair', qty: 150, unit: 'Nos', value: 450000 },
-    { group: 'Raw Materials', item: 'Steel Sheets (Grade A)', qty: 1200, unit: 'Kg', value: 96000 },
-    { group: 'Raw Materials', item: 'Aluminum Coils', qty: 500, unit: 'Kg', value: 85000 },
-  ]);
+  const [data, setData] = useState([]);
+  const [summary, setSummary] = useState({
+    totalProducts: 0,
+    totalItemsInStock: 0,
+    totalStockValue: 0
+  });
+  const [loading, setLoading] = useState(false);
+  const [filterGroup, setFilterGroup] = useState('All Groups');
 
-  const totalQty = data.reduce((acc, curr) => acc + (curr.unit === 'Nos' ? curr.qty : 0), 0);
-  const totalValue = data.reduce((acc, curr) => acc + curr.value, 0);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/stock/summary');
+      if (res.data && res.data.success) {
+        setData(res.data.data.items || []);
+        setSummary(res.data.data.summary || {});
+      }
+    } catch (error) {
+      console.error('Error fetching stock summary:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredData = filterGroup === 'All Groups' 
+    ? data 
+    : data.filter(item => item.category === filterGroup);
+
+  const totalQty = filteredData.reduce((acc, curr) => acc + (curr.currentStock || 0), 0);
+  const totalValue = filteredData.reduce((acc, curr) => acc + (curr.stockValue || 0), 0);
+
+  // Extract unique categories for filter dropdown
+  const categories = ['All Groups', ...new Set(data.map(item => item.category))];
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -32,25 +60,28 @@ const StockSummary = () => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-4 border border-blue-200 rounded-lg flex items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
+      <div className="bg-slate-50 p-4 border border-blue-200 rounded-lg flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-indigo-600" />
         <span className="text-gray-500">Stock Group:</span>
-        <select className="border p-1.5 rounded min-w-[200px]">
-          <option>All Groups</option>
-          <option>Electronics</option>
-          <option>Furniture</option>
-          <option>Raw Materials</option>
+        <select 
+          className="border p-1.5 rounded min-w-[200px]"
+          value={filterGroup}
+          onChange={(e) => setFilterGroup(e.target.value)}
+        >
+          {categories.map((cat, idx) => (
+            <option key={idx} value={cat}>{cat}</option>
+          ))}
         </select>
-        <button className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700">Apply Filter</button>
+        <button onClick={fetchData} className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700">Refresh Data</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="bg-emerald-50/50 border border-emerald-200 p-4 rounded-lg flex flex-col justify-between">
-          <span className="text-[11px] uppercase font-bold text-emerald-600">Total Pieces in Stock (Nos)</span>
+          <span className="text-[11px] uppercase font-bold text-emerald-600">Total Items in Stock (Physical)</span>
           <span className="text-2xl font-extrabold text-emerald-800">{totalQty.toLocaleString()} Units</span>
         </div>
         <div className="bg-indigo-50/50 border border-indigo-200 p-4 rounded-lg flex flex-col justify-between">
-          <span className="text-[11px] uppercase font-bold text-indigo-600">Total Stock Valuation</span>
+          <span className="text-[11px] uppercase font-bold text-indigo-600">Total Stock Valuation (Cost)</span>
           <span className="text-2xl font-extrabold text-indigo-800">₹ {totalValue.toLocaleString()}</span>
         </div>
       </div>
@@ -62,27 +93,42 @@ const StockSummary = () => {
               <th className="p-3">Stock Group</th>
               <th className="p-3">Item Name</th>
               <th className="p-3 text-right">Available Qty</th>
-              <th className="p-3">Unit</th>
+              <th className="p-3 text-right">Avg Cost Rate (₹)</th>
               <th className="p-3 text-right">Total Value (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 text-gray-500">{item.group}</td>
-                <td className="p-3 font-semibold text-gray-800">{item.item}</td>
-                <td className="p-3 text-right font-bold text-gray-800">{item.qty.toLocaleString()}</td>
-                <td className="p-3 text-gray-500">{item.unit}</td>
-                <td className="p-3 text-right font-extrabold text-indigo-700">₹ {item.value.toLocaleString()}</td>
-              </tr>
-            ))}
+            {loading ? (
+               <tr>
+                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">Fetching stock summary...</td>
+               </tr>
+            ) : filteredData.length === 0 ? (
+               <tr>
+                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">No products found.</td>
+               </tr>
+            ) : (
+              filteredData.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="p-3 text-gray-500">{item.category}</td>
+                  <td className="p-3 font-semibold text-gray-800">
+                    <div>{item.name}</div>
+                    <div className="text-[10px] text-gray-400 font-normal">SKU: {item.sku}</div>
+                  </td>
+                  <td className="p-3 text-right font-bold text-gray-800">{item.currentStock.toLocaleString()}</td>
+                  <td className="p-3 text-right text-gray-500">{item.purchasePrice.toLocaleString()}</td>
+                  <td className="p-3 text-right font-extrabold text-indigo-700">₹ {(item.stockValue || 0).toLocaleString()}</td>
+                </tr>
+              ))
+            )}
           </tbody>
-          <tfoot className="bg-slate-100 border-t font-extrabold">
-            <tr>
-              <td colSpan="4" className="p-3 text-right text-gray-800 uppercase text-[10px]">Grand Total Value</td>
-              <td className="p-3 text-right text-indigo-800">₹ {totalValue.toLocaleString()}</td>
-            </tr>
-          </tfoot>
+          {!loading && filteredData.length > 0 && (
+            <tfoot className="bg-slate-100 border-t font-extrabold">
+              <tr>
+                <td colSpan="4" className="p-3 text-right text-gray-800 uppercase text-[10px]">Grand Total Value</td>
+                <td className="p-3 text-right text-indigo-800">₹ {totalValue.toLocaleString()}</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>

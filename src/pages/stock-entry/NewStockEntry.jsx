@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Plus, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewStockEntry = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Basic Information State
   const [form, setForm] = useState({
     // Basic Information
-    stockNo: 'STK-00001',
+    stockNo: `STK-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 1000)}`,
     stockDate: new Date().toISOString().split('T')[0],
     company: '',
     branch: '',
@@ -39,6 +42,43 @@ const NewStockEntry = () => {
     totalQty: 0,
     stockValue: 0
   });
+
+  useEffect(() => {
+    if (id) {
+      const fetchEntry = async () => {
+        try {
+          const res = await api.get(`/stock-entries/${id}`);
+          if (res.data?.data) {
+            const data = res.data.data;
+            setForm({
+              stockNo: data.stockNo || '',
+              stockDate: data.stockDate || '',
+              company: data.company || '',
+              branch: data.branch || '',
+              warehouseBase: data.warehouseBase || '',
+              stockType: data.stockType || 'Opening Stock',
+              locationWarehouse: data.locationWarehouse || '',
+              rack: data.rack || '',
+              bin: data.bin || '',
+              supplier: data.supplier || '',
+              poNo: data.poNo || '',
+              invoiceNo: data.invoiceNo || '',
+              remarks: data.remarks || ''
+            });
+            if (data.products && data.products.length > 0) {
+              setProducts(data.products.map((p, idx) => ({ ...p, id: idx + 1 })));
+            }
+            if (data.summary) {
+              setSummary(data.summary);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching stock entry", err);
+        }
+      };
+      fetchEntry();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -85,10 +125,37 @@ const NewStockEntry = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Stock Entry Posted successfully!');
-    navigate('/stock-entry/list');
+    
+    try {
+      const payload = {
+        ...form,
+        voucherNo: form.stockNo, // Added to prevent E11000 duplicate key error on old voucherNo index
+        products: products.map(p => ({
+          ...p,
+          qty: Number(p.qty) || 0,
+          rate: Number(p.rate) || 0,
+        })),
+        summary: {
+          totalQty: Number(summary.totalQty) || 0,
+          stockValue: Number(summary.stockValue) || 0,
+        }
+      };
+
+      if (id) {
+        await api.put(`/stock-entries/${id}`, payload);
+        alert('Stock Entry Updated successfully!');
+      } else {
+        await api.post('/stock-entries', payload);
+        alert('Stock Entry Posted successfully!');
+      }
+      navigate('/stock-entry/list');
+    } catch (error) {
+      console.error('Error saving stock entry', error);
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      alert('Failed to save stock entry. Backend error: ' + JSON.stringify(errMsg));
+    }
   };
 
   return (
@@ -140,31 +207,22 @@ const NewStockEntry = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse</label>
-                  <select name="warehouseBase" value={form.warehouseBase} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none bg-white">
-                    <option value="">Select Warehouse</option>
-                    <option>Central Godown</option>
-                  </select>
+                  <DynamicSelect category="Warehouse" name="warehouseBase" value={form.warehouseBase} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Stock Type</label>
                   <select name="stockType" value={form.stockType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none bg-white">
-                    <option>Opening Stock</option>
-                    <option>Stock Adjustment</option>
-                    <option>Transfer</option>
+                    <option value="Opening Stock">Opening Stock</option>
+                    <option value="Stock Adjustment">Stock Adjustment</option>
+                    <option value="Transfer">Transfer</option>
                   </select>
                 </div>
               </div>
@@ -192,10 +250,7 @@ const NewStockEntry = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier</label>
-                      <select name="supplier" value={form.supplier} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none bg-white">
-                        <option value="">Select Supplier</option>
-                        <option>Global Traders</option>
-                      </select>
+                      <DynamicSelect category="Supplier" name="supplier" value={form.supplier} onChange={handleChange} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">PO No.</label>
@@ -236,11 +291,7 @@ const NewStockEntry = () => {
                   {products.map((prod) => (
                     <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-2 py-2">
-                        <select value={prod.product} onChange={(e) => handleProductChange(prod.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-emerald-500 outline-none bg-white">
-                          <option value="">Select Product</option>
-                          <option>Item A</option>
-                          <option>Item B</option>
-                        </select>
+                        <DynamicSelect category="Product" name="product" value={prod.product} onChange={(e) => handleProductChange(prod.id, 'product', e.target.value)} />
                       </td>
                       <td className="px-2 py-2">
                         <input type="text" value={prod.sku} onChange={(e) => handleProductChange(prod.id, 'sku', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-emerald-500 outline-none bg-white" />
@@ -276,10 +327,7 @@ const NewStockEntry = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse</label>
-                    <select name="locationWarehouse" value={form.locationWarehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Godown 1</option>
-                    </select>
+                    <DynamicSelect category="Warehouse" name="locationWarehouse" value={form.locationWarehouse} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Rack</label>

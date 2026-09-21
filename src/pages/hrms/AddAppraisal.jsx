@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Save, X, Plus, Trash2, Award, User, Target, BarChart2, MessageSquare, ClipboardCheck, GraduationCap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../../api';
 
 const AddAppraisal = () => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const editData = location.state?.editData;
 
   // 1. Basic Info
-  const [basicInfo, setBasicInfo] = useState({
-    cycle: '2026-2027',
+  const [basicInfo, setBasicInfo] = useState(editData?.basicInfo || {
+    cycle: '',
     employee: '',
     department: 'IT Dept',
     designation: 'Software Engineer',
@@ -16,8 +19,71 @@ const AddAppraisal = () => {
     periodTo: '2027-03-31'
   });
 
+  // Lookups & Modal State
+  const [employees, setEmployees] = useState([]);
+  const [cycles, setCycles] = useState([]);
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [modalInput, setModalInput] = useState('');
+
+  const fetchLookups = async () => {
+    try {
+      const [empRes, optRes] = await Promise.all([
+        api.get('/employees').catch(() => ({ data: { data: [] } })),
+        api.get('/master-options?category=appraisal_cycle').catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      if (empRes.data?.data) {
+        setEmployees(empRes.data.data);
+      }
+      if (optRes.data?.data) {
+        setCycles(optRes.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching lookups:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLookups();
+  }, []);
+
+  const handleOpenModal = (type) => {
+    setModalType(type);
+    setModalInput('');
+    setShowAddModal(true);
+  };
+
+  const handleQuickAddSubmit = async () => {
+    if (!modalInput.trim()) return;
+    try {
+      if (modalType === 'employee' || modalType === 'manager') {
+        const parts = modalInput.trim().split(' ');
+        await api.post('/employees', {
+          employeeName: modalInput,
+          employeeId: `EMP-${Math.floor(Math.random() * 10000)}`,
+          email: `${parts[0].toLowerCase()}@example.com`,
+          status: 'Active'
+        });
+      } else if (modalType === 'cycle') {
+        await api.post('/master-options', {
+          category: 'appraisal_cycle',
+          label: modalInput,
+          value: modalInput
+        });
+      }
+      setModalInput('');
+      setShowAddModal(false);
+      fetchLookups();
+    } catch (err) {
+      console.error("Error saving quick add:", err);
+      alert('Failed to save. Please try again.');
+    }
+  };
+
   // 2. Performance Rating
-  const [ratings, setRatings] = useState([
+  const [ratings, setRatings] = useState(editData?.ratings || [
     { id: 1, criteria: 'Quality of Work', weightage: 20, rating: 4 },
     { id: 2, criteria: 'Productivity', weightage: 20, rating: 5 },
     { id: 3, criteria: 'Communication', weightage: 10, rating: 4 },
@@ -33,7 +99,7 @@ const AddAppraisal = () => {
   const maxScore = ratings.reduce((acc, curr) => acc + ((curr.weightage / 100) * 5), 0).toFixed(2);
 
   // 3. KPI / Goals
-  const [goals, setGoals] = useState([
+  const [goals, setGoals] = useState(editData?.goals || [
     { id: 1, goal: 'Complete Phase 1 Launch', target: 'Q3', achieved: 'Yes', percentage: 100, rating: 5, score: 5 }
   ]);
 
@@ -50,21 +116,21 @@ const AddAppraisal = () => {
   };
 
   // 4. Employee Self-Assessment
-  const [selfAssessment, setSelfAssessment] = useState({
+  const [selfAssessment, setSelfAssessment] = useState(editData?.selfAssessment || {
     achievements: '',
     challenges: '',
     futureGoals: ''
   });
 
   // 5. Manager Evaluation
-  const [managerEvaluation, setManagerEvaluation] = useState({
+  const [managerEvaluation, setManagerEvaluation] = useState(editData?.managerEvaluation || {
     strengths: '',
     improvementAreas: '',
     trainingRequired: ''
   });
 
   // 6. Final Appraisal
-  const [finalAppraisal, setFinalAppraisal] = useState({
+  const [finalAppraisal, setFinalAppraisal] = useState(editData?.finalAppraisal || {
     grade: 'Very Good',
     increment: 'Yes',
     incrementPercent: '15',
@@ -72,10 +138,41 @@ const AddAppraisal = () => {
     remarks: ''
   });
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Appraisal Submitted Successfully!');
-    navigate('/hrms/performance/appraisals');
+    
+    if (!basicInfo.employee || !basicInfo.cycle || !basicInfo.manager) {
+      alert('Please fill out all required fields (Cycle, Employee, Reporting Manager).');
+      return;
+    }
+
+    try {
+      const payload = {
+        basicInfo,
+        ratings,
+        goals,
+        selfAssessment,
+        managerEvaluation,
+        finalAppraisal
+      };
+      
+      let res;
+      if (editData?._id) {
+        res = await api.put(`/appraisals/${editData._id}`, payload);
+      } else {
+        res = await api.post('/appraisals', payload);
+      }
+      
+      if (res.data?.success || res.status === 201 || res.status === 200) {
+        alert(`Appraisal ${editData?._id ? 'Updated' : 'Submitted'} Successfully!`);
+        navigate('/hrms/performance/appraisals');
+      } else {
+        alert(res.data?.message || `Failed to ${editData?._id ? 'update' : 'submit'} appraisal.`);
+      }
+    } catch (err) {
+      console.error("Error saving appraisal:", err);
+      alert(err.response?.data?.message || 'An error occurred while saving the appraisal.');
+    }
   };
 
   return (
@@ -91,7 +188,7 @@ const AddAppraisal = () => {
         </button>
         <div className="flex items-center gap-2">
           <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-sm hover:bg-indigo-700">
-            <Plus size={16} /> New Appraisal Rating
+            <Plus size={16} /> {editData ? 'Edit Appraisal Rating' : 'New Appraisal Rating'}
           </button>
         </div>
       </div>
@@ -112,42 +209,78 @@ const AddAppraisal = () => {
               <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Appraisal Cycle *</label>
-                  <select 
-                    value={basicInfo.cycle} onChange={(e) => setBasicInfo({...basicInfo, cycle: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none"
-                  >
-                    <option>2026-2027</option>
-                    <option>2025-2026</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <select 
+                      value={basicInfo.cycle} onChange={(e) => setBasicInfo({...basicInfo, cycle: e.target.value})}
+                      className="w-full flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none"
+                    >
+                      <option value="">Select Cycle</option>
+                      {cycles.length > 0 ? (
+                        cycles.map(c => <option key={c._id} value={c.value}>{c.label}</option>)
+                      ) : (
+                        <>
+                          <option>2026-2027</option>
+                          <option>2025-2026</option>
+                        </>
+                      )}
+                    </select>
+                    <button type="button" onClick={() => handleOpenModal('cycle')} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition-colors shrink-0" title="Add Cycle">
+                      <Plus size={18} />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Employee *</label>
-                  <select 
-                    value={basicInfo.employee} onChange={(e) => setBasicInfo({...basicInfo, employee: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none"
-                  >
-                    <option value="">Select Employee</option>
-                    <option>Vikram Singh</option>
-                    <option>Neha Gupta</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <select 
+                      value={basicInfo.employee} 
+                      onChange={(e) => {
+                        const empId = e.target.value;
+                        const selectedEmp = employees.find(emp => emp._id === empId);
+                        setBasicInfo({
+                          ...basicInfo, 
+                          employee: empId,
+                          department: selectedEmp?.department || '',
+                          designation: selectedEmp?.designation || '',
+                          manager: selectedEmp?.reportingManager || basicInfo.manager
+                        });
+                      }}
+                      className="w-full flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none"
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map(emp => (
+                        <option key={emp._id} value={emp._id}>{emp.employeeName}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => handleOpenModal('employee')} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition-colors shrink-0" title="Add Employee">
+                      <Plus size={18} />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department</label>
-                  <input type="text" value={basicInfo.department} disabled className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500" />
+                  <input type="text" value={basicInfo.department} onChange={(e) => setBasicInfo({...basicInfo, department: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Designation</label>
-                  <input type="text" value={basicInfo.designation} disabled className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500" />
+                  <input type="text" value={basicInfo.designation} onChange={(e) => setBasicInfo({...basicInfo, designation: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Reporting Manager *</label>
-                  <select 
-                    value={basicInfo.manager} onChange={(e) => setBasicInfo({...basicInfo, manager: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none"
-                  >
-                    <option value="">Select Manager</option>
-                    <option>Rajesh Kumar</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <select 
+                      value={basicInfo.manager} onChange={(e) => setBasicInfo({...basicInfo, manager: e.target.value})}
+                      className="w-full flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none"
+                    >
+                      <option value="">Select Manager</option>
+                      {employees.map(emp => (
+                        <option key={emp._id} value={emp._id}>{emp.employeeName}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => handleOpenModal('manager')} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition-colors shrink-0" title="Add Manager">
+                      <Plus size={18} />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Appraisal Period From</label>
@@ -383,12 +516,43 @@ const AddAppraisal = () => {
               <Save size={16} /> Save Draft
             </button>
             <button type="submit" className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-              <CheckCircle size={16} /> Submit Appraisal
+              <CheckCircle size={16} /> {editData ? 'Update Appraisal' : 'Submit Appraisal'}
             </button>
           </div>
 
         </form>
       </div>
+
+      {/* QUICK ADD MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
+              <h3 className="font-bold text-slate-700 capitalize">Quick Add {modalType}</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={16}/>
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1 capitalize">{modalType} Name *</label>
+                <input 
+                  type="text" 
+                  value={modalInput}
+                  onChange={e => setModalInput(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder={`Enter ${modalType} name...`}
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-3 py-1.5 border rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={handleQuickAddSubmit} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700">Save {modalType}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

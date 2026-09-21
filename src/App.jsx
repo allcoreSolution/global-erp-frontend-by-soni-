@@ -106,16 +106,39 @@ import LowStockReport from './pages/reports/stock/LowStockReport';
 import ExpiredStock from './pages/reports/stock/ExpiredStock';
 import SalesSummaryReports from './pages/reports/SalesSummaryReports';
 import GeneralSalesSummary from './pages/reports/sales/GeneralSalesSummary';
+import DailySales from './pages/reports/sales/DailySales';
+import MonthlySales from './pages/reports/sales/MonthlySales';
+import YearlySales from './pages/reports/sales/YearlySales';
+import SalesInvoiceRegister from './pages/reports/sales/SalesInvoiceRegister';
+import SalesReturnReport from './pages/reports/sales/SalesReturnReport';
+import NetSalesReport from './pages/reports/sales/NetSalesReport';
 import SalesAnalysisReports from './pages/reports/SalesAnalysisReports';
 import ProductWiseSales from './pages/reports/sales/ProductWiseSales';
+import CustomerWiseSales from './pages/reports/sales/CustomerWiseSales';
+import CategoryWiseSales from './pages/reports/sales/CategoryWiseSales';
+import BrandWiseSales from './pages/reports/sales/BrandWiseSales';
+import SalespersonWiseSales from './pages/reports/sales/SalespersonWiseSales';
+import BranchWiseSales from './pages/reports/sales/BranchWiseSales';
+import WarehouseWiseSales from './pages/reports/sales/WarehouseWiseSales';
 import SalesFinancialReports from './pages/reports/SalesFinancialReports';
 import SalesAmountReport from './pages/reports/sales/SalesAmountReport';
+import DiscountReport from './pages/reports/sales/DiscountReport';
+import TaxCollectedReport from './pages/reports/sales/TaxCollectedReport';
+import ProfitMarginReport from './pages/reports/sales/ProfitMarginReport';
+import PaidPendingSales from './pages/reports/sales/PaidPendingSales';
+import CustomerOutstanding from './pages/reports/sales/CustomerOutstanding';
 import TopPerformanceReports from './pages/reports/TopPerformanceReports';
 import TopCustomers from './pages/reports/TopCustomers';
 import SalespersonPerformance from './pages/reports/SalespersonPerformance';
 import TopSellingItems from './pages/reports/sales/TopSellingItems';
 import PurchaseSummaryReports from './pages/reports/PurchaseSummaryReports';
 import GeneralPurchaseSummary from './pages/reports/purchases/GeneralPurchaseSummary';
+import DailyPurchase from './pages/reports/purchases/DailyPurchase';
+import MonthlyPurchase from './pages/reports/purchases/MonthlyPurchase';
+import YearlyPurchase from './pages/reports/purchases/YearlyPurchase';
+import PurchaseInvoiceRegister from './pages/reports/purchases/PurchaseInvoiceRegister';
+import PurchaseReturnReport from './pages/reports/purchases/PurchaseReturnReport';
+import NetPurchaseReport from './pages/reports/purchases/NetPurchaseReport';
 import ProductWisePurchase from './pages/reports/purchases/ProductWisePurchase';
 import PurchaseAmountReport from './pages/reports/purchases/PurchaseAmountReport';
 import TopSuppliers from './pages/reports/purchases/TopSuppliers';
@@ -171,6 +194,11 @@ import StockMovement from './pages/reports/stock/StockMovement';
 import StockValuation from './pages/reports/stock/StockValuation';
 import WarehouseWiseStock from './pages/reports/stock/WarehouseWiseStock';
 import BranchWiseStock from './pages/reports/stock/BranchWiseStock';
+import OverstockReport from './pages/reports/stock/OverstockReport';
+import OutOfStockReport from './pages/reports/stock/OutOfStockReport';
+import DamagedStockReport from './pages/reports/stock/DamagedStockReport';
+import StockAdjustmentReport from './pages/reports/stock/StockAdjustmentReport';
+import StockTransferReport from './pages/reports/stock/StockTransferReport';
 
 import ManagementDashboard from './pages/reports/mis/ManagementDashboard';
 import PerformanceAnalysis from './pages/reports/mis/PerformanceAnalysis';
@@ -297,6 +325,7 @@ function App() {
         <Route path="suppliers/transaction-history" element={<SupplierMaster />} />
         <Route path="suppliers/utilities" element={<SupplierMaster />} />
         <Route path="employees/profile" element={<EmployeeProfile />} />
+        <Route path="employees/profile/:id" element={<EmployeeProfile />} />
         <Route path="employees/job-info" element={<JobInfo />} />
         <Route path="employees/financial-docs" element={<FinancialDocs />} />
         <Route path="employees/records" element={<EmployeeRecords />} />
@@ -333,20 +362,27 @@ function App() {
         <Route path="products/adjustment-list" element={<AdjustmentList />} />
         <Route path="products/stock-count" element={<StockCount />} />
         <Route path="purchases/add-purchase" element={<AddPurchase />} />
+        <Route path="purchases/edit-purchase/:id" element={<AddPurchase />} />
         <Route path="purchases/purchase-list" element={<PurchaseList />} />
         <Route path="purchases/import-purchase" element={<ImportPurchaseCSV />} />
         <Route path="purchases/purchase-return" element={<PurchaseReturn />} />
         <Route path="purchases/add-purchase-return" element={<AddPurchaseReturn />} />
+        <Route path="purchases/edit-purchase-return/:id" element={<AddPurchaseReturn />} />
         <Route path="receipt/list" element={<ReceiptList />} />
         <Route path="receipt/new" element={<NewReceipt />} />
+        <Route path="receipt/edit/:id" element={<NewReceipt />} />
         <Route path="payment/list" element={<PaymentList />} />
         <Route path="payment/new" element={<NewPayment />} />
+        <Route path="payment/edit/:id" element={<NewPayment />} />
         <Route path="bank-receipt/list" element={<BankReceiptList />} />
         <Route path="bank-receipt/new" element={<NewBankReceipt />} />
+        <Route path="bank-receipt/edit/:id" element={<NewBankReceipt />} />
         <Route path="bank-payment/list" element={<BankPaymentList />} />
         <Route path="bank-payment/new" element={<NewBankPayment />} />
+        <Route path="bank-payment/edit/:id" element={<NewBankPayment />} />
         <Route path="contra/list" element={<ContraList />} />
         <Route path="contra/new" element={<NewContra />} />
+        <Route path="contra/edit/:id" element={<NewContra />} />
         <Route path="journal/list" element={<JournalList />} />
         <Route path="journal/new" element={<NewJournal />} />
         <Route path="journal/edit/:id" element={<NewJournal />} />
@@ -358,8 +394,10 @@ function App() {
         <Route path="stock-transfer/edit/:id" element={<NewTransfer />} />
         <Route path="debit-note/list" element={<DebitNoteList />} />
         <Route path="debit-note/new" element={<NewDebitNote />} />
+        <Route path="debit-note/edit/:id" element={<NewDebitNote />} />
         <Route path="credit-note/list" element={<CreditNoteList />} />
         <Route path="credit-note/new" element={<NewCreditNote />} />
+        <Route path="credit-note/edit/:id" element={<NewCreditNote />} />
         <Route path="reports/accounts/ledger-voucher" element={<LedgerVoucherReports />} />
         <Route path="reports/accounts/account-ledger" element={<AccountLedger />} />
         <Route path="reports/accounts/customer-ledger" element={<CustomerLedger />} />
@@ -403,18 +441,46 @@ function App() {
         <Route path="reports/stock/product-wise-stock" element={<ProductWiseStock />} />
         <Route path="reports/stock/control" element={<ControlReports />} />
         <Route path="reports/stock/low-stock" element={<LowStockReport />} />
+        <Route path="reports/stock/overstock" element={<OverstockReport />} />
+        <Route path="reports/stock/out-of-stock" element={<OutOfStockReport />} />
+        <Route path="reports/stock/damaged" element={<DamagedStockReport />} />
+        <Route path="reports/stock/adjustment" element={<StockAdjustmentReport />} />
+        <Route path="reports/stock/transfer" element={<StockTransferReport />} />
         <Route path="reports/sales/summary" element={<SalesSummaryReports />} />
         <Route path="reports/sales/general-summary" element={<GeneralSalesSummary />} />
+        <Route path="reports/sales/daily" element={<DailySales />} />
+        <Route path="reports/sales/monthly" element={<MonthlySales />} />
+        <Route path="reports/sales/yearly" element={<YearlySales />} />
+        <Route path="reports/sales/invoice-register" element={<SalesInvoiceRegister />} />
+        <Route path="reports/sales/return-report" element={<SalesReturnReport />} />
+        <Route path="reports/sales/net-sales" element={<NetSalesReport />} />
         <Route path="reports/sales/analysis" element={<SalesAnalysisReports />} />
         <Route path="reports/sales/product-wise-sales" element={<ProductWiseSales />} />
+        <Route path="reports/sales/customer-wise-sales" element={<CustomerWiseSales />} />
+        <Route path="reports/sales/category-wise-sales" element={<CategoryWiseSales />} />
+        <Route path="reports/sales/brand-wise-sales" element={<BrandWiseSales />} />
+        <Route path="reports/sales/salesperson-wise-sales" element={<SalespersonWiseSales />} />
+        <Route path="reports/sales/branch-wise-sales" element={<BranchWiseSales />} />
+        <Route path="reports/sales/warehouse-wise-sales" element={<WarehouseWiseSales />} />
         <Route path="reports/sales/financial" element={<SalesFinancialReports />} />
         <Route path="reports/sales/sales-amount" element={<SalesAmountReport />} />
+        <Route path="reports/sales/discount-report" element={<DiscountReport />} />
+        <Route path="reports/sales/tax-collected" element={<TaxCollectedReport />} />
+        <Route path="reports/sales/profit-margin" element={<ProfitMarginReport />} />
+        <Route path="reports/sales/paid-pending" element={<PaidPendingSales />} />
+        <Route path="reports/sales/customer-outstanding" element={<CustomerOutstanding />} />
         <Route path="reports/sales/performance" element={<TopPerformanceReports />} />
         <Route path="reports/sales/top-selling-items" element={<TopSellingItems />} />
         <Route path="reports/sales/top-customers" element={<TopCustomers />} />
         <Route path="reports/sales/salesperson-performance" element={<SalespersonPerformance />} />
         <Route path="reports/purchases/summary" element={<PurchaseSummaryReports />} />
         <Route path="reports/purchases/general-summary" element={<GeneralPurchaseSummary />} />
+        <Route path="reports/purchases/daily-purchase" element={<DailyPurchase />} />
+        <Route path="reports/purchases/monthly-purchase" element={<MonthlyPurchase />} />
+        <Route path="reports/purchases/yearly-purchase" element={<YearlyPurchase />} />
+        <Route path="reports/purchases/purchase-invoice-register" element={<PurchaseInvoiceRegister />} />
+        <Route path="reports/purchases/purchase-return-report" element={<PurchaseReturnReport />} />
+        <Route path="reports/purchases/net-purchase" element={<NetPurchaseReport />} />
         <Route path="reports/purchases/product-wise-purchase" element={<ProductWisePurchase />} />
         <Route path="reports/purchases/purchase-amount" element={<PurchaseAmountReport />} />
         <Route path="reports/purchases/top-suppliers" element={<TopSuppliers />} />
@@ -459,10 +525,13 @@ function App() {
         <Route path="sales/add-coupon" element={<AddCoupon />} />
         <Route path="sales/courier-list" element={<CourierList />} />
         <Route path="sales/add-courier" element={<AddCourier />} />
+        <Route path="sales/edit-courier/:id" element={<AddCourier />} />
         <Route path="sales/sale-return" element={<SaleReturn />} />
         <Route path="sales/add-sale-return" element={<AddSaleReturn />} />
+        <Route path="sales/edit-sale-return/:id" element={<AddSaleReturn />} />
         <Route path="sales/sale-exchange-list" element={<SaleExchangeList />} />
         <Route path="sales/add-sale-exchange" element={<AddSaleExchange />} />
+        <Route path="sales/edit-sale-exchange/:id" element={<AddSaleExchange />} />
         <Route path="setup/backup-restore" element={<BackupRestore />} />
         <Route path="setup/system-settings" element={<SystemSettings />} />
         <Route path="setup/general-settings" element={<GeneralSettings />} />
@@ -495,6 +564,7 @@ function App() {
         <Route path="hrms/performance/targets/add" element={<AddEmployeeTarget />} />
         <Route path="hrms/setup/shifts" element={<ShiftSetup />} />
         <Route path="hrms/setup/shifts/add" element={<AddShiftSetup />} />
+        <Route path="hrms/setup/shifts/edit/:id" element={<AddShiftSetup />} />
         <Route path="hrms/setup/master-settings" element={<HrmsMasterSettings />} />
         <Route path="coming-soon" element={<ComingSoon />} />
         <Route path="*" element={<ComingSoon />} />

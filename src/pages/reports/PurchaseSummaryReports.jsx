@@ -30,7 +30,7 @@ const PurchaseSummaryReports = () => {
       icon: Calendar,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
       actionText: 'Check Daily Purchases',
-      to: '/coming-soon'
+      to: '/reports/purchases/daily-purchase'
     },
     {
       title: 'Monthly Purchase',
@@ -38,7 +38,7 @@ const PurchaseSummaryReports = () => {
       icon: LineChart,
       color: 'text-purple-600 bg-purple-50 border-purple-100',
       actionText: 'Review Monthly Records',
-      to: '/coming-soon'
+      to: '/reports/purchases/monthly-purchase'
     },
     {
       title: 'Yearly Purchase',
@@ -46,7 +46,7 @@ const PurchaseSummaryReports = () => {
       icon: TrendingUp,
       color: 'text-cyan-600 bg-cyan-50 border-cyan-100',
       actionText: 'Audit Yearly Reports',
-      to: '/coming-soon'
+      to: '/reports/purchases/yearly-purchase'
     },
     {
       title: 'Purchase Invoice Register',
@@ -54,7 +54,7 @@ const PurchaseSummaryReports = () => {
       icon: FileText,
       color: 'text-amber-600 bg-amber-50 border-amber-100',
       actionText: 'Open Bills Registers',
-      to: '/coming-soon'
+      to: '/reports/purchases/purchase-invoice-register'
     },
     {
       title: 'Purchase Return Report',
@@ -62,7 +62,7 @@ const PurchaseSummaryReports = () => {
       icon: RotateCcw,
       color: 'text-rose-600 bg-rose-50 border-rose-100',
       actionText: 'Open Returns Logs',
-      to: '/coming-soon'
+      to: '/reports/purchases/purchase-return-report'
     },
     {
       title: 'Net Purchase Report',
@@ -70,7 +70,7 @@ const PurchaseSummaryReports = () => {
       icon: Percent,
       color: 'text-teal-600 bg-teal-50 border-teal-100',
       actionText: 'Audit Net Expenses',
-      to: '/coming-soon'
+      to: '/reports/purchases/net-purchase'
     }
   ];
 

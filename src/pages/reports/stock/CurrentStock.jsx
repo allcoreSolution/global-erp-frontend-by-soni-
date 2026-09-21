@@ -1,13 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const CurrentStock = () => {
-  const data = [
-    { sku: 'ELC-TV-55', item: 'LED TV 55 Inch', location: 'Main Warehouse', onHand: 45, committed: 10, available: 35 },
-    { sku: 'ELC-AC-15', item: 'Air Conditioner 1.5 Ton', location: 'Retail Store 1', onHand: 22, committed: 5, available: 17 },
-    { sku: 'FURN-CHR-01', item: 'Ergonomic Office Chair', location: 'Main Warehouse', onHand: 150, committed: 140, available: 10 },
-    { sku: 'RAW-STL-A', item: 'Steel Sheets (Grade A)', location: 'Factory Yard', onHand: 1200, committed: 0, available: 1200 },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/stock/current-stock');
+      if (res.data && res.data.success) {
+        setData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching current stock:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredData = searchTerm.trim() === '' 
+    ? data 
+    : data.filter(item => 
+        (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -28,11 +51,17 @@ const CurrentStock = () => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-4 border border-emerald-200 rounded-lg flex items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
+      <div className="bg-slate-50 p-4 border border-emerald-200 rounded-lg flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-emerald-600" />
         <span className="text-gray-500">Search Item / SKU:</span>
-        <input type="text" className="border p-1.5 rounded min-w-[200px]" placeholder="e.g. ELC-TV-55" />
-        <button className="px-3 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700">Search</button>
+        <input 
+          type="text" 
+          className="border p-1.5 rounded min-w-[200px]" 
+          placeholder="e.g. ELC-TV-55" 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <button onClick={fetchData} className="px-3 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700">Refresh Data</button>
       </div>
 
       <div className="border rounded overflow-x-auto text-xs mt-4">
@@ -48,16 +77,26 @@ const CurrentStock = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 font-mono text-emerald-700">{item.sku}</td>
-                <td className="p-3 font-semibold text-gray-800">{item.item}</td>
-                <td className="p-3 text-gray-600">{item.location}</td>
-                <td className="p-3 text-right font-bold text-gray-700">{item.onHand}</td>
-                <td className="p-3 text-right text-rose-600">{item.committed}</td>
-                <td className="p-3 text-right font-extrabold text-emerald-700 bg-emerald-50/20">{item.available}</td>
-              </tr>
-            ))}
+            {loading ? (
+               <tr>
+                 <td colSpan="6" className="p-4 text-center text-gray-500 italic">Fetching current stock...</td>
+               </tr>
+            ) : filteredData.length === 0 ? (
+               <tr>
+                 <td colSpan="6" className="p-4 text-center text-gray-500 italic">No products found.</td>
+               </tr>
+            ) : (
+              filteredData.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="p-3 font-mono text-emerald-700">{item.sku || 'N/A'}</td>
+                  <td className="p-3 font-semibold text-gray-800">{item.name}</td>
+                  <td className="p-3 text-gray-600">{item.location}</td>
+                  <td className="p-3 text-right font-bold text-gray-700">{item.onHand.toLocaleString()}</td>
+                  <td className="p-3 text-right text-rose-600">{item.committed.toLocaleString()}</td>
+                  <td className="p-3 text-right font-extrabold text-emerald-700 bg-emerald-50/20">{item.available.toLocaleString()}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

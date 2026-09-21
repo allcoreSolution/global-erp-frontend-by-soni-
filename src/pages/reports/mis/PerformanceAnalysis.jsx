@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -15,81 +15,40 @@ import {
   CheckCircle, 
   ArrowUpRight 
 } from 'lucide-react';
+import api from '../../../api';
 
 const PerformanceAnalysis = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [period, setPeriod] = useState('This Month');
 
   // Datasets matching the requested sections
-  const salesVsTarget = {
-    achieved: 1485000,
-    target: 1500000,
-    pct: 99,
-    growth: '+12.4%',
-    desc: 'Consolidated sales targets versus real booking receipts.'
-  };
+  
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const purchaseVsTarget = {
-    spent: 890000,
-    budget: 950000,
-    pct: 93.6,
-    savings: '₹60,000 Saved',
-    desc: 'Procurement expenditures tracked against budgeted capital allocation.'
-  };
+  useEffect(() => {
+    api.get('/reports/mis/performance-analysis')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setApiData(res.data.data);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const margins = [
-    { title: 'Gross Profit Margin', value: '38.4%', target: '40.0%', status: 'Optimal' },
-    { title: 'Net Profit Margin', value: '24.2%', target: '25.0%', status: 'Stable' },
-    { title: 'Operating Margin', value: '29.8%', target: '30.0%', status: 'Optimal' }
-  ];
+  if (loading || !apiData) {
+    return <div className="p-6 text-center text-slate-500">Loading mis/PerformanceAnalysis.jsx...</div>;
+  }
 
-  const branchPerf = [
-    { name: 'Mumbai HO', target: '₹8.0 L', achieved: '₹8.4 L', status: 'Exceeded', pct: 105 },
-    { name: 'Delhi Branch', target: '₹4.5 L', achieved: '₹4.2 L', status: 'On Track', pct: 93 },
-    { name: 'Bangalore Branch', target: '₹2.5 L', achieved: '₹2.25 L', status: 'On Track', pct: 90 }
-  ];
-
-  const deptPerf = [
-    { name: 'Sales & Distribution', efficiency: '94%', lead: 'Priya Patel' },
-    { name: 'Purchasing & Supply', efficiency: '88%', lead: 'Rohan Deshmukh' },
-    { name: 'Finance & Accounts', efficiency: '96%', lead: 'Sanjay Shah' },
-    { name: 'Operations & HR', efficiency: '91%', lead: 'Nisha Pillai' }
-  ];
-
-  const employeePerf = [
-    { name: 'Amit Sharma', role: 'Account Lead', score: '9.4/10', rate: 'Outstanding' },
-    { name: 'Neha Gupta', role: 'Support Specialist', score: '8.8/10', rate: 'Excellent' },
-    { name: 'Rajesh Kumar', role: 'Admin Specialist', score: '7.9/10', rate: 'Good' }
-  ];
-
-  const salespersonPerf = [
-    { name: 'Vikram Singh', target: '₹3.0 L', achieved: '₹3.4 L', commission: '₹17,000', rating: 4.9 },
-    { name: 'Karan Malhotra', target: '₹2.5 L', achieved: '₹2.6 L', commission: '₹13,000', rating: 4.6 },
-    { name: 'Shweta Sen', target: '₹2.0 L', achieved: '₹1.8 L', commission: '₹9,000', rating: 4.1 }
-  ];
+  const { salesVsTarget, purchaseVsTarget, margins, branchPerf, deptPerf, employeePerf, salespersonPerf } = apiData;
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportCSV = () => {
-    const headers = ['Analysis Area', 'Target/Baseline', 'Achieved/Value', 'Performance Index'];
-    const rows = [
-      ['Sales vs Target', `₹${(salesVsTarget.target/100000).toFixed(1)}L`, `₹${(salesVsTarget.achieved/100000).toFixed(1)}L`, `${salesVsTarget.pct}%`],
-      ['Purchase vs Target', `Budget: ₹${(purchaseVsTarget.budget/100000).toFixed(1)}L`, `Spent: ₹${(purchaseVsTarget.spent/100000).toFixed(1)}L`, `${purchaseVsTarget.pct}%`],
-      ['Gross Profit Margin', '40.0%', margins[0].value, margins[0].status],
-      ['Top Branch (Mumbai HO)', '₹8.0 L', '₹8.4 L', '105%'],
-      ['Top Salesperson (Vikram)', '₹3.0 L', '₹3.4 L', '113%']
-    ];
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Performance_Analysis_Report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert("Export CSV functionality will be implemented here.");
   };
 
   return (

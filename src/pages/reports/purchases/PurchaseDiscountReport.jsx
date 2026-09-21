@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Percent, Search, Filter, Download, ArrowDown, TrendingDown, Tag } from 'lucide-react';
+import api from '../../../api';
 
 const PurchaseDiscountReport = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const discounts = [
-    { id: 1, vendor: 'Global Tech', billNo: 'BILL-445', billAmount: 45000, discountPct: '5%', discountAmount: 2250, finalAmount: 42750 },
-    { id: 2, vendor: 'TechDistro Inc.', billNo: 'BILL-889', billAmount: 125000, discountPct: '10%', discountAmount: 12500, finalAmount: 112500 },
-    { id: 3, vendor: 'OfficeDepot', billNo: 'BILL-112', billAmount: 15400, discountPct: '2%', discountAmount: 308, finalAmount: 15092 },
-    { id: 4, vendor: 'Furnishings Co', billNo: 'BILL-475', billAmount: 32000, discountPct: '8%', discountAmount: 2560, finalAmount: 29440 },
-    { id: 5, vendor: 'Global Chips Ltd', billNo: 'BILL-990', billAmount: 88000, discountPct: '7.5%', discountAmount: 6600, finalAmount: 81400 },
-  ];
+  const [discounts, setDiscounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/financial/discount-report');
+        if (response.data.success) {
+          setDiscounts(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

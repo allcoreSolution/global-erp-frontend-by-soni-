@@ -1,20 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Search, Filter, Download, Target, Award, DollarSign } from 'lucide-react';
+import api from '../../api';
 
 const SalespersonPerformance = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const salesReps = [
-    { id: 1, name: 'Michael Scott', region: 'North America', target: 500000, achieved: 520000, completion: 104, commission: 26000, rating: 'Excellent' },
-    { id: 2, name: 'Dwight Schrute', region: 'Europe', target: 450000, achieved: 410000, completion: 91, commission: 16400, rating: 'Good' },
-    { id: 3, name: 'Jim Halpert', region: 'Asia Pacific', target: 400000, achieved: 435000, completion: 108, commission: 21750, rating: 'Excellent' },
-    { id: 4, name: 'Stanley Hudson', region: 'North America', target: 350000, achieved: 320000, completion: 91, commission: 12800, rating: 'Good' },
-    { id: 5, name: 'Phyllis Vance', region: 'Europe', target: 300000, achieved: 280000, completion: 93, commission: 11200, rating: 'Good' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/sales/analysis/salesperson-wise');
+        if (response.data.success) {
+          // Sort by achieved descending
+          const sorted = response.data.data.sort((a, b) => b.achieved - a.achieved).map((item, index) => ({
+            ...item,
+            rank: index + 1,
+            commission: item.achieved * 0.05, // Mocking commission as 5% of achieved
+            rating: item.status
+          }));
+          setData(sorted);
+        }
+      } catch (error) {
+        console.error("Error fetching salesperson performance:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
+
+  const filteredData = data.filter(rep => rep.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -32,7 +53,6 @@ const SalespersonPerformance = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-xl border border-purple-100 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-purple-50 rounded-lg text-purple-600">
@@ -40,7 +60,9 @@ const SalespersonPerformance = () => {
           </div>
           <div>
             <p className="text-[11px] font-bold text-slate-500 uppercase">Total Target</p>
-            <h3 className="text-xl font-bold text-slate-800">$2,000,000</h3>
+            <h3 className="text-xl font-bold text-slate-800">
+              {formatCurrency(data.reduce((acc, curr) => acc + curr.target, 0))}
+            </h3>
           </div>
         </div>
         <div className="bg-white p-5 rounded-xl border border-indigo-100 shadow-sm flex items-center gap-4">
@@ -49,7 +71,9 @@ const SalespersonPerformance = () => {
           </div>
           <div>
             <p className="text-[11px] font-bold text-slate-500 uppercase">Total Achieved</p>
-            <h3 className="text-xl font-bold text-slate-800">$1,965,000</h3>
+            <h3 className="text-xl font-bold text-slate-800">
+              {formatCurrency(data.reduce((acc, curr) => acc + curr.achieved, 0))}
+            </h3>
           </div>
         </div>
         <div className="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-4">
@@ -57,13 +81,14 @@ const SalespersonPerformance = () => {
             <DollarSign size={24} />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-500 uppercase">Total Commissions Paid</p>
-            <h3 className="text-xl font-bold text-slate-800">$88,150</h3>
+            <p className="text-[11px] font-bold text-slate-500 uppercase">Total Commissions</p>
+            <h3 className="text-xl font-bold text-slate-800">
+              {formatCurrency(data.reduce((acc, curr) => acc + curr.commission, 0))}
+            </h3>
           </div>
         </div>
       </div>
 
-      {/* Data Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
           <h2 className="text-sm font-bold text-slate-800">Sales Representatives</h2>
@@ -82,6 +107,7 @@ const SalespersonPerformance = () => {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
+                <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Rank</th>
                 <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Rep Name</th>
                 <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Region</th>
                 <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider text-right">Target</th>
@@ -92,26 +118,31 @@ const SalespersonPerformance = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {salesReps.map((rep) => (
+              {loading ? (
+                <tr><td colSpan="8" className="p-4 text-center text-slate-500">Loading data...</td></tr>
+              ) : filteredData.map((rep) => {
+                const compValue = parseFloat(rep.completion);
+                return (
                 <tr key={rep.id} className="hover:bg-slate-50/50 transition">
+                  <td className="px-6 py-4 font-bold text-slate-700">#{rep.rank}</td>
                   <td className="px-6 py-4 font-bold text-indigo-600">{rep.name}</td>
                   <td className="px-6 py-4 text-slate-600">{rep.region}</td>
-                  <td className="px-6 py-4 text-slate-500 text-right font-medium">${rep.target.toLocaleString()}</td>
-                  <td className="px-6 py-4 font-bold text-slate-800 text-right">${rep.achieved.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-slate-500 text-right font-medium">{formatCurrency(rep.target)}</td>
+                  <td className="px-6 py-4 font-bold text-slate-800 text-right">{formatCurrency(rep.achieved)}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <div className="w-full bg-slate-200 rounded-full h-1.5 w-24">
                         <div 
-                          className={`h-1.5 rounded-full ${rep.completion >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} 
-                          style={{ width: `${Math.min(rep.completion, 100)}%` }}
+                          className={`h-1.5 rounded-full ${compValue >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} 
+                          style={{ width: `${Math.min(compValue, 100)}%` }}
                         ></div>
                       </div>
-                      <span className={`text-[10px] font-bold ${rep.completion >= 100 ? 'text-emerald-600' : 'text-blue-600'}`}>
-                        {rep.completion}%
+                      <span className={`text-[10px] font-bold ${compValue >= 100 ? 'text-emerald-600' : 'text-blue-600'}`}>
+                        {rep.completion}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-800 font-bold text-right">${rep.commission.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-slate-800 font-bold text-right">{formatCurrency(rep.commission)}</td>
                   <td className="px-6 py-4 text-center">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                       rep.rating === 'Excellent' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -120,7 +151,7 @@ const SalespersonPerformance = () => {
                     </span>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

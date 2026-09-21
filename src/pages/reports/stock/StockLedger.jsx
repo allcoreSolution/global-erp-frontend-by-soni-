@@ -1,14 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const StockLedger = () => {
-  const data = [
-    { date: '10-Aug-2026', ref: 'PUR-0012', type: 'Purchase', inQty: 100, outQty: 0, balance: 100 },
-    { date: '15-Aug-2026', ref: 'SAL-0045', type: 'Sales', inQty: 0, outQty: 25, balance: 75 },
-    { date: '22-Aug-2026', ref: 'SAL-0050', type: 'Sales', inQty: 0, outQty: 10, balance: 65 },
-    { date: '01-Sep-2026', ref: 'PUR-0018', type: 'Purchase', inQty: 50, outQty: 0, balance: 115 },
-    { date: '05-Sep-2026', ref: 'RET-0002', type: 'Sales Return', inQty: 2, outQty: 0, balance: 117 },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [filterItem, setFilterItem] = useState('All');
+  
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // The API returns all ledger entries across products. In production, we'd pass filters to the backend.
+      const res = await api.get('/reports/stock/ledger');
+      if (res.data && res.data.success) {
+        setData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching stock ledger:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Extract unique items for the dropdown filter
+  const uniqueItems = ['All', ...new Set(data.map(d => d.item))];
+
+  // Filter and calculate running balance
+  const filteredData = [...data]
+    .filter(d => filterItem === 'All' || d.item === filterItem)
+    .filter(d => {
+      const dDate = new Date(d.date).toISOString().split('T')[0];
+      return dDate >= fromDate && dDate <= toDate;
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort chronologically for running balance
+
+  let runningBalance = 0;
+  const tableData = filteredData.map(item => {
+    runningBalance += (item.inward || 0) - (item.outward || 0);
+    return { ...item, balance: runningBalance };
+  });
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -29,21 +70,28 @@ const StockLedger = () => {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-4 border border-amber-200 rounded-lg flex flex-col sm:flex-row gap-4 text-xs font-semibold text-gray-700 mb-4">
+      <div className="bg-slate-50 p-4 border border-amber-200 rounded-lg flex flex-wrap gap-4 text-xs font-semibold text-gray-700 mb-4">
         <div className="flex items-center gap-2">
           <Filter size={16} className="text-amber-600" />
           <span className="text-gray-500">Item:</span>
-          <select className="border p-1.5 rounded min-w-[200px]">
-            <option>LED TV 55 Inch (ELC-TV-55)</option>
-            <option>Air Conditioner 1.5 Ton</option>
+          <select 
+            className="border p-1.5 rounded min-w-[200px] outline-none focus:border-amber-500"
+            value={filterItem}
+            onChange={(e) => setFilterItem(e.target.value)}
+          >
+            {uniqueItems.map((item, idx) => (
+              <option key={idx} value={item}>{item}</option>
+            ))}
           </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-gray-500">From:</span>
-          <input type="date" className="border p-1.5 rounded" defaultValue="2026-08-01" />
+          <input type="date" className="border p-1.5 rounded outline-none focus:border-amber-500" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
           <span className="text-gray-500">To:</span>
-          <input type="date" className="border p-1.5 rounded" defaultValue="2026-09-30" />
-          <button className="px-3 py-1.5 bg-amber-600 text-white rounded hover:bg-amber-700">Apply Filter</button>
+          <input type="date" className="border p-1.5 rounded outline-none focus:border-amber-500" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          <button onClick={fetchData} className="px-3 py-1.5 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors">
+            Apply Filter
+          </button>
         </div>
       </div>
 
@@ -53,6 +101,7 @@ const StockLedger = () => {
             <tr>
               <th className="p-3">Transaction Date</th>
               <th className="p-3">Reference No.</th>
+              <th className="p-3">Item / SKU</th>
               <th className="p-3">Transaction Type</th>
               <th className="p-3 text-right bg-emerald-50/50">Inward Qty (+)</th>
               <th className="p-3 text-right bg-rose-50/50">Outward Qty (-)</th>
@@ -60,16 +109,30 @@ const StockLedger = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 text-gray-600">{item.date}</td>
-                <td className="p-3 font-mono text-amber-700">{item.ref}</td>
-                <td className="p-3 font-semibold text-gray-700">{item.type}</td>
-                <td className="p-3 text-right font-bold text-emerald-600">{item.inQty > 0 ? item.inQty : '-'}</td>
-                <td className="p-3 text-right font-bold text-rose-600">{item.outQty > 0 ? item.outQty : '-'}</td>
-                <td className="p-3 text-right font-extrabold text-gray-800 border-l">{item.balance}</td>
-              </tr>
-            ))}
+            {loading ? (
+               <tr>
+                 <td colSpan="7" className="p-4 text-center text-gray-500 italic">Fetching stock ledger...</td>
+               </tr>
+            ) : tableData.length === 0 ? (
+               <tr>
+                 <td colSpan="7" className="p-4 text-center text-gray-500 italic">No ledger records found.</td>
+               </tr>
+            ) : (
+              tableData.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="p-3 text-gray-600">{new Date(item.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')}</td>
+                  <td className="p-3 font-mono text-amber-700">{item.voucherNo}</td>
+                  <td className="p-3 font-semibold text-gray-800">
+                    <div>{item.item}</div>
+                    <div className="text-[10px] text-gray-400 font-normal">{item.sku}</div>
+                  </td>
+                  <td className="p-3 font-semibold text-gray-700">{item.type}</td>
+                  <td className="p-3 text-right font-bold text-emerald-600">{item.inward > 0 ? item.inward : '-'}</td>
+                  <td className="p-3 text-right font-bold text-rose-600">{item.outward > 0 ? item.outward : '-'}</td>
+                  <td className="p-3 text-right font-extrabold text-gray-800 border-l">{item.balance}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

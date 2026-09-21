@@ -1,48 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calculator, Filter, Download, Printer, Percent, ShieldCheck } from 'lucide-react';
+import api from '../../../api';
 
 const TaxAnalysis = () => {
   const [period, setPeriod] = useState('This Month');
 
   // Datasets matching the requested summaries
-  const summaries = {
-    taxTotals: { cgst: '₹2,18,700', sgst: '₹2,18,700', igst: '₹1,08,000', totalTax: '₹5,45,400', taxableVal: '₹24,30,000' },
-    exemptSales: { exemptVal: '₹1,20,000', nilRated: '₹45,000', nonGst: '₹80,000' },
-    rateBreakdown: [
-      { rate: '5% Slab', taxable: '₹4,50,000', cgst: '₹11,250', sgst: '₹11,250', igst: '₹0' },
-      { rate: '12% Slab', taxable: '₹5,80,000', cgst: '₹34,800', sgst: '₹34,800', igst: '₹0' },
-      { rate: '18% Slab', taxable: '₹10,50,000', cgst: '₹94,500', sgst: '₹94,500', igst: '₹1,08,000' },
-      { rate: '28% Slab', taxable: '₹3,50,000', cgst: '₹49,000', sgst: '₹49,000', igst: '₹0' }
-    ],
-    hsnSummary: [
-      { hsn: '7210 (Steel Sheets)', desc: 'Iron/Steel Coil Products', uqc: 'MTS', qty: 450, taxable: '₹5,60,000', rate: '18%', totalTax: '₹1,00,800' },
-      { hsn: '8481 (Valves)', desc: 'Taps, cocks & valves', uqc: 'PCS', qty: 124, taxable: '₹4,10,000', rate: '28%', totalTax: '₹1,14,800' },
-      { hsn: '8544 (Cables)', desc: 'Insulated winding wire', uqc: 'KGS', qty: 980, taxable: '₹3,20,000', rate: '18%', totalTax: '₹57,600' }
-    ]
-  };
+  
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/reports/gst/tax-analysis')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setApiData(res.data.data);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !apiData) {
+    return <div className="p-6 text-center text-slate-500">Loading gst/TaxAnalysis.jsx...</div>;
+  }
+
+  const { summaries } = apiData;
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportCSV = () => {
-    const headers = ['Category Description', 'Taxable base Value (₹)', 'Tax Rate Component'];
-    const rows = [
-      ['CGST Total', summaries.taxTotals.taxableVal, summaries.taxTotals.cgst],
-      ['SGST Total', summaries.taxTotals.taxableVal, summaries.taxTotals.sgst],
-      ['IGST Total', summaries.taxTotals.taxableVal, summaries.taxTotals.igst],
-      ['Exempt Outward Sales', summaries.exemptSales.exemptVal, 'Exempt'],
-      ['Nil Rated Outward Sales', summaries.exemptSales.nilRated, 'Nil Rated']
-    ];
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `GST_Tax_Analysis_Report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert("Export CSV functionality will be implemented here.");
   };
 
   return (

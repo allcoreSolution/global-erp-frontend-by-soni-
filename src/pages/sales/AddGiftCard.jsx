@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Gift } from 'lucide-react';
+import { ArrowLeft, CreditCard, Save } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const AddGiftCard = () => {
   const navigate = useNavigate();
@@ -127,10 +128,14 @@ const AddGiftCard = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Gift Card Type</label>
-                <select name="giftCardType" value={form.giftCardType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white">
-                  <option>Digital</option>
-                  <option>Physical</option>
-                </select>
+                <DynamicSelect 
+                  category="GiftCardType" 
+                  name="giftCardType" 
+                  value={form.giftCardType} 
+                  onChange={handleChange} 
+                  defaultOptions={['Digital', 'Physical']} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
@@ -141,17 +146,25 @@ const AddGiftCard = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Branch</label>
-                <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white">
-                  <option>Select</option>
-                  <option>Head Office</option>
-                </select>
+                <DynamicSelect 
+                  category="Branch" 
+                  name="branch" 
+                  value={form.branch} 
+                  onChange={handleChange} 
+                  defaultOptions={['Select', 'Head Office']} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white">
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
+                <DynamicSelect 
+                  category="Status" 
+                  name="status" 
+                  value={form.status} 
+                  onChange={handleChange} 
+                  defaultOptions={['Active', 'Inactive']} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white" 
+                />
               </div>
             </div>
           </div>
@@ -169,10 +182,14 @@ const AddGiftCard = () => {
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
-                  <select name="currency" value={form.currency} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>INR</option>
-                    <option>USD</option>
-                  </select>
+                  <DynamicSelect 
+                    category="Currency" 
+                    name="currency" 
+                    value={form.currency} 
+                    onChange={handleChange} 
+                    defaultOptions={['INR', 'USD']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Current Balance</label>
@@ -207,12 +224,14 @@ const AddGiftCard = () => {
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Validity Period</label>
-                  <select name="validityPeriod" value={form.validityPeriod} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>30 Days</option>
-                    <option>90 Days</option>
-                    <option>180 Days</option>
-                    <option>365 Days</option>
-                  </select>
+                  <DynamicSelect 
+                    category="ValidityPeriod" 
+                    name="validityPeriod" 
+                    value={form.validityPeriod} 
+                    onChange={handleChange} 
+                    defaultOptions={['30 Days', '90 Days', '180 Days', '365 Days']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div className="col-span-2 mt-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
@@ -231,11 +250,14 @@ const AddGiftCard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Customer</label>
-                <select name="customer" value={form.customer} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                  <option>Select</option>
-                  <option>Walk-in Customer</option>
-                  <option>John Doe</option>
-                </select>
+                <DynamicSelect 
+                  category="Customer" 
+                  name="customer" 
+                  value={form.customer} 
+                  onChange={handleChange} 
+                  defaultOptions={['Select', 'Walk-in Customer', 'John Doe']} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Recipient Name</label>
@@ -265,17 +287,25 @@ const AddGiftCard = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Usage Type</label>
-                  <select name="usageType" value={form.usageType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Multiple</option>
-                    <option>Single</option>
-                  </select>
+                  <DynamicSelect 
+                    category="UsageType" 
+                    name="usageType" 
+                    value={form.usageType} 
+                    onChange={handleChange} 
+                    defaultOptions={['Multiple', 'Single']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Redeemable At</label>
-                  <select name="redeemableAt" value={form.redeemableAt} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>All Branches</option>
-                    <option>Specific Branch</option>
-                  </select>
+                  <DynamicSelect 
+                    category="RedeemableAt" 
+                    name="redeemableAt" 
+                    value={form.redeemableAt} 
+                    onChange={handleChange} 
+                    defaultOptions={['All Branches', 'Specific Branch']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 
                 <div className="col-span-2 grid grid-cols-2 gap-2 mt-2">
@@ -299,10 +329,14 @@ const AddGiftCard = () => {
 
                 <div className="col-span-2 mt-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Applicable For</label>
-                  <select name="applicableFor" value={form.applicableFor} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>All Products</option>
-                    <option>Specific Categories</option>
-                  </select>
+                  <DynamicSelect 
+                    category="ApplicableFor" 
+                    name="applicableFor" 
+                    value={form.applicableFor} 
+                    onChange={handleChange} 
+                    defaultOptions={['All Products', 'Specific Categories']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
               </div>
             </div>
@@ -313,25 +347,36 @@ const AddGiftCard = () => {
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Sales Account</label>
-                  <select name="salesAccount" value={form.salesAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Sales - Gift Cards</option>
-                  </select>
+                  <DynamicSelect 
+                    category="SalesAccount" 
+                    name="salesAccount" 
+                    value={form.salesAccount} 
+                    onChange={handleChange} 
+                    defaultOptions={['Select', 'Sales - Gift Cards']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Liability Account</label>
-                  <select name="liabilityAccount" value={form.liabilityAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Gift Card Liability</option>
-                  </select>
+                  <DynamicSelect 
+                    category="LiabilityAccount" 
+                    name="liabilityAccount" 
+                    value={form.liabilityAccount} 
+                    onChange={handleChange} 
+                    defaultOptions={['Select', 'Gift Card Liability']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Configuration</label>
-                  <select name="taxConfiguration" value={form.taxConfiguration} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>GST 18%</option>
-                    <option>Tax Exempt</option>
-                  </select>
+                  <DynamicSelect 
+                    category="TaxConfiguration" 
+                    name="taxConfiguration" 
+                    value={form.taxConfiguration} 
+                    onChange={handleChange} 
+                    defaultOptions={['Select', 'GST 18%', 'Tax Exempt']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
               </div>
             </div>

@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, Search, Filter, Download, DollarSign, Package, Clock } from 'lucide-react';
+import api from '../../../api';
 
 const SupplierWisePurchase = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const suppliers = [
-    { id: 1, name: 'Global Tech', orders: 145, volume: 450000, leadTime: '4 Days', compliance: '98%', status: 'Excellent' },
-    { id: 2, name: 'TechDistro Inc.', orders: 320, volume: 1250000, leadTime: '2 Days', compliance: '99%', status: 'Excellent' },
-    { id: 3, name: 'OfficeDepot', orders: 85, volume: 154000, leadTime: '7 Days', compliance: '85%', status: 'Average' },
-    { id: 4, name: 'Furnishings Co', orders: 42, volume: 320000, leadTime: '14 Days', compliance: '92%', status: 'Good' },
-    { id: 5, name: 'Global Chips Ltd', orders: 210, volume: 880000, leadTime: '5 Days', compliance: '95%', status: 'Good' },
-  ];
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/analysis/supplier-wise');
+        if (response.data.success) {
+          setSuppliers(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">

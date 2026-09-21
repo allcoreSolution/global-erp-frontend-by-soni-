@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Info, Plus, Search, Trash2, Upload, HelpCircle 
 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const AddPurchase = () => {
+  const navigate = useNavigate();
+  const { id } = useParams();
   // Mock Data lists
   const warehouses = ['Central Warehouse', 'North Branch Warehouse', 'East Side Storage'];
   const suppliers = ['Apple Global Corp', 'Dell Trading Co', 'Logitech Distribution Pvt Ltd', 'HP India Logistics'];
   const currencies = ['INR', 'USD', 'EUR', 'GBP'];
-  const productsCatalog = [
-    { name: 'iPhone 15 Pro', code: 'PRD001', cost: 1000, tax: 18, price: 1200 },
-    { name: 'Dell XPS 15', code: 'PRD002', cost: 1500, tax: 18, price: 1800 },
-    { name: 'MX Master 3S', code: 'PRD003', cost: 80, tax: 18, price: 100 },
-    { name: 'HP LaserJet Pro', code: 'PRD004', cost: 250, tax: 12, price: 320 },
-  ];
+  const [productsCatalog, setProductsCatalog] = useState([]);
 
   // States
   const [purchaseDate, setPurchaseDate] = useState('2026-08-13');
@@ -158,18 +158,115 @@ const AddPurchase = () => {
   // Grand Total calculation
   const calculatedGrandTotal = totalCalculatedSubTotal + calculatedGlobalTax + Number(shippingCost) - Number(discountValue);
 
-  // Form Submit Action
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const fetchCatalogs = async () => {
+      try {
+        const prodRes = await api.get('/products');
+        const pData = prodRes.data?.data || prodRes.data || [];
+        setProductsCatalog(pData.map(p => ({
+          id: p._id,
+          name: p.productName || p.name,
+          code: p.productCode || p.sku || p.code,
+          cost: p.purchasePrice || p.productPrice || p.price || 0,
+          tax: p.productTax || p.taxRate || 0,
+          price: p.productPrice || p.salePrice || p.price || 0
+        })));
+      } catch (err) {
+        console.error('Failed to load products', err);
+      }
+    };
+    fetchCatalogs();
+
+    if (id) {
+      const fetchPurchase = async () => {
+        try {
+          const { data } = await api.get(`/purchases/${id}`);
+          if (data.success && data.data) {
+            const p = data.data;
+            setPurchaseDate(p.purchaseDate || '');
+            setReferenceNo(p.referenceNo || '');
+            setWarehouse(p.warehouse || '');
+            setSupplier(p.supplier || '');
+            setPaymentTerm(p.paymentTerm || '');
+            setDueDate(p.dueDate || '');
+            setPurchaseStatus(p.purchaseStatus || 'Received');
+            setCurrency(p.currency || 'INR');
+            setExchangeRate(p.exchangeRate || '1');
+            setPaymentStatus(p.paymentStatus || 'Due');
+            setOrderTax(p.orderTax || 'No Tax');
+            setDiscountValue(p.discountValue || 0);
+            setShippingCost(p.shippingCost || 0);
+            setNote(p.note || '');
+            if (p.orderItems && p.orderItems.length > 0) {
+              setOrderItems(p.orderItems.map(item => ({
+                name: item.name,
+                code: item.code,
+                quantity: item.quantity,
+                netUnitCost: item.netUnitCost,
+                profitMargin: item.profitMargin,
+                profitMarginType: item.profitMarginType,
+                productPrice: item.productPrice,
+                discount: item.discount,
+                taxPercent: item.taxPercent
+              })));
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching purchase', error);
+        }
+      };
+      fetchPurchase();
+    }
+  }, [id]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!warehouse) {
       alert("Please select Warehouse.");
       return;
     }
-    if (!supplier) {
-      alert("Please select Supplier.");
-      return;
+    
+    try {
+      const payload = {
+        purchaseDate,
+        referenceNo,
+        warehouse,
+        supplier,
+        paymentTerm,
+        dueDate,
+        purchaseStatus,
+        paymentStatus,
+        currency,
+        exchangeRate,
+        orderTax,
+        discountValue: Number(discountValue) || 0,
+        shippingCost: Number(shippingCost) || 0,
+        note,
+        orderItems: orderItems.map(item => ({
+          name: item.name,
+          code: item.code,
+          quantity: Number(item.quantity) || 1,
+          netUnitCost: Number(item.netUnitCost) || 0,
+          profitMargin: Number(item.profitMargin) || 0,
+          profitMarginType: item.profitMarginType,
+          productPrice: Number(item.productPrice) || 0,
+          discount: Number(item.discount) || 0,
+          taxPercent: Number(item.taxPercent) || 0
+        }))
+      };
+
+      if (id) {
+        await api.put(`/purchases/${id}`, payload);
+        alert('Purchase updated successfully!');
+      } else {
+        await api.post('/purchases', payload);
+        alert(`Purchase Order Submited Successfully!\nGrand Total: INR ${calculatedGrandTotal.toFixed(2)}`);
+      }
+      navigate('/purchases/purchase-list');
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Error processing purchase');
     }
-    alert(`Purchase Order Submited Successfully!\nGrand Total: INR ${calculatedGrandTotal.toFixed(2)}`);
   };
 
   return (
@@ -215,28 +312,13 @@ const AddPurchase = () => {
           {/* Warehouse Selector */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Warehouse *</label>
-            <select
-              value={warehouse}
-              onChange={(e) => setWarehouse(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-              required
-            >
-              <option value="">Select warehouse...</option>
-              {warehouses.map((w, i) => <option key={i} value={w}>{w}</option>)}
-            </select>
+            <DynamicSelect category="Warehouse" name="warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} />
           </div>
 
           {/* Supplier Selector */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Supplier</label>
-            <select
-              value={supplier}
-              onChange={(e) => setSupplier(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-            >
-              <option value="">Select supplier...</option>
-              {suppliers.map((s, i) => <option key={i} value={s}>{s}</option>)}
-            </select>
+            <DynamicSelect category="Supplier" name="supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
           </div>
 
           {/* Payment Term */}
@@ -268,15 +350,7 @@ const AddPurchase = () => {
           {/* Purchase Status */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Purchase Status</label>
-            <select
-              value={purchaseStatus}
-              onChange={(e) => setPurchaseStatus(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-            >
-              <option value="Received">Received</option>
-              <option value="Pending">Pending</option>
-              <option value="Ordered">Ordered</option>
-            </select>
+            <DynamicSelect category="PurchaseStatus" name="purchaseStatus" value={purchaseStatus} onChange={(e) => setPurchaseStatus(e.target.value)} />
           </div>
 
           {/* Attach Document File Chooser */}
@@ -301,14 +375,7 @@ const AddPurchase = () => {
           {/* Currency */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Currency *</label>
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-              required
-            >
-              {currencies.map((c, i) => <option key={i} value={c}>{c}</option>)}
-            </select>
+            <DynamicSelect category="Currency" name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} />
           </div>
 
           {/* Exchange Rate */}
@@ -422,14 +489,7 @@ const AddPurchase = () => {
                       </td>
                       {/* Margin Type dropdown */}
                       <td className="px-4 py-3">
-                        <select
-                          value={item.profitMarginType}
-                          onChange={(e) => handleMarginTypeChange(item.code, e.target.value)}
-                          className="w-full border border-blue-500 rounded px-1 py-1 text-sm bg-white text-black outline-none"
-                        >
-                          <option value="Percentage">Percentage (%)</option>
-                          <option value="Fixed">Fixed</option>
-                        </select>
+                        <DynamicSelect category="MarginType" name="profitMarginType" value={item.profitMarginType} onChange={(e) => handleMarginTypeChange(item.code, e.target.value)} />
                       </td>
                       {/* Price */}
                       <td className="px-4 py-3">
@@ -509,16 +569,7 @@ const AddPurchase = () => {
           {/* Global Order Tax */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Order Tax</label>
-            <select
-              value={orderTax}
-              onChange={(e) => setOrderTax(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-            >
-              <option value="No Tax">No Tax</option>
-              <option value="5%">GST 5%</option>
-              <option value="10%">GST 10%</option>
-              <option value="18%">GST 18%</option>
-            </select>
+            <DynamicSelect category="TaxConfiguration" name="orderTax" value={orderTax} onChange={(e) => setOrderTax(e.target.value)} />
           </div>
 
           {/* Global Discount */}
@@ -548,16 +599,7 @@ const AddPurchase = () => {
           {/* Payment Status */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Payment Status *</label>
-            <select
-              value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-              required
-            >
-              <option value="Due">Due</option>
-              <option value="Paid">Paid</option>
-              <option value="Partial">Partial</option>
-            </select>
+            <DynamicSelect category="PaymentStatus" name="paymentStatus" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} />
           </div>
         </div>
 

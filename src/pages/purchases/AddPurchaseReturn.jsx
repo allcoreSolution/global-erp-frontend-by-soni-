@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Plus, Trash2, Search, UploadCloud, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const AddPurchaseReturn = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
-  // Basic Details State
   const [form, setForm] = useState({
-    returnNo: 'PR-00001',
+    returnNo: `PR-${Date.now().toString().slice(-6)}`,
     returnDate: new Date().toISOString().split('T')[0],
     returnType: 'Partial',
     company: '',
@@ -39,21 +41,65 @@ const AddPurchaseReturn = () => {
     remarks: ''
   });
 
-  // Items State
-  const [items, setItems] = useState([
-    { id: 1, product: '', batch: '', purchasedQty: 100, returnQty: 20, rate: 500, taxPercent: 18, amount: 10000 }
-  ]);
-
-  // Totals State
+  const [items, setItems] = useState([]);
   const [totals, setTotals] = useState({
-    goodsValue: 10000,
-    discount: 500,
-    tax: 1710,
-    returnTotal: 11210
+    goodsValue: 0,
+    discount: 0,
+    tax: 0,
+    returnTotal: 0
   });
 
   const [returnReason, setReturnReason] = useState('Damaged Goods');
   const [itemCondition, setItemCondition] = useState('Damaged');
+  
+  useEffect(() => {
+    if (id) {
+      const fetchReturn = async () => {
+        try {
+          const { data } = await api.get(`/purchase-returns/${id}`);
+          if (data.success && data.data) {
+            const ret = data.data;
+            setForm({
+              returnNo: ret.returnNo || '',
+              returnDate: ret.returnDate || '',
+              returnType: ret.returnType || 'Partial',
+              company: ret.company || '',
+              branch: ret.branch || '',
+              warehouse: ret.warehouse || '',
+              status: ret.status || 'Draft',
+              purchaseInvoice: ret.purchaseInvoice || '',
+              purchaseOrder: ret.purchaseOrder || '',
+              purchaseDate: ret.purchaseDate || '',
+              supplier: ret.supplier || '',
+              supplierInvoiceNo: ret.supplierInvoiceNo || '',
+              grnNo: ret.grnNo || '',
+              returnWarehouse: ret.returnWarehouse || '',
+              dispatchDate: ret.dispatchDate || '',
+              transporter: ret.transporter || '',
+              vehicleNo: ret.vehicleNo || '',
+              lrNo: ret.lrNo || '',
+              stockAdjustment: ret.stockAdjustment ?? true,
+              debitNoteNo: ret.debitNoteNo || '',
+              settlementType: ret.settlementType || 'Credit Note',
+              adjustAgainstInvoice: ret.adjustAgainstInvoice ?? false,
+              supplierRefund: ret.supplierRefund ?? false,
+              requestedBy: ret.requestedBy || '',
+              approvedBy: ret.approvedBy || '',
+              remarks: ret.remarks || ''
+            });
+            setReturnReason(ret.returnReason || 'Damaged Goods');
+            setItemCondition(ret.itemCondition || 'Damaged');
+            if (ret.items && ret.items.length > 0) {
+              setItems(ret.items.map((item, idx) => ({ ...item, id: item._id || idx })));
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch purchase return", error);
+        }
+      };
+      fetchReturn();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -87,11 +133,10 @@ const AddPurchaseReturn = () => {
     }
   };
 
-  // Calculate Totals dynamically
   useEffect(() => {
-    const goodsValue = items.reduce((sum, item) => sum + item.amount, 0);
-    const tax = items.reduce((sum, item) => sum + (item.amount * (Number(item.taxPercent) / 100)), 0);
-    const discount = 500; // Mocked discount for now based on mockup
+    const goodsValue = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const tax = items.reduce((sum, item) => sum + ((Number(item.amount) || 0) * (Number(item.taxPercent) / 100)), 0);
+    const discount = 0; 
     
     setTotals({
       goodsValue,
@@ -101,10 +146,37 @@ const AddPurchaseReturn = () => {
     });
   }, [items]);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Purchase Return Processed successfully!');
-    navigate('/purchases/purchase-return');
+    const payload = {
+      ...form,
+      returnReason,
+      itemCondition,
+      items: items.map(item => ({
+        product: item.product || '',
+        batch: item.batch || '',
+        purchasedQty: Number(item.purchasedQty) || 0,
+        returnQty: Number(item.returnQty) || 1,
+        rate: Number(item.rate) || 0,
+        taxPercent: Number(item.taxPercent) || 0,
+        amount: Number(item.amount) || 0
+      })),
+      totals
+    };
+
+    try {
+      if (id) {
+        await api.put(`/purchase-returns/${id}`, payload);
+        alert('Purchase Return Updated successfully!');
+      } else {
+        await api.post('/purchase-returns', payload);
+        alert('Purchase Return Processed successfully!');
+      }
+      navigate('/purchases/purchase-return');
+    } catch (error) {
+      console.error('Error saving purchase return', error);
+      alert('Failed to save purchase return');
+    }
   };
 
   return (
@@ -164,31 +236,19 @@ const AddPurchaseReturn = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse *</label>
-                  <select name="warehouse" value={form.warehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Warehouse</option>
-                    <option>Central Warehouse</option>
-                  </select>
+                  <DynamicSelect category="Warehouse" name="warehouse" value={form.warehouse} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 lg:col-span-3">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white max-w-[200px]">
-                    <option>Draft</option>
-                    <option>Completed</option>
-                  </select>
+                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -199,16 +259,11 @@ const AddPurchaseReturn = () => {
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Invoice *</label>
-                  <select name="purchaseInvoice" value={form.purchaseInvoice} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Invoice</option>
-                    <option>PINV-2023-01</option>
-                  </select>
+                  <DynamicSelect category="Purchase Invoice" name="purchaseInvoice" value={form.purchaseInvoice} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Order</label>
-                  <select name="purchaseOrder" value={form.purchaseOrder} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select PO</option>
-                  </select>
+                  <DynamicSelect category="Purchase Order" name="purchaseOrder" value={form.purchaseOrder} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Date</label>
@@ -216,10 +271,7 @@ const AddPurchaseReturn = () => {
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier *</label>
-                  <select name="supplier" value={form.supplier} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Supplier</option>
-                    <option>Apple Global Corp</option>
-                  </select>
+                  <DynamicSelect category="Supplier" name="supplier" value={form.supplier} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier Invoice No.</label>
@@ -227,9 +279,7 @@ const AddPurchaseReturn = () => {
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">GRN No.</label>
-                  <select name="grnNo" value={form.grnNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select GRN</option>
-                  </select>
+                  <DynamicSelect category="GRN" name="grnNo" value={form.grnNo} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -302,21 +352,11 @@ const AddPurchaseReturn = () => {
             <div className="flex gap-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
                <div className="w-64">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Return Reason</label>
-                  <select value={returnReason} onChange={(e) => setReturnReason(e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm text-slate-700 outline-none bg-white focus:border-indigo-500">
-                    <option>Damaged Goods</option>
-                    <option>Defective Product</option>
-                    <option>Incorrect Item Delivered</option>
-                    <option>Quality Not as Expected</option>
-                  </select>
+                  <DynamicSelect category="Return Reason" name="returnReason" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} />
                </div>
                <div className="w-64">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Item Condition</label>
-                  <select value={itemCondition} onChange={(e) => setItemCondition(e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm text-slate-700 outline-none bg-white focus:border-indigo-500">
-                    <option>Damaged</option>
-                    <option>Good</option>
-                    <option>Opened</option>
-                    <option>Sealed</option>
-                  </select>
+                  <DynamicSelect category="Item Condition" name="itemCondition" value={itemCondition} onChange={(e) => setItemCondition(e.target.value)} />
                </div>
             </div>
           </div>
@@ -331,11 +371,7 @@ const AddPurchaseReturn = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Return Warehouse</label>
-                      <select name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>Central Warehouse</option>
-                        <option>Transit Hub</option>
-                      </select>
+                      <DynamicSelect category="Return Warehouse" name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier</label>
@@ -347,11 +383,7 @@ const AddPurchaseReturn = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Transporter</label>
-                      <select name="transporter" value={form.transporter} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>FedEx Logistics</option>
-                        <option>BlueDart</option>
-                      </select>
+                      <DynamicSelect category="Transporter" name="transporter" value={form.transporter} onChange={handleChange} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle No.</label>
@@ -378,11 +410,7 @@ const AddPurchaseReturn = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Settlement Type</label>
-                      <select name="settlementType" value={form.settlementType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option>Credit Note</option>
-                        <option>Bank Refund</option>
-                        <option>Cash Refund</option>
-                      </select>
+                      <DynamicSelect category="Settlement Type" name="settlementType" value={form.settlementType} onChange={handleChange} />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Amount</label>
@@ -408,17 +436,11 @@ const AddPurchaseReturn = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Requested By</label>
-                      <select name="requestedBy" value={form.requestedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>Store Manager</option>
-                      </select>
+                      <DynamicSelect category="Requested By" name="requestedBy" value={form.requestedBy} onChange={handleChange} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                      <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>Finance Manager</option>
-                      </select>
+                      <DynamicSelect category="Approved By" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
@@ -426,9 +448,11 @@ const AddPurchaseReturn = () => {
                     </div>
                     <div className="col-span-2 mt-2">
                        <label className="block text-xs font-semibold text-slate-700 mb-1">Attachment</label>
-                       <button type="button" className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500">
-                          <UploadCloud size={18} /> Upload Document
-                       </button>
+                       <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">
+                          <UploadCloud size={18} /> 
+                          <span className="truncate">{form.documentFile ? form.documentFile.name : 'Upload Document'}</span>
+                          <input type="file" className="hidden" onChange={(e) => setForm(prev => ({ ...prev, documentFile: e.target.files[0] }))} />
+                       </label>
                     </div>
                   </div>
                 </div>

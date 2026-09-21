@@ -1,13 +1,137 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, FileSpreadsheet, Plus, Trash2, Upload, Briefcase, Calculator, Building, CreditCard, CheckSquare, User, Landmark } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, CheckCircle, FileSpreadsheet, Plus, Trash2, Upload, Briefcase, Calculator, Building, CreditCard, CheckSquare, User, Landmark, X, Paperclip } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const AddExpenseClaim = () => {
   const navigate = useNavigate();
 
+  // Lookup States
+  const [employees, setEmployees] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [expenseCategories, setExpenseCategories] = useState([]);
+  const [expenseModes, setExpenseModes] = useState([]);
+  const [travelModes, setTravelModes] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+
+  // Quick Add Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalType, setModalType] = useState(''); 
+  const [modalInput, setModalInput] = useState('');
+
+  const handleOpenModal = (type) => {
+    setModalType(type);
+    setModalInput('');
+    setShowAddModal(true);
+  };
+
+  const handleQuickAddSubmit = async () => {
+    if(!modalInput.trim()) return;
+    try {
+      let endpoint = '';
+      let payload = {};
+      
+      if(modalType === 'department') {
+        endpoint = '/departments';
+        payload = { 
+          deptName: modalInput, 
+          deptCode: `DEPT-${Math.floor(Math.random() * 10000)}`,
+          status: 'Active' 
+        };
+      } else if (modalType === 'branch') {
+        endpoint = '/branches';
+        payload = { 
+          name: modalInput, 
+          id: `BR-${Math.floor(Math.random() * 10000)}`,
+          status: 'Active' 
+        };
+      } else if (modalType === 'company') {
+        endpoint = '/companies/register';
+        const uniqueId = Math.floor(Math.random() * 100000);
+        payload = { 
+          companyName: modalInput,
+          companyEmail: `comp${uniqueId}@example.com`,
+          adminEmail: `admin${uniqueId}@example.com`,
+          adminPassword: 'Password123!',
+          companyPhone: '0000000000',
+          companyAddress: 'Unknown Address'
+        };
+      } else if (modalType === 'employee' || modalType === 'manager' || modalType === 'finance') {
+        endpoint = '/employees';
+        const parts = modalInput.trim().split(' ');
+        payload = { 
+          employeeName: modalInput,
+          employeeId: `EMP-${Math.floor(Math.random() * 10000)}`,
+          email: `${parts[0].toLowerCase()}@example.com`,
+          status: 'Active'
+        };
+      } else if (modalType === 'expenseCategory') {
+        endpoint = '/expense-categories';
+        payload = { 
+          name: modalInput,
+          isActive: true
+        };
+      } else if (modalType === 'expenseMode' || modalType === 'travelMode' || modalType === 'paymentMethod') {
+        endpoint = '/master-options';
+        let cat = '';
+        if (modalType === 'expenseMode') cat = 'expense_mode';
+        if (modalType === 'travelMode') cat = 'travel_mode';
+        if (modalType === 'paymentMethod') cat = 'payment_method';
+        payload = { 
+          category: cat,
+          label: modalInput,
+          value: modalInput
+        };
+      }
+      
+      await api.post(endpoint, payload);
+      setModalInput('');
+      setShowAddModal(false);
+      fetchLookups();
+    } catch(err) {
+      console.error("Error in quick add:", err);
+      alert(`Failed to quick add ${modalType}. It may require more details. Please add it from the main module.`);
+    }
+  };
+
+  useEffect(() => {
+    fetchLookups();
+  }, []);
+
+  const fetchLookups = async () => {
+    try {
+      const [empRes, compRes, brRes, deptRes, catRes, optRes] = await Promise.all([
+        api.get('/employees').catch(() => ({ data: { data: [] } })),
+        api.get('/companies').catch(() => ({ data: { data: [] } })),
+        api.get('/branches').catch(() => ({ data: { data: [] } })),
+        api.get('/departments').catch(() => ({ data: { data: [] } })),
+        api.get('/expense-categories').catch(() => ({ data: { data: [] } })),
+        api.get('/master-options').catch(() => ({ data: { data: [] } }))
+      ]);
+      if (empRes.data?.data) setEmployees(empRes.data.data);
+      if (Array.isArray(compRes.data)) {
+        setCompanies(compRes.data);
+      } else if (compRes.data?.data) {
+        setCompanies(compRes.data.data);
+      }
+      if (brRes.data?.data) setBranches(brRes.data.data);
+      if (deptRes.data?.data) setDepartments(deptRes.data.data);
+      if (catRes.data?.data) setExpenseCategories(catRes.data.data);
+      if (optRes.data?.data) {
+        const allOpts = optRes.data.data;
+        setExpenseModes(allOpts.filter(o => o.category === 'expense_mode'));
+        setTravelModes(allOpts.filter(o => o.category === 'travel_mode'));
+        setPaymentMethods(allOpts.filter(o => o.category === 'payment_method'));
+      }
+    } catch (error) {
+      console.error("Error fetching lookups:", error);
+    }
+  };
+
   // Form State
   const [form, setForm] = useState({
-    // Basic Info
     claimNo: 'EXP-10024',
     claimDate: new Date().toISOString().split('T')[0],
     employee: '',
@@ -16,54 +140,56 @@ const AddExpenseClaim = () => {
     branch: '',
     department: '',
     status: 'Draft',
-    
-    // Business Purpose
     purpose: '',
     project: '',
     client: '',
     costCenter: '',
     businessTrip: 'No',
-    
-    // Travel Details
     travelFrom: '',
     travelTo: '',
     travelMode: 'Cab',
     distance: '',
     ticketNo: '',
-    
-    // Amounts
     nonReimbursable: 0,
     advanceReceived: 0,
-    
-    // Approval
     manager: '',
     finance: '',
     approvedAmount: '',
     approvalStatus: 'Pending',
     remarks: '',
-    
-    // Payment
     paymentStatus: 'Pending',
     paymentMethod: 'Bank Transfer',
     paymentDate: '',
     utrNo: ''
   });
 
-  // Expense Details Table State
   const [expenses, setExpenses] = useState([
     { id: 1, date: '', category: 'Travel', desc: 'Cab Charge', amount: 800, mode: 'UPI' },
     { id: 2, date: '', category: 'Food', desc: 'Lunch', amount: 500, mode: 'Cash' },
     { id: 3, date: '', category: 'Hotel', desc: 'Stay', amount: 2000, mode: 'Card' }
   ]);
 
-  // Totals
   const [totals, setTotals] = useState({
     totalExpense: 0,
     reimbursementAmount: 0,
     finalPayable: 0
   });
 
-  // Calculations
+  // Document Upload State & Refs
+  const billInputRef = useRef(null);
+  const ticketInputRef = useRef(null);
+  const [documents, setDocuments] = useState({
+    bill: null,
+    ticket: null
+  });
+
+  const handleFileChange = (e, type) => {
+    const file = e.target.files[0];
+    if (file) {
+      setDocuments(prev => ({ ...prev, [type]: file }));
+    }
+  };
+
   useEffect(() => {
     const totalExp = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     const nonReimb = Number(form.nonReimbursable) || 0;
@@ -96,10 +222,28 @@ const AddExpenseClaim = () => {
     setExpenses(expenses.filter(exp => exp.id !== id));
   };
 
-  const handleSave = (e) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Expense Claim submitted successfully!');
-    navigate('/hrms/expenses/claims'); 
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...form,
+        expenses,
+        totalExpense: totals.totalExpense,
+        reimbursementAmount: totals.reimbursementAmount,
+        finalPayable: totals.finalPayable
+      };
+      await api.post('/expense-claims', payload);
+      alert('Expense Claim submitted successfully!');
+      navigate('/hrms/expenses/claims'); 
+    } catch (error) {
+      console.error("Error saving claim:", error);
+      alert('Failed to submit claim. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -162,33 +306,59 @@ const AddExpenseClaim = () => {
                    </div>
                    <div className="md:col-span-2">
                      <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Employee *</label>
-                     <select name="employee" value={form.employee} onChange={handleChange} required className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
-                       <option value="">Select Employee</option>
-                       <option>Amit Sharma</option>
-                       <option>Priya Patel</option>
-                     </select>
+                     <div className="flex gap-2">
+                       <select name="employee" value={form.employee} onChange={handleChange} required className="w-full flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
+                         <option value="">Select Employee</option>
+                         {employees.map(emp => (
+                           <option key={emp._id} value={emp._id}>{emp.employeeName}</option>
+                         ))}
+                       </select>
+                       <button type="button" onClick={() => handleOpenModal('employee')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Employee">
+                         <Plus size={18} />
+                       </button>
+                     </div>
                    </div>
                    <div>
                      <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Company *</label>
-                     <select name="company" value={form.company} onChange={handleChange} required className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
-                       <option value="">Select Company</option>
-                       <option>Allcore Solutions</option>
-                     </select>
+                     <div className="flex gap-2">
+                       <select name="company" value={form.company} onChange={handleChange} required className="w-full flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
+                         <option value="">Select Company</option>
+                         {companies.map(comp => (
+                           <option key={comp._id} value={comp._id}>{comp.companyName || comp.name}</option>
+                         ))}
+                       </select>
+                       <button type="button" onClick={() => handleOpenModal('company')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Company">
+                         <Plus size={18} />
+                       </button>
+                     </div>
                    </div>
                    <div>
                      <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Branch</label>
-                     <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
-                       <option value="">Select Branch</option>
-                       <option>Mumbai HQ</option>
-                     </select>
+                     <div className="flex gap-2">
+                       <select name="branch" value={form.branch} onChange={handleChange} className="w-full flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
+                         <option value="">Select Branch</option>
+                         {branches.map(br => (
+                           <option key={br._id} value={br._id}>{br.branchName || br.name}</option>
+                         ))}
+                       </select>
+                       <button type="button" onClick={() => handleOpenModal('branch')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Branch">
+                         <Plus size={18} />
+                       </button>
+                     </div>
                    </div>
                    <div>
                      <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Department</label>
-                     <select name="department" value={form.department} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
-                       <option value="">Select Dept</option>
-                       <option>Sales</option>
-                       <option>IT</option>
-                     </select>
+                     <div className="flex gap-2">
+                       <select name="department" value={form.department} onChange={handleChange} className="w-full flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none bg-white">
+                         <option value="">Select Dept</option>
+                         {departments.map(dept => (
+                           <option key={dept._id} value={dept._id}>{dept.deptName || dept.name}</option>
+                         ))}
+                       </select>
+                       <button type="button" onClick={() => handleOpenModal('department')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Department">
+                         <Plus size={18} />
+                       </button>
+                     </div>
                    </div>
                    <div>
                      <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Status</label>
@@ -227,13 +397,26 @@ const AddExpenseClaim = () => {
                               <input type="date" value={exp.date} onChange={(e) => handleExpenseChange(exp.id, 'date', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:border-violet-500 outline-none" />
                             </td>
                             <td className="p-2">
-                              <select value={exp.category} onChange={(e) => handleExpenseChange(exp.id, 'category', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:border-violet-500 outline-none bg-white">
-                                <option>Travel</option>
-                                <option>Food</option>
-                                <option>Hotel</option>
-                                <option>Office Supplies</option>
-                                <option>Other</option>
-                              </select>
+                              <div className="flex gap-1">
+                                <select value={exp.category} onChange={(e) => handleExpenseChange(exp.id, 'category', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:border-violet-500 outline-none bg-white">
+                                  {expenseCategories.length > 0 ? (
+                                    expenseCategories.map(cat => (
+                                      <option key={cat._id} value={cat.name}>{cat.name}</option>
+                                    ))
+                                  ) : (
+                                    <>
+                                      <option>Travel</option>
+                                      <option>Food</option>
+                                      <option>Hotel</option>
+                                      <option>Office Supplies</option>
+                                      <option>Other</option>
+                                    </>
+                                  )}
+                                </select>
+                                <button type="button" onClick={() => handleOpenModal('expenseCategory')} className="p-1 bg-violet-50 text-violet-600 rounded border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Category">
+                                  <Plus size={14} />
+                                </button>
+                              </div>
                             </td>
                             <td className="p-2">
                               <input type="text" value={exp.desc} onChange={(e) => handleExpenseChange(exp.id, 'desc', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:border-violet-500 outline-none" placeholder="Details" />
@@ -242,12 +425,23 @@ const AddExpenseClaim = () => {
                               <input type="number" value={exp.amount} onChange={(e) => handleExpenseChange(exp.id, 'amount', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs text-right font-semibold text-slate-700 focus:border-violet-500 outline-none" />
                             </td>
                             <td className="p-2">
-                              <select value={exp.mode} onChange={(e) => handleExpenseChange(exp.id, 'mode', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:border-violet-500 outline-none bg-white">
-                                <option>UPI</option>
-                                <option>Cash</option>
-                                <option>Card</option>
-                                <option>Corp Card</option>
-                              </select>
+                              <div className="flex gap-1">
+                                <select value={exp.mode} onChange={(e) => handleExpenseChange(exp.id, 'mode', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:border-violet-500 outline-none bg-white">
+                                  {expenseModes.length > 0 ? (
+                                    expenseModes.map(opt => <option key={opt._id} value={opt.value}>{opt.label}</option>)
+                                  ) : (
+                                    <>
+                                      <option>UPI</option>
+                                      <option>Cash</option>
+                                      <option>Card</option>
+                                      <option>Corp Card</option>
+                                    </>
+                                  )}
+                                </select>
+                                <button type="button" onClick={() => handleOpenModal('expenseMode')} className="p-1 bg-violet-50 text-violet-600 rounded border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Mode">
+                                  <Plus size={14} />
+                                </button>
+                              </div>
                             </td>
                             <td className="p-2 text-center">
                               <button type="button" onClick={() => removeExpense(exp.id)} className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50">
@@ -325,13 +519,24 @@ const AddExpenseClaim = () => {
                      <div className="grid grid-cols-2 gap-3">
                        <div>
                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Mode</label>
-                         <select name="travelMode" value={form.travelMode} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                           <option>Cab</option>
-                           <option>Flight</option>
-                           <option>Train</option>
-                           <option>Bus</option>
-                           <option>Personal Vehicle</option>
-                         </select>
+                         <div className="flex gap-2">
+                           <select name="travelMode" value={form.travelMode} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
+                             {travelModes.length > 0 ? (
+                               travelModes.map(opt => <option key={opt._id} value={opt.value}>{opt.label}</option>)
+                             ) : (
+                               <>
+                                 <option>Cab</option>
+                                 <option>Flight</option>
+                                 <option>Train</option>
+                                 <option>Bus</option>
+                                 <option>Personal Vehicle</option>
+                               </>
+                             )}
+                           </select>
+                           <button type="button" onClick={() => handleOpenModal('travelMode')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Mode">
+                             <Plus size={18} />
+                           </button>
+                         </div>
                        </div>
                        <div>
                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Distance (KM)</label>
@@ -400,17 +605,31 @@ const AddExpenseClaim = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Manager</label>
-                        <select name="manager" value={form.manager} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-2 py-2 text-xs focus:border-violet-500 outline-none bg-white">
-                          <option value="">Select</option>
-                          <option>Rahul V.</option>
-                        </select>
+                        <div className="flex gap-2">
+                          <select name="manager" value={form.manager} onChange={handleChange} className="w-full flex-1 border border-slate-300 rounded-lg px-2 py-2 text-xs focus:border-violet-500 outline-none bg-white">
+                            <option value="">Select</option>
+                            {employees.map(emp => (
+                              <option key={emp._id} value={emp._id}>{emp.employeeName}</option>
+                            ))}
+                          </select>
+                          <button type="button" onClick={() => handleOpenModal('manager')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Manager">
+                            <Plus size={16} />
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Finance</label>
-                        <select name="finance" value={form.finance} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-2 py-2 text-xs focus:border-violet-500 outline-none bg-white">
-                          <option value="">Select</option>
-                          <option>Sneha K.</option>
-                        </select>
+                        <div className="flex gap-2">
+                          <select name="finance" value={form.finance} onChange={handleChange} className="w-full flex-1 border border-slate-300 rounded-lg px-2 py-2 text-xs focus:border-violet-500 outline-none bg-white">
+                            <option value="">Select</option>
+                            {employees.map(emp => (
+                              <option key={emp._id} value={emp._id}>{emp.employeeName}</option>
+                            ))}
+                          </select>
+                          <button type="button" onClick={() => handleOpenModal('finance')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Finance">
+                            <Plus size={16} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -450,11 +669,22 @@ const AddExpenseClaim = () => {
                       </div>
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Method</label>
-                        <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-2 py-2 text-xs focus:border-violet-500 outline-none bg-white">
-                          <option>Bank Transfer</option>
-                          <option>Cash</option>
-                          <option>Cheque</option>
-                        </select>
+                        <div className="flex gap-2">
+                          <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="w-full flex-1 border border-slate-300 rounded-lg px-2 py-2 text-xs focus:border-violet-500 outline-none bg-white">
+                            {paymentMethods.length > 0 ? (
+                              paymentMethods.map(opt => <option key={opt._id} value={opt.value}>{opt.label}</option>)
+                            ) : (
+                              <>
+                                <option>Bank Transfer</option>
+                                <option>Cash</option>
+                                <option>Cheque</option>
+                              </>
+                            )}
+                          </select>
+                          <button type="button" onClick={() => handleOpenModal('paymentMethod')} className="p-2 bg-violet-50 text-violet-600 rounded-lg border border-violet-200 hover:bg-violet-100 transition-colors shrink-0" title="Add Method">
+                            <Plus size={16} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -475,17 +705,86 @@ const AddExpenseClaim = () => {
                   <Upload size={24} className="mx-auto text-slate-400 mb-2" />
                   <p className="text-sm font-bold text-slate-700">Upload Documents</p>
                   <p className="text-[10px] text-slate-500 mb-4">Attach Bills, Tickets, Invoices</p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <button type="button" className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-600 hover:bg-slate-50">Upload Bill</button>
-                    <button type="button" className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-600 hover:bg-slate-50">Upload Ticket</button>
+                  
+                  {/* Hidden File Inputs */}
+                  <input type="file" ref={billInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'bill')} />
+                  <input type="file" ref={ticketInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'ticket')} />
+
+                  <div className="flex flex-col gap-3 items-center">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <button type="button" onClick={() => billInputRef.current?.click()} className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                        Upload Bill
+                      </button>
+                      <button type="button" onClick={() => ticketInputRef.current?.click()} className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                        Upload Ticket
+                      </button>
+                    </div>
+                    
+                    {/* Display Selected Files */}
+                    {(documents.bill || documents.ticket) && (
+                      <div className="w-full text-left bg-white p-3 rounded-lg border border-slate-200 space-y-2 mt-2">
+                        {documents.bill && (
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Paperclip size={12} className="text-violet-500" />
+                              <span className="font-semibold truncate max-w-[150px]">{documents.bill.name}</span>
+                            </div>
+                            <button type="button" onClick={() => setDocuments(p => ({...p, bill: null}))} className="text-red-500 hover:text-red-700">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
+                        {documents.ticket && (
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Paperclip size={12} className="text-violet-500" />
+                              <span className="font-semibold truncate max-w-[150px]">{documents.ticket.name}</span>
+                            </div>
+                            <button type="button" onClick={() => setDocuments(p => ({...p, ticket: null}))} className="text-red-500 hover:text-red-700">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-             </div>
-
-          </div>
+              </div>
+            </div>
         </form>
       </div>
+
+      {/* QUICK ADD MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
+              <h3 className="font-bold text-slate-700 capitalize">Quick Add {modalType}</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={16}/>
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1 capitalize">{modalType} Name *</label>
+                <input 
+                  type="text" 
+                  value={modalInput}
+                  onChange={e => setModalInput(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-violet-500 outline-none"
+                  placeholder={`Enter ${modalType} name...`}
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-3 py-1.5 border rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={handleQuickAddSubmit} className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm font-bold hover:bg-violet-700">Save {modalType}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

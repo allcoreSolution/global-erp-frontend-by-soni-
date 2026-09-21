@@ -1,25 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const ProfitAndLoss = () => {
-  const incomes = [
-    { account: 'Sales Account', amount: 850000 },
-    { account: 'Service Revenue', amount: 150000 },
-    { account: 'Interest Income', amount: 12000 }
-  ];
+  const [incomes, setIncomes] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [totals, setTotals] = useState({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
+  const [loading, setLoading] = useState(false);
 
-  const expenses = [
-    { account: 'Purchase Account', amount: 450000 },
-    { account: 'Direct Labor', amount: 80000 },
-    { account: 'Salary & Wages', amount: 120000 },
-    { account: 'Office Rent', amount: 60000 },
-    { account: 'Marketing Expense', amount: 25000 },
-    { account: 'Depreciation', amount: 15000 }
-  ];
+  useEffect(() => {
+    fetchProfitAndLoss();
+  }, []);
 
-  const totalIncome = incomes.reduce((acc, curr) => acc + curr.amount, 0);
-  const totalExpense = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const netProfit = totalIncome - totalExpense;
+  const fetchProfitAndLoss = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/financial/profit-and-loss');
+      if (res.data && res.data.success) {
+        setIncomes(res.data.data.incomes || []);
+        setExpenses(res.data.data.expenses || []);
+        setTotals({
+          totalIncome: res.data.data.totalIncome || 0,
+          totalExpense: res.data.data.totalExpense || 0,
+          netProfit: res.data.data.netProfit || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching P&L:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { totalIncome, totalExpense, netProfit } = totals;
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -70,12 +83,18 @@ const ProfitAndLoss = () => {
           <div className="bg-rose-50 border-b border-rose-100 p-2 font-bold text-rose-800">Expenses (Dr)</div>
           <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
-              {expenses.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 text-gray-700">{item.account}</td>
-                  <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading expenses...</td></tr>
+              ) : expenses.length === 0 ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">No expenses found.</td></tr>
+              ) : (
+                expenses.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 text-gray-700">{item.accountName || item.account}</td>
+                    <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
               {netProfit > 0 && (
                 <tr className="bg-emerald-50/30">
                   <td className="p-3 font-bold text-emerald-700">Net Profit (Transferred to Balance Sheet)</td>
@@ -97,12 +116,18 @@ const ProfitAndLoss = () => {
           <div className="bg-blue-50 border-b border-blue-100 p-2 font-bold text-blue-800">Income (Cr)</div>
           <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
-              {incomes.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 text-gray-700">{item.account}</td>
-                  <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading income...</td></tr>
+              ) : incomes.length === 0 ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">No income found.</td></tr>
+              ) : (
+                incomes.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 text-gray-700">{item.accountName || item.account}</td>
+                    <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
               {netProfit < 0 && (
                 <tr className="bg-rose-50/30">
                   <td className="p-3 font-bold text-rose-700">Net Loss</td>

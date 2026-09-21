@@ -1,14 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Download, Printer, Filter, Search, ArrowUpDown, TrendingUp } from 'lucide-react';
+import api from '../../../api';
 
 const ProductWiseSales = () => {
-  const data = [
-    { sku: 'PRD-ELC-001', name: 'Smart LED TV 55"', category: 'Electronics', unitsSold: 125, avgPrice: 42000, grossRevenue: 5250000, margin: '22%', status: 'High Performer' },
-    { sku: 'PRD-FUR-104', name: 'Ergonomic Mesh Chair', category: 'Furniture', unitsSold: 340, avgPrice: 6500, grossRevenue: 2210000, margin: '35%', status: 'Steady' },
-    { sku: 'PRD-ELC-015', name: 'Wireless Headphones', category: 'Electronics', unitsSold: 85, avgPrice: 4000, grossRevenue: 340000, margin: '18%', status: 'Needs Attention' },
-    { sku: 'PRD-SFT-099', name: 'Antivirus Pro 1-Year', category: 'Software', unitsSold: 850, avgPrice: 700, grossRevenue: 595000, margin: '65%', status: 'High Margin' },
-    { sku: 'PRD-APP-022', name: 'Microwave Oven 20L', category: 'Appliances', unitsSold: 45, avgPrice: 8500, grossRevenue: 382500, margin: '15%', status: 'Needs Attention' },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/sales/analysis/product-wise');
+        if (response.data.success) {
+          setData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching product wise sales:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
 
@@ -113,7 +125,15 @@ const ProductWiseSales = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {data.map((item, idx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="p-4 text-center text-slate-500">Loading data...</td>
+                </tr>
+              ) : data.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-4 text-center text-slate-500">No data available</td>
+                </tr>
+              ) : data.map((item, idx) => (
                 <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
                   <td className="p-4 font-mono text-indigo-700 font-medium">{item.sku}</td>
                   <td className="p-4 font-semibold text-slate-800 flex flex-col">

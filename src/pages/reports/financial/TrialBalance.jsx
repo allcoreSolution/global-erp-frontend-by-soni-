@@ -1,23 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scale, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const TrialBalance = () => {
-  const [data] = useState([
-    { account: 'Cash in Hand', type: 'Asset', debit: 125000, credit: 0 },
-    { account: 'HDFC Bank A/c', type: 'Asset', debit: 550000, credit: 0 },
-    { account: 'Capital Account', type: 'Equity', debit: 0, credit: 1000000 },
-    { account: 'Sales Revenue', type: 'Revenue', debit: 0, credit: 350000 },
-    { account: 'Purchase A/c', type: 'Expense', debit: 150000, credit: 0 },
-    { account: 'Salary Expense', type: 'Expense', debit: 45000, credit: 0 },
-    { account: 'Office Rent', type: 'Expense', debit: 15000, credit: 0 },
-    { account: 'Acme Distributors Ltd.', type: 'Liability', debit: 0, credit: 85000 },
-    { account: 'Amit Sharma (Customer)', type: 'Asset', debit: 55000, credit: 0 },
-    { account: 'GST Payable', type: 'Liability', debit: 0, credit: 10000 },
-  ]);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [totals, setTotals] = useState({ debit: 0, credit: 0, isBalanced: true });
 
-  const totalDebit = data.reduce((acc, curr) => acc + curr.debit, 0);
-  const totalCredit = data.reduce((acc, curr) => acc + curr.credit, 0);
-  const isBalanced = totalDebit === totalCredit;
+  useEffect(() => {
+    fetchTrialBalance();
+  }, []);
+
+  const fetchTrialBalance = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/financial/trial-balance');
+      if (res.data && res.data.success) {
+        setData(res.data.data);
+        if (res.data.totals) setTotals(res.data.totals);
+      }
+    } catch (error) {
+      console.error('Error fetching Trial Balance:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { debit: totalDebit, credit: totalCredit, isBalanced } = totals;
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -73,14 +82,20 @@ const TrialBalance = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 font-semibold text-gray-800">{item.account}</td>
-                <td className="p-3 text-gray-500">{item.type}</td>
-                <td className="p-3 text-right font-bold text-blue-700">{item.debit > 0 ? item.debit.toLocaleString() : '-'}</td>
-                <td className="p-3 text-right font-bold text-rose-700">{item.credit > 0 ? item.credit.toLocaleString() : '-'}</td>
-              </tr>
-            ))}
+            {loading ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">Loading Trial Balance...</td></tr>
+            ) : data.length === 0 ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">No ledgers found.</td></tr>
+            ) : (
+              data.map((item, idx) => (
+                <tr key={item.accountId || idx} className="hover:bg-slate-50">
+                  <td className="p-3 font-semibold text-gray-800">{item.accountName || item.account}</td>
+                  <td className="p-3 text-gray-500">{item.groupType || item.type}</td>
+                  <td className="p-3 text-right font-bold text-blue-700">{item.debit > 0 ? item.debit.toLocaleString() : '-'}</td>
+                  <td className="p-3 text-right font-bold text-rose-700">{item.credit > 0 ? item.credit.toLocaleString() : '-'}</td>
+                </tr>
+              ))
+            )}
             <tr className="bg-slate-100 font-extrabold">
               <td colSpan="2" className="p-3 text-right text-gray-700 uppercase tracking-wider text-[10px]">Grand Total</td>
               <td className="p-3 text-right text-indigo-700">₹ {totalDebit.toLocaleString()}</td>

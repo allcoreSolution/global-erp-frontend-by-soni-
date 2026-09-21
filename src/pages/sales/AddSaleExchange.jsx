@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, FileText, CheckCircle, Plus, Trash2, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const AddSaleExchange = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Basic Details State
   const [form, setForm] = useState({
@@ -121,10 +124,139 @@ const AddSaleExchange = () => {
     });
   }, [returnItems, replacementItems]);
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    if (id) {
+      const fetchExchange = async () => {
+        try {
+          const { data } = await api.get(`/sale-exchanges/${id}`);
+          if (data.success && data.data) {
+            const ex = data.data;
+            setForm({
+              exchangeNo: ex.exchangeNo || '',
+              exchangeDate: ex.exchangeDate || '',
+              exchangeType: ex.exchangeType || 'Full',
+              company: ex.company || '',
+              branch: ex.branch || '',
+              warehouse: ex.warehouse || '',
+              status: ex.status || 'Draft',
+              invoiceNo: ex.invoiceNo || '',
+              salesOrder: ex.salesOrder || '',
+              saleDate: ex.saleDate || '',
+              customer: ex.customer || '',
+              salesperson: ex.salesperson || '',
+              paymentMethod: ex.paymentMethod || 'UPI',
+              transactionRef: ex.transactionRef || '',
+              returnWarehouse: ex.returnWarehouse || '',
+              replacementWarehouse: ex.replacementWarehouse || '',
+              restockItem: ex.restockItem ?? true,
+              requestedBy: ex.requestedBy || '',
+              approvedBy: ex.approvedBy || '',
+              customerRemarks: ex.customerRemarks || ''
+            });
+
+            if (ex.returnItems && ex.returnItems.length > 0) {
+              setReturnItems(ex.returnItems.map((item, idx) => ({
+                id: idx + 1,
+                product: item.product || '',
+                batch: item.batch || '',
+                soldQty: item.soldQty || 1,
+                returnQty: item.returnQty || 1,
+                rate: item.rate || 0,
+                amount: item.amount || 0,
+                reason: item.reason || 'Size Issue',
+                condition: item.condition || 'Good'
+              })));
+            }
+
+            if (ex.replacementItems && ex.replacementItems.length > 0) {
+              setReplacementItems(ex.replacementItems.map((item, idx) => ({
+                id: idx + 1,
+                product: item.product || '',
+                batch: item.batch || '',
+                qty: item.qty || 1,
+                unit: item.unit || 'PCS',
+                rate: item.rate || 0,
+                discount: item.discount || 0,
+                tax: item.tax || 0,
+                total: item.total || 0
+              })));
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching exchange', error);
+        }
+      };
+      fetchExchange();
+    }
+  }, [id]);
+
+
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Sale Exchange Processed successfully!');
-    navigate('/sales/sale-exchange-list');
+    try {
+      const payload = {
+        exchangeNo: form.exchangeNo,
+        exchangeDate: form.exchangeDate,
+        exchangeType: form.exchangeType,
+        company: form.company,
+        branch: form.branch,
+        warehouse: form.warehouse,
+        status: form.status,
+        invoiceNo: form.invoiceNo,
+        salesOrder: form.salesOrder,
+        saleDate: form.saleDate,
+        customer: form.customer,
+        salesperson: form.salesperson,
+        paymentMethod: form.paymentMethod,
+        transactionRef: form.transactionRef,
+        returnWarehouse: form.returnWarehouse,
+        replacementWarehouse: form.replacementWarehouse,
+        restockItem: form.restockItem,
+        requestedBy: form.requestedBy,
+        approvedBy: form.approvedBy,
+        customerRemarks: form.customerRemarks,
+        returnItems: returnItems.map(item => ({
+          product: item.product,
+          batch: item.batch,
+          soldQty: Number(item.soldQty) || 0,
+          returnQty: Number(item.returnQty) || 0,
+          rate: Number(item.rate) || 0,
+          amount: Number(item.amount) || 0,
+          reason: item.reason,
+          condition: item.condition
+        })),
+        replacementItems: replacementItems.map(item => ({
+          product: item.product,
+          batch: item.batch,
+          qty: Number(item.qty) || 0,
+          unit: item.unit,
+          rate: Number(item.rate) || 0,
+          discount: Number(item.discount) || 0,
+          tax: Number(item.tax) || 0,
+          total: Number(item.total) || 0
+        })),
+        totals: {
+          returnValue: Number(totals.returnValue) || 0,
+          replacementValue: Number(totals.replacementValue) || 0,
+          tax: Number(totals.tax) || 0,
+          discount: Number(totals.discount) || 0,
+          additionalPayable: Number(totals.additionalPayable) || 0
+        }
+      };
+
+      if (id) {
+        await api.put(`/sale-exchanges/${id}`, payload);
+        alert('Sale Exchange updated successfully!');
+      } else {
+        await api.post('/sale-exchanges', payload);
+        alert('Sale Exchange Processed successfully!');
+      }
+      navigate('/sales/sale-exchange-list');
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Error processing exchange');
+    }
   };
 
   return (
@@ -177,10 +309,7 @@ const AddSaleExchange = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Exchange Type</label>
-                  <select name="exchangeType" value={form.exchangeType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Full</option>
-                    <option>Partial</option>
-                  </select>
+                  <DynamicSelect category="ExchangeType" name="exchangeType" value={form.exchangeType} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
@@ -191,24 +320,15 @@ const AddSaleExchange = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse *</label>
-                  <select name="warehouse" value={form.warehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Warehouse</option>
-                    <option>Test Shop</option>
-                  </select>
+                  <DynamicSelect category="Warehouse" name="warehouse" value={form.warehouse} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 lg:col-span-3">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white max-w-[200px]">
-                    <option>Draft</option>
-                    <option>Completed</option>
-                  </select>
+                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -226,9 +346,7 @@ const AddSaleExchange = () => {
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Sales Order</label>
-                  <select name="salesOrder" value={form.salesOrder} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select SO</option>
-                  </select>
+                  <DynamicSelect category="SalesOrder" name="salesOrder" value={form.salesOrder} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Sale Date</label>
@@ -240,9 +358,7 @@ const AddSaleExchange = () => {
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Salesperson</label>
-                  <select name="salesperson" value={form.salesperson} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Person</option>
-                  </select>
+                  <DynamicSelect category="Salesperson" name="salesperson" value={form.salesperson} onChange={handleChange} />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
@@ -309,19 +425,15 @@ const AddSaleExchange = () => {
             <div className="flex gap-4 p-3 bg-orange-100/50 rounded-lg">
                <div>
                   <label className="text-xs font-semibold text-orange-800 mr-2">Return Reason:</label>
-                  <select value={returnItems[0].reason} onChange={(e) => handleReturnItemChange(returnItems[0].id, 'reason', e.target.value)} className="border border-orange-300 rounded px-2 py-1 text-xs text-orange-900 outline-none bg-white">
-                    <option>Size Issue</option>
-                    <option>Defective</option>
-                    <option>Not Needed</option>
-                  </select>
+                  <div className="inline-block min-w-[120px]">
+                    <DynamicSelect category="ReturnReason" name="reason" value={returnItems[0].reason} onChange={(e) => handleReturnItemChange(returnItems[0].id, e.target.name, e.target.value)} />
+                  </div>
                </div>
                <div>
                   <label className="text-xs font-semibold text-orange-800 mr-2">Condition:</label>
-                  <select value={returnItems[0].condition} onChange={(e) => handleReturnItemChange(returnItems[0].id, 'condition', e.target.value)} className="border border-orange-300 rounded px-2 py-1 text-xs text-orange-900 outline-none bg-white">
-                    <option>Good</option>
-                    <option>Damaged</option>
-                    <option>Opened</option>
-                  </select>
+                  <div className="inline-block min-w-[120px]">
+                    <DynamicSelect category="ItemCondition" name="condition" value={returnItems[0].condition} onChange={(e) => handleReturnItemChange(returnItems[0].id, e.target.name, e.target.value)} />
+                  </div>
                </div>
             </div>
           </div>
@@ -422,11 +534,7 @@ const AddSaleExchange = () => {
                   <div className="grid grid-cols-2 gap-4 items-end">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Return Warehouse</label>
-                      <select name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>Store A</option>
-                        <option>Defective Goods Hub</option>
-                      </select>
+                      <DynamicSelect category="Warehouse" name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} />
                     </div>
                     <div className="flex items-center gap-2 mb-2">
                       <input type="checkbox" name="restockItem" checked={form.restockItem} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded" />
@@ -434,10 +542,7 @@ const AddSaleExchange = () => {
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Replacement Warehouse</label>
-                      <select name="replacementWarehouse" value={form.replacementWarehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>Store A</option>
-                      </select>
+                      <DynamicSelect category="Warehouse" name="replacementWarehouse" value={form.replacementWarehouse} onChange={handleChange} />
                     </div>
                   </div>
                 </div>
@@ -448,17 +553,11 @@ const AddSaleExchange = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Requested By</label>
-                      <select name="requestedBy" value={form.requestedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">User</option>
-                        <option>Cashier 1</option>
-                      </select>
+                      <DynamicSelect category="Salesperson" name="requestedBy" value={form.requestedBy} onChange={handleChange} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                      <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">User</option>
-                        <option>Manager</option>
-                      </select>
+                      <DynamicSelect category="Salesperson" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Remarks</label>

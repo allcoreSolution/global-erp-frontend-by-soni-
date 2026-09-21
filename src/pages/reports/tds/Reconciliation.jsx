@@ -1,13 +1,26 @@
-import React, { useState } from 'react';
-import { Layers, Filter, Download, Printer, CheckCircle, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeftRight, Filter, Download, Printer, CheckCircle2, AlertTriangle, ShieldAlert, Layers } from 'lucide-react';
+import api from '../../../api';
 
 const Reconciliation = () => {
-  const [period, setPeriod] = useState('This Month');
-  const [reconciledItems, setReconciledItems] = useState([
-    { entryNo: 'REC-001', client: 'Aditya Enterprises', bookTds: 10000, as26Tds: 10000, difference: 0, status: 'Reconciled' },
-    { entryNo: 'REC-002', client: 'Choudhary Logistics', bookTds: 5000, as26Tds: 0, difference: 5000, status: 'Discrepancy' },
-    { entryNo: 'REC-003', client: 'Vardhaman Steels', bookTds: 500, as26Tds: 500, difference: 0, status: 'Reconciled' }
-  ]);
+  const [period, setPeriod] = useState('FY 2026-27');
+  const [reconciledItems, setReconciledItems] = useState([]);
+  const [summaries, setSummaries] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/reports/tds/reconciliation')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setReconciledItems(res.data.data.reconciledItems);
+          setSummaries(res.data.data.summaries);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !summaries) return <div className="p-6 text-center text-slate-500">Loading tds/Reconciliation.jsx...</div>;
 
   const handlePrint = () => {
     window.print();

@@ -1,14 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, Download, Printer, Filter, Search, ArrowUpDown, TrendingDown, Trophy } from 'lucide-react';
+import api from '../../../api';
 
 const TopSuppliers = () => {
-  const data = [
-    { rank: 1, vendorId: 'VND-045', name: 'Global Supplies Inc.', category: 'Electronics', orders: 120, amount: 4500000, margin: '22%', trend: 'Up' },
-    { rank: 2, vendorId: 'VND-012', name: 'Prime Hardware Ltd.', category: 'Hardware', orders: 85, amount: 2100000, margin: '35%', trend: 'Up' },
-    { rank: 3, vendorId: 'VND-088', name: 'Alpha Software Corp.', category: 'Software', orders: 45, amount: 1500000, margin: '18%', trend: 'Down' },
-    { rank: 4, vendorId: 'VND-104', name: 'Delta Furniture', category: 'Furniture', orders: 60, amount: 800000, margin: '15%', trend: 'Flat' },
-    { rank: 5, vendorId: 'VND-023', name: 'Office Solutions', category: 'Stationery', orders: 30, amount: 250000, margin: '12%', trend: 'Up' },
-  ];
+const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/performance/top-suppliers');
+        if (response.data.success) {
+          setData(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
 

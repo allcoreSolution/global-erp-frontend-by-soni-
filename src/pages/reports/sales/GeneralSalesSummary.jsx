@@ -1,13 +1,40 @@
-import React from 'react';
-import { Layers, Download, Printer, Filter, Search, ArrowUpDown, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Layers, Download, Printer, Filter, ArrowUpDown, TrendingUp } from 'lucide-react';
+import api from '../../../api';
 
 const GeneralSalesSummary = () => {
-  const data = [
-    { date: '2026-09-01', orders: 45, itemsSold: 120, grossSales: 450000, discount: 15000, tax: 78300, netSales: 513300 },
-    { date: '2026-09-02', orders: 38, itemsSold: 95, grossSales: 380000, discount: 12000, tax: 66240, netSales: 434240 },
-    { date: '2026-09-03', orders: 52, itemsSold: 145, grossSales: 520000, discount: 18000, tax: 90360, netSales: 592360 },
-    { date: '2026-09-04', orders: 60, itemsSold: 180, grossSales: 600000, discount: 20000, tax: 104400, netSales: 684400 },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/sales/general-summary');
+      if (res.data && res.data.success) {
+        setData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching general sales summary:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totals = data.reduce(
+    (acc, row) => ({
+      orders: acc.orders + (row.orders || 0),
+      itemsSold: acc.itemsSold + (row.itemsSold || 0),
+      grossSales: acc.grossSales + (row.grossSales || 0),
+      discount: acc.discount + (row.discount || 0),
+      tax: acc.tax + (row.tax || 0),
+      netSales: acc.netSales + (row.netSales || 0),
+    }),
+    { orders: 0, itemsSold: 0, grossSales: 0, discount: 0, tax: 0, netSales: 0 }
+  );
 
   const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
 
@@ -70,10 +97,10 @@ const GeneralSalesSummary = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Orders', val: '195', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-          { label: 'Total Items Sold', val: '540', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-          { label: 'Avg. Order Value', val: '₹ 11,406', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-          { label: 'Net Sales Revenue', val: '₹ 22.2 L', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <TrendingUp size={16} className="ml-1 inline-block opacity-70" /> },
+          { label: 'Total Orders', val: totals.orders.toLocaleString(), color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+          { label: 'Total Items Sold', val: totals.itemsSold.toLocaleString(), color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+          { label: 'Avg. Order Value', val: totals.orders > 0 ? formatCurrency(Math.round(totals.netSales / totals.orders)) : '₹ 0', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+          { label: 'Net Sales Revenue', val: formatCurrency(totals.netSales), color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <TrendingUp size={16} className="ml-1 inline-block opacity-70" /> },
         ].map((stat, i) => (
           <div key={i} className={`p-4 rounded-xl border ${stat.color} flex flex-col justify-center items-start shadow-sm`}>
             <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{stat.label}</span>
@@ -102,27 +129,39 @@ const GeneralSalesSummary = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {data.map((row, idx) => (
-                <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
-                  <td className="p-4 font-semibold text-slate-700">{new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                  <td className="p-4 text-center font-medium text-slate-600">{row.orders}</td>
-                  <td className="p-4 text-center text-slate-600">{row.itemsSold}</td>
-                  <td className="p-4 text-right font-medium text-slate-700">{formatCurrency(row.grossSales)}</td>
-                  <td className="p-4 text-right text-rose-600">-{formatCurrency(row.discount)}</td>
-                  <td className="p-4 text-right text-slate-600">{formatCurrency(row.tax)}</td>
-                  <td className="p-4 text-right font-bold text-emerald-700 bg-emerald-50/10">{formatCurrency(row.netSales)}</td>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="p-4 text-center text-gray-500 italic">Fetching general sales summary...</td>
                 </tr>
-              ))}
+              ) : data.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-4 text-center text-gray-500 italic">No sales data found.</td>
+                </tr>
+              ) : (
+                data.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="p-4 font-semibold text-slate-700">{new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td className="p-4 text-center font-medium text-slate-600">{row.orders}</td>
+                    <td className="p-4 text-center text-slate-600">{row.itemsSold}</td>
+                    <td className="p-4 text-right font-medium text-slate-700">{formatCurrency(row.grossSales)}</td>
+                    <td className="p-4 text-right text-rose-600">-{formatCurrency(row.discount)}</td>
+                    <td className="p-4 text-right text-slate-600">{formatCurrency(row.tax)}</td>
+                    <td className="p-4 text-right font-bold text-emerald-700 bg-emerald-50/10">{formatCurrency(row.netSales)}</td>
+                  </tr>
+                ))
+              )}
               {/* Grand Total Row */}
-              <tr className="bg-slate-50 font-bold border-t-2 border-slate-200 text-slate-800">
-                <td className="p-4">Grand Total</td>
-                <td className="p-4 text-center">195</td>
-                <td className="p-4 text-center">540</td>
-                <td className="p-4 text-right">{formatCurrency(1950000)}</td>
-                <td className="p-4 text-right text-rose-600">-{formatCurrency(65000)}</td>
-                <td className="p-4 text-right">{formatCurrency(339300)}</td>
-                <td className="p-4 text-right text-emerald-700 bg-emerald-100/50">{formatCurrency(2224300)}</td>
-              </tr>
+              {data.length > 0 && (
+                <tr className="bg-slate-50 font-bold border-t-2 border-slate-200 text-slate-800">
+                  <td className="p-4">Grand Total</td>
+                  <td className="p-4 text-center">{totals.orders}</td>
+                  <td className="p-4 text-center">{totals.itemsSold}</td>
+                  <td className="p-4 text-right">{formatCurrency(totals.grossSales)}</td>
+                  <td className="p-4 text-right text-rose-600">-{formatCurrency(totals.discount)}</td>
+                  <td className="p-4 text-right">{formatCurrency(totals.tax)}</td>
+                  <td className="p-4 text-right text-emerald-700 bg-emerald-100/50">{formatCurrency(totals.netSales)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

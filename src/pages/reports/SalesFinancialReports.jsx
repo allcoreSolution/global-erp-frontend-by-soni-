@@ -30,7 +30,7 @@ const SalesFinancialReports = () => {
       icon: Percent,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
       actionText: 'Check Discounts Issued',
-      to: '/coming-soon'
+      to: '/reports/sales/discount-report'
     },
     {
       title: 'Tax / GST Collected',
@@ -38,7 +38,7 @@ const SalesFinancialReports = () => {
       icon: Calculator,
       color: 'text-purple-600 bg-purple-50 border-purple-100',
       actionText: 'Review GST Taxes',
-      to: '/coming-soon'
+      to: '/reports/sales/tax-collected'
     },
     {
       title: 'Profit / Margin Report',
@@ -46,7 +46,7 @@ const SalesFinancialReports = () => {
       icon: TrendingUp,
       color: 'text-cyan-600 bg-cyan-50 border-cyan-100',
       actionText: 'Check Profit Margins',
-      to: '/coming-soon'
+      to: '/reports/sales/profit-margin'
     },
     {
       title: 'Paid vs Pending Sales',
@@ -54,7 +54,7 @@ const SalesFinancialReports = () => {
       icon: Scale,
       color: 'text-amber-600 bg-amber-50 border-amber-100',
       actionText: 'Track Clearances Status',
-      to: '/coming-soon'
+      to: '/reports/sales/paid-pending'
     },
     {
       title: 'Customer Outstanding',
@@ -62,7 +62,7 @@ const SalesFinancialReports = () => {
       icon: Clock,
       color: 'text-rose-600 bg-rose-50 border-rose-100',
       actionText: 'Track Customer Receivables',
-      to: '/coming-soon'
+      to: '/reports/sales/customer-outstanding'
     }
   ];
 

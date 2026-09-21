@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud, FilePlus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud, FilePlus, X } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewCreditNote = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
 
   // Form State
   const [form, setForm] = useState({
@@ -51,6 +55,9 @@ const NewCreditNote = () => {
     remarks: ''
   });
 
+  const fileInputRef = useRef(null);
+  const [attachment, setAttachment] = useState(null);
+
   // Credit Note Items Rows
   const [items, setItems] = useState([
     { id: 1, product: '', batch: '', qty: 0, rate: 0, taxPercent: 0, amount: 0 }
@@ -61,6 +68,69 @@ const NewCreditNote = () => {
     subTotal: 0,
     grandTotal: 0
   });
+
+  useEffect(() => {
+    if (isEditMode) {
+      const fetchCreditNote = async () => {
+        try {
+          const res = await api.get(`/credit-notes/${id}`);
+          if (res.data?.data) {
+            const data = res.data.data;
+            setForm({
+              creditNoteNo: data.creditNoteNo || '',
+              date: data.date || '',
+              company: data.company || '',
+              branch: data.branch || '',
+              type: data.type || 'Sales Return',
+              status: data.status || 'Draft',
+              customer: data.customer || '',
+              customerCode: data.customerCode || '',
+              customerType: data.customerType || '',
+              mobile: data.mobile || '',
+              originalInvoiceNo: data.originalInvoiceNo || '',
+              originalInvoiceDate: data.originalInvoiceDate || '',
+              orderNo: data.orderNo || '',
+              challan: data.challan || '',
+              discount: data.discount || 0,
+              cgst: data.cgst || 0,
+              sgst: data.sgst || 0,
+              igst: data.igst || 0,
+              roundOff: data.roundOff || 0,
+              adjustmentType: data.adjustmentType || 'Adjust Against Invoice',
+              adjustInvoiceNo: data.adjustInvoiceNo || '',
+              adjustAmount: data.adjustAmount || 0,
+              refundAmount: data.refundAmount || 0,
+              remainingCredit: data.remainingCredit || 0,
+              customerLedger: data.customerLedger || '',
+              salesReturnLedger: data.salesReturnLedger || '',
+              taxAccount: data.taxAccount || '',
+              costCenter: data.costCenter || '',
+              remarks: data.remarks || ''
+            });
+            if (data.items && data.items.length > 0) {
+              setItems(data.items.map((it, idx) => ({ ...it, id: idx + 1 })));
+            }
+            if (data.summary) {
+              setSummary({
+                subTotal: data.summary.subTotal || 0,
+                grandTotal: data.summary.grandTotal || 0
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching credit note", err);
+          alert("Credit note not found!");
+          navigate('/credit-note/list');
+        }
+      };
+      fetchCreditNote();
+    } else {
+      setForm(prev => ({
+        ...prev,
+        creditNoteNo: `CN-${Math.floor(Math.random() * 90000) + 10000}`
+      }));
+    }
+  }, [id, isEditMode, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -122,10 +192,65 @@ const NewCreditNote = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachment(e.target.files[0]);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Credit Note Posted successfully!');
-    navigate('/credit-note/list');
+    
+    try {
+      // The file object (attachment) is omitted from the JSON payload
+      const payload = {
+        ...form,
+        voucherNo: form.creditNoteNo, // Protect from duplicate unique index
+        
+        // Deep Casting numbers
+        discount: Number(form.discount) || 0,
+        cgst: Number(form.cgst) || 0,
+        sgst: Number(form.sgst) || 0,
+        igst: Number(form.igst) || 0,
+        roundOff: Number(form.roundOff) || 0,
+        adjustAmount: Number(form.adjustAmount) || 0,
+        refundAmount: Number(form.refundAmount) || 0,
+        remainingCredit: Number(form.remainingCredit) || 0,
+
+        items: items.map(item => ({
+          product: item.product,
+          batch: item.batch,
+          qty: Number(item.qty) || 0,
+          rate: Number(item.rate) || 0,
+          taxPercent: Number(item.taxPercent) || 0,
+          amount: Number(item.amount) || 0,
+        })),
+
+        summary: {
+          subTotal: Number(summary.subTotal) || 0,
+          grandTotal: Number(summary.grandTotal) || 0
+        }
+      };
+
+      if (isEditMode) {
+        await api.put(`/credit-notes/${id}`, payload);
+        alert('Credit Note Updated successfully!');
+      } else {
+        await api.post('/credit-notes', payload);
+        alert('Credit Note Posted successfully!');
+      }
+      navigate('/credit-note/list');
+    } catch (err) {
+      console.error("Failed to save credit note", err);
+      alert('Failed to save credit note: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   return (
@@ -186,32 +311,47 @@ const NewCreditNote = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect 
+                    name="company" 
+                    category="Company" 
+                    value={form.company} 
+                    onChange={handleChange} 
+                    defaultOptions={['Main Corp']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect 
+                    name="branch" 
+                    category="Branch" 
+                    value={form.branch} 
+                    onChange={handleChange} 
+                    defaultOptions={['HQ']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Type *</label>
-                  <select name="type" value={form.type} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                    <option>Sales Return</option>
-                    <option>Price Difference</option>
-                    <option>Discount Given</option>
-                  </select>
+                  <DynamicSelect 
+                    name="type" 
+                    category="Credit Note Type" 
+                    value={form.type} 
+                    onChange={handleChange} 
+                    defaultOptions={['Sales Return', 'Price Difference', 'Discount Given']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                    <option>Draft</option>
-                    <option>Approved</option>
-                  </select>
+                  <DynamicSelect 
+                    name="status" 
+                    category="Status" 
+                    value={form.status} 
+                    onChange={handleChange} 
+                    defaultOptions={['Draft', 'Approved']} 
+                    className="w-full text-sm"
+                  />
                 </div>
               </div>
             </div>
@@ -222,10 +362,14 @@ const NewCreditNote = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer *</label>
-                  <select name="customer" value={form.customer} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                    <option value="">Select Customer</option>
-                    <option>ABC Retailers</option>
-                  </select>
+                  <DynamicSelect 
+                    name="customer" 
+                    category="Customer" 
+                    value={form.customer} 
+                    onChange={handleChange} 
+                    defaultOptions={['ABC Retailers']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Code</label>
@@ -248,10 +392,14 @@ const NewCreditNote = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No. *</label>
-                  <select name="originalInvoiceNo" value={form.originalInvoiceNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                    <option value="">Select Invoice</option>
-                    <option>SINV-2023-112</option>
-                  </select>
+                  <DynamicSelect 
+                    name="originalInvoiceNo" 
+                    category="Invoice" 
+                    value={form.originalInvoiceNo} 
+                    onChange={handleChange} 
+                    defaultOptions={['SINV-2023-112']} 
+                    className="w-full text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Date</label>
@@ -295,11 +443,14 @@ const NewCreditNote = () => {
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-2 py-2">
-                        <select value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-blue-500 outline-none bg-white">
-                          <option value="">Select Product</option>
-                          <option>Item X</option>
-                          <option>Item Y</option>
-                        </select>
+                        <DynamicSelect 
+                          name="product" 
+                          category="Product" 
+                          value={item.product} 
+                          onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} 
+                          defaultOptions={['Item X', 'Item Y']} 
+                          className="w-full text-sm"
+                        />
                       </td>
                       <td className="px-2 py-2">
                         <input type="text" value={item.batch} onChange={(e) => handleItemChange(item.id, 'batch', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-blue-500 outline-none bg-white" />
@@ -346,11 +497,14 @@ const NewCreditNote = () => {
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                    <div className="col-span-2 md:col-span-4">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                     <select name="adjustmentType" value={form.adjustmentType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                       <option>Adjust Against Invoice</option>
-                       <option>Keep on Account / Advance</option>
-                       <option>Cash Refund</option>
-                     </select>
+                     <DynamicSelect 
+                       name="adjustmentType" 
+                       category="Adjustment Type" 
+                       value={form.adjustmentType} 
+                       onChange={handleChange} 
+                       defaultOptions={['Adjust Against Invoice', 'Keep on Account / Advance', 'Cash Refund']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div className="col-span-2 text-slate-500">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice</label>
@@ -377,31 +531,47 @@ const NewCreditNote = () => {
                  <div className="grid grid-cols-2 gap-4">
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Ledger</label>
-                     <select name="customerLedger" value={form.customerLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                       <option value="">Select Ledger</option>
-                       <option>Debtors - ABC Retailers</option>
-                     </select>
+                     <DynamicSelect 
+                       name="customerLedger" 
+                       category="Customer Ledger" 
+                       value={form.customerLedger} 
+                       onChange={handleChange} 
+                       defaultOptions={['Debtors - ABC Retailers']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Sales Return Ledger</label>
-                     <select name="salesReturnLedger" value={form.salesReturnLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                       <option value="">Select Ledger</option>
-                       <option>Sales Returns A/C</option>
-                     </select>
+                     <DynamicSelect 
+                       name="salesReturnLedger" 
+                       category="Return Ledger" 
+                       value={form.salesReturnLedger} 
+                       onChange={handleChange} 
+                       defaultOptions={['Sales Returns A/C']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Account</label>
-                     <select name="taxAccount" value={form.taxAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                       <option value="">Select</option>
-                       <option>Output GST A/C</option>
-                     </select>
+                     <DynamicSelect 
+                       name="taxAccount" 
+                       category="Tax Account" 
+                       value={form.taxAccount} 
+                       onChange={handleChange} 
+                       defaultOptions={['Output GST A/C']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                    <div>
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Center</label>
-                     <select name="costCenter" value={form.costCenter} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white">
-                       <option value="">Select</option>
-                       <option>Main Branch Sales</option>
-                     </select>
+                     <DynamicSelect 
+                       name="costCenter" 
+                       category="Cost Center" 
+                       value={form.costCenter} 
+                       onChange={handleChange} 
+                       defaultOptions={['Main Branch Sales']} 
+                       className="w-full text-sm"
+                     />
                    </div>
                  </div>
                </div>
@@ -415,10 +585,31 @@ const NewCreditNote = () => {
                     </div>
                     <div>
                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attachment</label>
-                       <button type="button" className="flex flex-col items-center justify-center gap-1 w-full h-[76px] border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-blue-400 hover:text-blue-600 transition-colors text-sm font-medium text-slate-500">
-                          <UploadCloud size={20} />
-                          <span className="text-xs">Upload Document</span>
-                       </button>
+                       
+                       <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          className="hidden" 
+                       />
+
+                       {!attachment ? (
+                         <button 
+                            type="button" 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex flex-col items-center justify-center gap-1 w-full h-[76px] border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-blue-400 hover:text-blue-600 transition-colors text-sm font-medium text-slate-500"
+                         >
+                            <UploadCloud size={20} />
+                            <span className="text-xs">Upload Document</span>
+                         </button>
+                       ) : (
+                         <div className="flex items-center justify-between w-full h-[76px] border border-slate-200 rounded px-4 bg-slate-50 text-sm">
+                            <span className="truncate max-w-[200px] font-medium text-slate-700">{attachment.name}</span>
+                            <button type="button" onClick={removeAttachment} className="text-red-500 hover:bg-red-100 p-1.5 rounded transition-colors">
+                              <X size={16} />
+                            </button>
+                         </div>
+                       )}
                     </div>
                   </div>
                </div>

@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewBankReceipt = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Basic Information State
   const [form, setForm] = useState({
-    receiptNo: 'BREC-00001',
+    receiptNo: `BRCT-${Date.now().toString().slice(-5)}`,
     receiptDate: new Date().toISOString().split('T')[0],
     company: '',
     branch: '',
@@ -21,7 +24,7 @@ const NewBankReceipt = () => {
     contactNumber: '',
     
     // Bank & Payment Details
-    amount: 30000,
+    amount: 0,
     method: 'NEFT',
     bankName: '',
     utrNo: '',
@@ -47,10 +50,53 @@ const NewBankReceipt = () => {
 
   // Totals State
   const [totals, setTotals] = useState({
-    received: 30000,
-    adjusted: 30000,
+    received: 0,
+    adjusted: 0,
     unadjusted: 0
   });
+
+  useEffect(() => {
+    if (id) {
+      const fetchReceipt = async () => {
+        try {
+          const { data } = await api.get(`/bank-receipts/${id}`);
+          if (data.success && data.data) {
+            const rec = data.data;
+            setForm({
+              receiptNo: rec.receiptNo || `BRCT-${Date.now().toString().slice(-5)}`,
+              receiptDate: rec.receiptDate || new Date().toISOString().split('T')[0],
+              company: rec.company || '',
+              branch: rec.branch || '',
+              bankAccount: rec.bankAccount || '',
+              receiptType: rec.receiptType || 'Customer Receipt',
+              customerParty: rec.customerParty || '',
+              customerType: rec.customerType || 'Retailer',
+              invoiceNo: rec.invoiceNo || '',
+              contactNumber: rec.contactNumber || '',
+              amount: rec.amount || 0,
+              method: rec.method || 'NEFT',
+              bankName: rec.bankName || '',
+              utrNo: rec.utrNo || '',
+              transactionDate: rec.transactionDate || new Date().toISOString().split('T')[0],
+              chequeNo: rec.chequeNo || '',
+              bankLedger: rec.bankLedger || '',
+              customerLedger: rec.customerLedger || '',
+              tdsAmount: rec.tdsAmount || 0,
+              otherDeduction: rec.otherDeduction || 0,
+              receivedBy: rec.receivedBy || '',
+              approvedBy: rec.approvedBy || '',
+              remarks: rec.remarks || ''
+            });
+            setInvoices(rec.invoices || []);
+            setTotals(rec.totals || { received: 0, adjusted: 0, unadjusted: 0 });
+          }
+        } catch (error) {
+          console.error("Error fetching bank receipt data", error);
+        }
+      };
+      fetchReceipt();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -100,10 +146,39 @@ const NewBankReceipt = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Bank Receipt Posted successfully!');
-    navigate('/bank-receipt/list');
+    try {
+      const payload = {
+        ...form,
+        amount: Number(form.amount) || 0,
+        tdsAmount: Number(form.tdsAmount) || 0,
+        otherDeduction: Number(form.otherDeduction) || 0,
+        invoices: invoices.map(inv => ({
+          ...inv,
+          invoiceAmount: Number(inv.invoiceAmount) || 0,
+          dueAmount: Number(inv.dueAmount) || 0,
+          adjustAmount: Number(inv.adjustAmount) || 0
+        })),
+        totals: {
+          received: Number(totals.received) || 0,
+          adjusted: Number(totals.adjusted) || 0,
+          unadjusted: Number(totals.unadjusted) || 0
+        }
+      };
+
+      if (id) {
+        await api.put(`/bank-receipts/${id}`, payload);
+        alert('Bank Receipt Updated successfully!');
+      } else {
+        await api.post('/bank-receipts', payload);
+        alert('Bank Receipt Posted successfully!');
+      }
+      navigate('/bank-receipt/list');
+    } catch (error) {
+      console.error('Error saving bank receipt', error);
+      alert('Failed to save bank receipt. Please check the inputs.');
+    }
   };
 
   return (
@@ -156,25 +231,15 @@ const NewBankReceipt = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Account *</label>
-                  <select name="bankAccount" value={form.bankAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Account</option>
-                    <option>HDFC Current</option>
-                    <option>ICICI OD</option>
-                  </select>
+                  <DynamicSelect category="Account" name="bankAccount" value={form.bankAccount} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Type *</label>
@@ -192,25 +257,15 @@ const NewBankReceipt = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer *</label>
-                  <select name="customerParty" value={form.customerParty} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Customer</option>
-                    <option>XYZ Retailers</option>
-                    <option>Global Traders</option>
-                  </select>
+                  <DynamicSelect category="Customer" name="customerParty" value={form.customerParty} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Type</label>
-                  <select name="customerType" value={form.customerType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Retailer</option>
-                    <option>Wholesaler</option>
-                  </select>
+                  <DynamicSelect category="Customer Type" name="customerType" value={form.customerType} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No.</label>
-                  <select name="invoiceNo" value={form.invoiceNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Invoice</option>
-                    <option>INV001</option>
-                  </select>
+                  <DynamicSelect category="Invoice" name="invoiceNo" value={form.invoiceNo} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Number</label>
@@ -230,12 +285,7 @@ const NewBankReceipt = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Method *</label>
-                  <select name="method" value={form.method} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>NEFT</option>
-                    <option>RTGS</option>
-                    <option>IMPS</option>
-                    <option>Cheque</option>
-                  </select>
+                  <DynamicSelect category="Payment Method" name="method" value={form.method} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Name</label>
@@ -332,17 +382,11 @@ const NewBankReceipt = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Ledger</label>
-                    <select name="bankLedger" value={form.bankLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>HDFC Bank Ledger</option>
-                    </select>
+                    <DynamicSelect category="Bank Ledger" name="bankLedger" value={form.bankLedger} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Ledger</label>
-                    <select name="customerLedger" value={form.customerLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>XYZ Retailers Ledger</option>
-                    </select>
+                    <DynamicSelect category="Customer Ledger" name="customerLedger" value={form.customerLedger} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">TDS Amount</label>
@@ -361,17 +405,11 @@ const NewBankReceipt = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Received By</label>
-                    <select name="receivedBy" value={form.receivedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Accountant 1</option>
-                    </select>
+                    <DynamicSelect category="Received By" name="receivedBy" value={form.receivedBy} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                    <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Finance Head</option>
-                    </select>
+                    <DynamicSelect category="Approved By" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>

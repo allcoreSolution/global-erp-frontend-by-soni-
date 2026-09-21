@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
-import { ShoppingBag, Filter, Download, Printer, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingBag, Download, Printer, Filter, ShieldCheck, Search, FileText } from 'lucide-react';
+import api from '../../../api';
 
 const TdsPurchase = () => {
   const [period, setPeriod] = useState('This Month');
-  const [purchaseRecords, setPurchaseRecords] = useState([
-    { supplier: 'Ambani Raw Materials', sec: '194Q (Goods Purchase)', totalVal: 600000, tdsRate: '0.1%', tdsDeducted: 600, depositStatus: 'Deposited', challanNo: 'CHL-99881' },
-    { supplier: 'Vikas Tech Solutions', sec: '194J (Professional fees)', totalVal: 150000, tdsRate: '10%', tdsDeducted: 15000, depositStatus: 'Deposited', challanNo: 'CHL-44512' },
-    { supplier: 'Modern Contractor & Log', sec: '194C (Contracts)', totalVal: 200000, tdsRate: '2%', tdsDeducted: 4000, depositStatus: 'Pending', challanNo: '--' }
-  ]);
+  const [purchaseRecords, setPurchaseRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/reports/tds/purchase')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setPurchaseRecords(res.data.data.purchaseRecords);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="p-6 text-center text-slate-500">Loading tds/TdsPurchase.jsx...</div>;
 
   const handlePrint = () => {
     window.print();

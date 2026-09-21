@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Search, Download, Upload, FileText, Plus, Eye, Edit, Trash2, 
   ChevronLeft, ChevronRight, AlertCircle, X, CheckCircle 
 } from 'lucide-react';
+import api from '../../api';
 
 const SaleExchangeList = () => {
   const navigate = useNavigate();
-  // Empty data table setup as requested: "No data available in table"
   const [exchanges, setExchanges] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // States
   const [startDate, setStartDate] = useState('2025-08-13');
@@ -66,9 +67,33 @@ const SaleExchangeList = () => {
     });
   };
 
-  const handleDelete = (id) => {
+  const fetchExchanges = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/sale-exchanges');
+      if (data.success) {
+        setExchanges(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching exchanges', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExchanges();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this exchange record?")) {
-      setExchanges(exchanges.filter(e => e.id !== id));
+      try {
+        await api.delete(`/sale-exchanges/${id}`);
+        setExchanges(exchanges.filter(e => e._id !== id));
+      } catch (error) {
+        console.error('Error deleting exchange', error);
+        alert('Failed to delete exchange record');
+      }
     }
   };
 
@@ -92,12 +117,12 @@ const SaleExchangeList = () => {
     alert("Downloading Sales Exchanges list PDF document...");
   };
 
-  // Search filter
-  const filteredExchanges = exchanges.filter(e => 
-    e.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.saleReference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.customer.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredExchanges = exchanges.filter(e => {
+    const refMatch = e.exchangeNo?.toLowerCase().includes(searchTerm.toLowerCase());
+    const invoiceMatch = e.invoiceNo?.toLowerCase().includes(searchTerm.toLowerCase());
+    const customerMatch = e.customer?.toLowerCase().includes(searchTerm.toLowerCase());
+    return refMatch || invoiceMatch || customerMatch;
+  });
 
   // Pagination calculation
   const indexOfLastRecord = currentPage * recordsPerPage;
@@ -257,15 +282,15 @@ const SaleExchangeList = () => {
           <tbody className="divide-y divide-blue-500 bg-white">
             {currentRecords.length > 0 ? (
               currentRecords.map((e) => (
-                <tr key={e.id} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{e.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{e.reference}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{e.saleReference}</td>
+                <tr key={e._id} className="hover:bg-gray-50/70 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{e.exchangeDate}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{e.exchangeNo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{e.invoiceNo}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{e.warehouse}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{e.biller}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{e.company}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-semibold">{e.customer}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">{e.paymentType}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${e.grandTotal.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">{e.paymentMethod}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">₹{e.totals?.additionalPayable?.toFixed(2) || '0.00'}</td>
                   
                   {/* Action buttons (View, Edit, Delete) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -278,16 +303,14 @@ const SaleExchangeList = () => {
                         <Eye size={15} />
                       </button>
                       <button
-                        onClick={() => {
-                          alert(`Edit Exchange details: ${e.reference}`);
-                        }}
+                        onClick={() => navigate(`/sales/edit-sale-exchange/${e._id}`)}
                         className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
                         title="Edit details"
                       >
                         <Edit size={15} />
                       </button>
                       <button
-                        onClick={() => handleDelete(e.id)}
+                        onClick={() => handleDelete(e._id)}
                         className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
                         title="Delete record"
                       >

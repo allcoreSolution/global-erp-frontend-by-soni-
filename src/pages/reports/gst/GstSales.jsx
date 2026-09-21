@@ -1,49 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Filter, Download, Printer, ArrowUpRight, CheckCircle, Percent } from 'lucide-react';
+import api from '../../../api';
 
 const GstSales = () => {
   const [period, setPeriod] = useState('This Month');
   const [activeView, setActiveView] = useState('All');
 
   // GSTR-1 & Sales tax summary datasets
-  const summaries = {
-    gstr1: { taxable: '₹14,50,000', cgst: '₹1,30,500', sgst: '₹1,30,500', igst: '₹72,000', totalGst: '₹3,33,000' },
-    b2b: [
-      { client: 'Aditya Enterprises', gstNo: '27AAAAA1111A1Z1', taxable: '₹4,50,000', cgst: '₹40,500', sgst: '₹40,500', igst: '₹0' },
-      { client: 'Vardhaman Steels', gstNo: '27BBBBB2222B2Z2', taxable: '₹5,00,000', cgst: '₹0', sgst: '₹0', igst: '₹90,000' }
-    ],
-    b2c: [
-      { pos: 'Mumbai Counter', taxable: '₹2,50,000', cgst: '₹22,500', sgst: '₹22,500', igst: '₹0' },
-      { pos: 'Delhi Counter', taxable: '₹2,50,000', cgst: '₹0', sgst: '₹0', igst: '₹45,000' }
-    ],
-    creditNotes: [
-      { noteNo: 'CN-004', origInv: 'INV-2024-009', client: 'Aditya Enterprises', taxable: '₹-50,000', gstAdjust: '₹-9,000' }
-    ],
-    debitNotes: [
-      { noteNo: 'DN-002', origInv: 'INV-2024-003', client: 'Choudhary Logistics', taxable: '₹30,000', gstAdjust: '₹5,400' }
-    ]
-  };
+  
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/reports/gst/sales')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setApiData(res.data.data);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !apiData) {
+    return <div className="p-6 text-center text-slate-500">Loading gst/GstSales.jsx...</div>;
+  }
+
+  const { summaries } = apiData;
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportCSV = () => {
-    const headers = ['Sales Category', 'Taxable Amount (₹)', 'Output CGST (₹)', 'Output SGST (₹)', 'Output IGST (₹)'];
-    const rows = [
-      ['GSTR-1 Consolidated', summaries.gstr1.taxable, summaries.gstr1.cgst, summaries.gstr1.sgst, summaries.gstr1.igst],
-      ['B2B Sales Total', '₹9,50,000', '₹40,500', '₹40,500', '₹90,000'],
-      ['B2C Sales Total', '₹5,00,000', '₹22,500', '₹22,500', '₹45,000']
-    ];
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `GST_Sales_Report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert("Export CSV functionality will be implemented here.");
   };
 
   return (

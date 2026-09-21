@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewJournal = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Basic Information State
   const [form, setForm] = useState({
     // Basic Information
-    journalNo: 'JRN-00001',
+    journalNo: `JRN-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 1000)}`,
     journalDate: new Date().toISOString().split('T')[0],
     company: '',
     branch: '',
@@ -45,6 +48,48 @@ const NewJournal = () => {
     debit: 0,
     credit: 0
   });
+
+  useEffect(() => {
+    if (id) {
+      const fetchJournal = async () => {
+        try {
+          const res = await api.get(`/journals/${id}`);
+          if (res.data?.data) {
+            const data = res.data.data;
+            setForm({
+              journalNo: data.journalNo || '',
+              journalDate: data.journalDate || '',
+              company: data.company || '',
+              branch: data.branch || '',
+              financialYear: data.financialYear || '2023-24',
+              status: data.status || 'Draft',
+              referenceNo: data.referenceNo || '',
+              referenceType: data.referenceType || '',
+              refReferenceNo: data.refReferenceNo || '',
+              customerSupplier: data.customerSupplier || '',
+              invoiceNo: data.invoiceNo || '',
+              taxConfig: data.taxConfig || '',
+              tdsAmount: data.tdsAmount || '',
+              adjustmentAccount: data.adjustmentAccount || '',
+              narration: data.narration || '',
+              preparedBy: data.preparedBy || '',
+              approvedBy: data.approvedBy || '',
+              remarks: data.remarks || '',
+            });
+            if (data.entries && data.entries.length > 0) {
+              setEntries(data.entries.map((e, idx) => ({ ...e, id: idx + 1 })));
+            }
+            if (data.totals) {
+              setTotals(data.totals);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching journal", err);
+        }
+      };
+      fetchJournal();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -93,14 +138,44 @@ const NewJournal = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (totals.debit !== totals.credit) {
        alert('Total Debit must equal Total Credit before posting!');
        return;
     }
-    alert('Journal Entry Posted successfully!');
-    navigate('/journal/list');
+    
+    try {
+      const { documentFile, ...restForm } = form; // Strip file
+
+      const payload = {
+        ...restForm,
+        journalId: restForm.journalNo, // Legacy index bypass
+        tdsAmount: Number(form.tdsAmount) || 0,
+        entries: entries.map(e => ({
+          ...e,
+          debit: Number(e.debit) || 0,
+          credit: Number(e.credit) || 0,
+        })),
+        totals: {
+          debit: Number(totals.debit) || 0,
+          credit: Number(totals.credit) || 0,
+        }
+      };
+
+      if (id) {
+        await api.put(`/journals/${id}`, payload);
+        alert('Journal Updated successfully!');
+      } else {
+        await api.post('/journals', payload);
+        alert('Journal Posted successfully!');
+      }
+      navigate('/journal/list');
+    } catch (error) {
+      console.error('Error saving journal', error);
+      const errMsg = error.response?.data?.message || error.response?.data || error.message;
+      alert('Failed to save journal. Backend error: ' + JSON.stringify(errMsg));
+    }
   };
 
   return (
@@ -167,17 +242,11 @@ const NewJournal = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Reference No.</label>
@@ -210,13 +279,7 @@ const NewJournal = () => {
                     {entries.map((entry) => (
                       <tr key={entry.id}>
                         <td className="px-3 py-2">
-                          <select value={entry.account} onChange={(e) => handleEntryChange(entry.id, 'account', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white font-medium text-slate-700">
-                            <option value="">Select Account</option>
-                            <option>Office Expense</option>
-                            <option>Petty Cash</option>
-                            <option>Salary A/C</option>
-                            <option>TDS Payable</option>
-                          </select>
+                          <DynamicSelect category="Account" name="account" value={entry.account} onChange={(e) => handleEntryChange(entry.id, 'account', e.target.value)} />
                         </td>
                         <td className="px-3 py-2">
                           <input type="text" placeholder="Line description..." value={entry.description} onChange={(e) => handleEntryChange(entry.id, 'description', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white" />
@@ -279,10 +342,7 @@ const NewJournal = () => {
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Customer/Supplier</label>
-                        <select name="customerSupplier" value={form.customerSupplier} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                          <option value="">Select</option>
-                          <option>ABC Retailers</option>
-                        </select>
+                        <DynamicSelect category="Supplier" name="customerSupplier" value={form.customerSupplier} onChange={handleChange} />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No.</label>
@@ -297,10 +357,7 @@ const NewJournal = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Config</label>
-                        <select name="taxConfig" value={form.taxConfig} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                          <option value="">Select</option>
-                          <option>GST 18%</option>
-                        </select>
+                        <DynamicSelect category="Tax Config" name="taxConfig" value={form.taxConfig} onChange={handleChange} />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">TDS Amount</label>
@@ -308,10 +365,7 @@ const NewJournal = () => {
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Adjustment Account</label>
-                        <select name="adjustmentAccount" value={form.adjustmentAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                          <option value="">Select</option>
-                          <option>TDS Adjustment A/C</option>
-                        </select>
+                        <DynamicSelect category="Account" name="adjustmentAccount" value={form.adjustmentAccount} onChange={handleChange} />
                       </div>
                     </div>
                  </div>
@@ -327,17 +381,11 @@ const NewJournal = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Prepared By</label>
-                      <select name="preparedBy" value={form.preparedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>Accountant 1</option>
-                      </select>
+                      <DynamicSelect category="Employee" name="preparedBy" value={form.preparedBy} onChange={handleChange} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                      <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select</option>
-                        <option>Finance Head</option>
-                      </select>
+                      <DynamicSelect category="Employee" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
@@ -345,9 +393,11 @@ const NewJournal = () => {
                     </div>
                     <div className="col-span-2 mt-2">
                        <label className="block text-xs font-semibold text-slate-700 mb-1">Attachment</label>
-                       <button type="button" className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500">
-                          <UploadCloud size={18} /> Upload Document
-                       </button>
+                       <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">
+                          <UploadCloud size={18} /> 
+                          <span className="truncate">{form.documentFile ? form.documentFile.name : 'Upload Document'}</span>
+                          <input type="file" className="hidden" onChange={(e) => setForm(prev => ({ ...prev, documentFile: e.target.files[0] }))} />
+                       </label>
                     </div>
                   </div>
                </div>

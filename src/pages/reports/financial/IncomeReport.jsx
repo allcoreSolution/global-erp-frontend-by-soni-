@@ -1,14 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, Download, Printer } from 'lucide-react';
+import api from '../../../api';
 
 const IncomeReport = () => {
-  const incomes = [
-    { category: 'Product Sales (Domestic)', projected: 600000, actual: 650000 },
-    { category: 'Product Sales (Export)', projected: 100000, actual: 80000 },
-    { category: 'Service Maintenance Contracts', projected: 120000, actual: 150000 },
-    { category: 'Consulting Revenue', projected: 0, actual: 25000 },
-    { category: 'Interest from Bank', projected: 10000, actual: 12000 }
-  ];
+  const [incomes, setIncomes] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchIncomes();
+  }, []);
+
+  const fetchIncomes = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/financial/profit-and-loss');
+      if (res.data && res.data.success) {
+        // Map the backend data to match the UI columns
+        const mappedData = (res.data.data.incomes || []).map(inc => ({
+          category: inc.accountName,
+          projected: 0, // No projected/budget module yet
+          actual: inc.amount
+        }));
+        setIncomes(mappedData);
+      }
+    } catch (error) {
+      console.error('Error fetching incomes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -40,23 +60,29 @@ const IncomeReport = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {incomes.map((item, idx) => {
-              const variance = item.actual - item.projected;
-              return (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 font-semibold text-gray-800">{item.category}</td>
-                  <td className="p-3 text-right text-gray-600 font-mono">{item.projected.toLocaleString()}</td>
-                  <td className="p-3 text-right font-extrabold text-teal-700">{item.actual.toLocaleString()}</td>
-                  <td className="p-3 text-right">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      variance >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                    }`}>
-                      {variance >= 0 ? `Surplus ₹${variance.toLocaleString()}` : `Deficit ₹${Math.abs(variance).toLocaleString()}`}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
+            {loading ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">Loading income data...</td></tr>
+            ) : incomes.length === 0 ? (
+              <tr><td colSpan="4" className="p-4 text-center text-gray-500">No income records found.</td></tr>
+            ) : (
+              incomes.map((item, idx) => {
+                const variance = item.actual - item.projected;
+                return (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 font-semibold text-gray-800">{item.category}</td>
+                    <td className="p-3 text-right text-gray-600 font-mono">{item.projected.toLocaleString()}</td>
+                    <td className="p-3 text-right font-extrabold text-teal-700">{item.actual.toLocaleString()}</td>
+                    <td className="p-3 text-right">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        variance >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                      }`}>
+                        {variance >= 0 ? `Surplus ₹${variance.toLocaleString()}` : `Deficit ₹${Math.abs(variance).toLocaleString()}`}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>

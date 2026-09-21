@@ -1,22 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarX, Search, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const ExpiredStock = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const expiryItems = [
-    { id: 'ITM-001', name: 'Organic Green Tea', batch: 'BT-2026-A1', mfgDate: '10-05-2025', expDate: '31-10-2026', qty: 25, unit: 'Boxes', value: 3750, supplier: 'Green Naturals' },
-    { id: 'ITM-002', name: 'Roasted Almonds pack', batch: 'BT-2026-A2', mfgDate: '15-06-2025', expDate: '15-12-2026', qty: 18, unit: 'Pkts', value: 4500, supplier: 'Nutri Farms' },
-    { id: 'ITM-003', name: 'Premium Green Coffee', batch: 'BT-2026-A3', mfgDate: '20-07-2025', expDate: '20-01-2027', qty: 30, unit: 'Jars', value: 8400, supplier: 'Coffee Co.' },
-    { id: 'ITM-004', name: 'Chia Seeds organic', batch: 'BT-2026-A4', mfgDate: '01-08-2025', expDate: '30-03-2027', qty: 22, unit: 'Pkts', value: 3300, supplier: 'Nutri Farms' },
-    { id: 'ITM-005', name: 'Flax Seeds premium', batch: 'BT-2026-A5', mfgDate: '05-09-2025', expDate: '05-04-2027', qty: 15, unit: 'Pkts', value: 2250, supplier: 'Seed Traders' },
-    { id: 'ITM-006', name: 'Vitamin C Tablets', batch: 'B-8812', mfgDate: '10-01-2024', expDate: '15-09-2026', qty: 50, unit: 'Strips', value: 2500, supplier: 'Pharma Plus' },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const filteredItems = expiryItems.filter(item => 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/stock/expired');
+      if (res.data && res.data.success) {
+        setData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching expired stock:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredItems = data.filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.batch.toLowerCase().includes(searchTerm.toLowerCase())
+    (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (item.batchNo && item.batchNo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const totalValue = filteredItems.reduce((acc, curr) => acc + curr.value, 0);
@@ -90,24 +102,27 @@ const ExpiredStock = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredItems.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="p-8 text-center text-gray-500 italic">Fetching expired stock...</td>
+              </tr>
+            ) : filteredItems.length > 0 ? (
               filteredItems.map((item, idx) => {
-                // Check if already expired (basic check based on today being ~Sep 2026)
-                const isExpired = new Date(item.expDate.split('-').reverse().join('-')) < new Date('2026-09-09');
+                const isExpired = item.status === 'Expired';
                 
                 return (
                   <tr key={idx} className="hover:bg-rose-50/30">
-                    <td className="p-3 font-mono text-gray-500">{item.id}</td>
+                    <td className="p-3 font-mono text-gray-500">{item.sku}</td>
                     <td className="p-3 font-medium text-gray-800">{item.name}</td>
-                    <td className="p-3 text-gray-600 text-xs">{item.batch}</td>
+                    <td className="p-3 text-gray-600 text-xs">{item.batchNo || 'N/A'}</td>
                     <td className="p-3">
                       <span className={`font-semibold px-2 py-1 rounded text-xs ${isExpired ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {item.expDate}
+                        {item.expiryDate || 'N/A'}
                       </span>
                     </td>
-                    <td className="p-3 text-center font-bold text-gray-700">{item.qty} <span className="text-xs font-normal text-gray-500">{item.unit}</span></td>
-                    <td className="p-3 text-gray-600 text-xs">{item.supplier}</td>
-                    <td className="p-3 text-right font-bold text-rose-700">₹ {item.value.toLocaleString()}</td>
+                    <td className="p-3 text-center font-bold text-gray-700">{item.qty} <span className="text-xs font-normal text-gray-500">{item.unit || 'Nos'}</span></td>
+                    <td className="p-3 text-gray-600 text-xs">{item.supplier || 'N/A'}</td>
+                    <td className="p-3 text-right font-bold text-rose-700">₹ {(item.value || 0).toLocaleString()}</td>
                   </tr>
                 );
               })

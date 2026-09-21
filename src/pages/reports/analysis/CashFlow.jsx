@@ -1,16 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const CashFlow = () => {
-  const data = [
-    { activity: 'Operating Activities', inflows: 1250000, outflows: 850000 },
-    { activity: 'Investing Activities', inflows: 50000, outflows: 250000 },
-    { activity: 'Financing Activities', inflows: 500000, outflows: 150000 }
-  ];
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
-  const totalInflows = data.reduce((acc, curr) => acc + curr.inflows, 0);
-  const totalOutflows = data.reduce((acc, curr) => acc + curr.outflows, 0);
-  const netCashFlow = totalInflows - totalOutflows;
+  const [fromDate, setFromDate] = useState(firstDay);
+  const [toDate, setToDate] = useState(lastDay);
+
+  const [flow, setFlow] = useState({ cashInflow: 0, cashOutflow: 0, netLiquidityMovement: 0 });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/reports/analysis/cash-flow?fromDate=${fromDate}&toDate=${toDate}`);
+      if (res.data && res.data.success) {
+        setFlow(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching cash flow summary:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const netCashFlow = flow.netLiquidityMovement;
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -31,19 +52,34 @@ const CashFlow = () => {
         </div>
       </div>
 
+      <div className="bg-slate-50 p-4 border border-purple-200 rounded-lg flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
+        <Filter size={16} className="text-purple-600" />
+        
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500">Date Range:</span>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-purple-500" />
+          <span className="text-gray-400">to</span>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-1.5 rounded outline-none focus:border-purple-500" />
+        </div>
+
+        <button onClick={fetchData} className="px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+          Apply Filter
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="bg-emerald-50/50 border border-emerald-200 p-4 rounded-lg flex flex-col justify-between">
           <span className="text-[11px] uppercase font-bold text-emerald-600">Total Cash Inflows</span>
-          <span className="text-2xl font-extrabold text-emerald-800">₹ {totalInflows.toLocaleString()}</span>
+          <span className="text-2xl font-extrabold text-emerald-800">₹ {flow.cashInflow.toLocaleString()}</span>
         </div>
         <div className="bg-rose-50/50 border border-rose-200 p-4 rounded-lg flex flex-col justify-between">
           <span className="text-[11px] uppercase font-bold text-rose-600">Total Cash Outflows</span>
-          <span className="text-2xl font-extrabold text-rose-800">₹ {totalOutflows.toLocaleString()}</span>
+          <span className="text-2xl font-extrabold text-rose-800">₹ {flow.cashOutflow.toLocaleString()}</span>
         </div>
         <div className={`p-4 rounded-lg flex flex-col justify-between border ${netCashFlow >= 0 ? 'bg-indigo-50/50 border-indigo-200' : 'bg-amber-50/50 border-amber-200'}`}>
           <span className={`text-[11px] uppercase font-bold ${netCashFlow >= 0 ? 'text-indigo-600' : 'text-amber-600'}`}>Net Cash Flow</span>
           <span className={`text-2xl font-extrabold ${netCashFlow >= 0 ? 'text-indigo-800' : 'text-amber-800'}`}>
-            {netCashFlow >= 0 ? '+' : '-'} ₹ {Math.abs(netCashFlow).toLocaleString()}
+            {netCashFlow >= 0 ? '+' : ''} ₹ {Math.abs(netCashFlow).toLocaleString()}
           </span>
         </div>
       </div>
@@ -52,26 +88,29 @@ const CashFlow = () => {
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b">
             <tr>
-              <th className="p-3">Cash Flow Activity</th>
+              <th className="p-3">Period</th>
               <th className="p-3 text-right bg-emerald-50/30">Cash Inflows (₹)</th>
               <th className="p-3 text-right bg-rose-50/30">Cash Outflows (₹)</th>
               <th className="p-3 text-right font-bold">Net Activity Flow (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((item, idx) => {
-              const net = item.inflows - item.outflows;
-              return (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 font-semibold text-gray-800">{item.activity}</td>
-                  <td className="p-3 text-right text-emerald-700">{item.inflows.toLocaleString()}</td>
-                  <td className="p-3 text-right text-rose-700">{item.outflows.toLocaleString()}</td>
-                  <td className={`p-3 text-right font-bold ${net >= 0 ? 'text-indigo-700' : 'text-amber-700'}`}>
-                    {net >= 0 ? '+' : ''}{net.toLocaleString()}
-                  </td>
-                </tr>
-              )
-            })}
+            {loading ? (
+              <tr>
+                <td colSpan="4" className="p-4 text-center text-gray-500 italic">Calculating cash flows...</td>
+              </tr>
+            ) : (
+              <tr className="hover:bg-slate-50">
+                <td className="p-3 font-semibold text-gray-800">
+                  {new Date(fromDate).toLocaleDateString()} to {new Date(toDate).toLocaleDateString()}
+                </td>
+                <td className="p-3 text-right text-emerald-700">{flow.cashInflow.toLocaleString()}</td>
+                <td className="p-3 text-right text-rose-700">{flow.cashOutflow.toLocaleString()}</td>
+                <td className={`p-3 text-right font-bold ${netCashFlow >= 0 ? 'text-indigo-700' : 'text-amber-700'}`}>
+                  {netCashFlow >= 0 ? '+' : ''}{netCashFlow.toLocaleString()}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

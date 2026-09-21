@@ -1,26 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Download, Printer, Filter } from 'lucide-react';
+import api from '../../../api';
 
 const BalanceSheet = () => {
-  const liabilities = [
-    { account: 'Capital Account', amount: 1500000 },
-    { account: 'Net Profit', amount: 218000 },
-    { account: 'Bank Loan (Secured)', amount: 350000 },
-    { account: 'Sundry Creditors', amount: 180000 },
-    { account: 'Duties & Taxes (GST)', amount: 25000 }
-  ];
+  const [assets, setAssets] = useState([]);
+  const [liabilities, setLiabilities] = useState([]);
+  const [totals, setTotals] = useState({ totalAssets: 0, totalLiabilitiesAndEquity: 0 });
+  const [loading, setLoading] = useState(false);
 
-  const assets = [
-    { account: 'Fixed Assets (Machinery)', amount: 800000 },
-    { account: 'Computers & IT', amount: 150000 },
-    { account: 'Closing Stock', amount: 420000 },
-    { account: 'Sundry Debtors', amount: 310000 },
-    { account: 'Cash in Hand', amount: 45000 },
-    { account: 'Bank Accounts', amount: 548000 }
-  ];
+  useEffect(() => {
+    fetchBalanceSheet();
+  }, []);
 
-  const totalLiabilities = liabilities.reduce((acc, curr) => acc + curr.amount, 0);
-  const totalAssets = assets.reduce((acc, curr) => acc + curr.amount, 0);
+  const fetchBalanceSheet = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/financial/balance-sheet');
+      if (res.data && res.data.success) {
+        setAssets(res.data.data.assets || []);
+        // Combine liabilities and equity for the view
+        const liab = res.data.data.liabilities || [];
+        const eq = res.data.data.equity || [];
+        setLiabilities([...eq, ...liab]);
+        
+        setTotals({
+          totalAssets: res.data.data.totalAssets || 0,
+          totalLiabilitiesAndEquity: res.data.data.totalLiabilitiesAndEquity || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching Balance Sheet:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { totalAssets, totalLiabilitiesAndEquity: totalLiabilities } = totals;
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
@@ -65,12 +80,18 @@ const BalanceSheet = () => {
           <div className="bg-rose-50 border-b border-rose-100 p-2 font-bold text-rose-800">Liabilities & Capital</div>
           <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
-              {liabilities.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 text-gray-700">{item.account}</td>
-                  <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading liabilities...</td></tr>
+              ) : liabilities.length === 0 ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">No liabilities/equity found.</td></tr>
+              ) : (
+                liabilities.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 text-gray-700">{item.accountName || item.account}</td>
+                    <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
             <tfoot className="bg-slate-100 border-t font-extrabold">
               <tr>
@@ -86,12 +107,18 @@ const BalanceSheet = () => {
           <div className="bg-emerald-50 border-b border-emerald-100 p-2 font-bold text-emerald-800">Assets & Properties</div>
           <table className="w-full text-left">
             <tbody className="divide-y divide-slate-100">
-              {assets.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="p-3 text-gray-700">{item.account}</td>
-                  <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">Loading assets...</td></tr>
+              ) : assets.length === 0 ? (
+                <tr><td colSpan="2" className="p-3 text-center text-gray-500 italic">No assets found.</td></tr>
+              ) : (
+                assets.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 text-gray-700">{item.accountName || item.account}</td>
+                    <td className="p-3 text-right font-medium text-gray-800">₹ {item.amount.toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
             <tfoot className="bg-slate-100 border-t font-extrabold">
               <tr>

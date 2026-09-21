@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Search, Download, Upload, FileText, Plus, Eye, Edit, Trash2, 
   ChevronLeft, ChevronRight, AlertCircle, Filter, X 
 } from 'lucide-react';
+import api from '../../api';
 
 const PurchaseReturn = () => {
   const navigate = useNavigate();
-  // Mock Purchase Return Logs Database (Starts empty as requested "No data available in table")
   const [returns, setReturns] = useState([]);
-  
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchReturns();
+  }, []);
+
+  const fetchReturns = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/purchase-returns');
+      if (data.success) {
+        setReturns(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching purchase returns', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   // States
   const [startDate, setStartDate] = useState('2025-08-13');
   const [endDate, setEndDate] = useState('2026-08-13');
@@ -32,9 +50,12 @@ const PurchaseReturn = () => {
 
   // Handle Search Filter (Reference, Purchase Reference, Supplier, Warehouse)
   const filteredReturns = returns.filter(r => {
-    const matchesSearch = r.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.purchaseRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+    const rNo = r.returnNo || '';
+    const pInv = r.purchaseInvoice || '';
+    const supp = r.supplier || '';
+    const matchesSearch = rNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          pInv.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          supp.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesWarehouse = selectedWarehouse === 'All Warehouse' || r.warehouse === selectedWarehouse;
     return matchesSearch && matchesWarehouse;
   });
@@ -70,9 +91,14 @@ const PurchaseReturn = () => {
     });
   };
 
-  const handleDeleteReturn = (id) => {
+  const handleDeleteReturn = async (id) => {
     if (window.confirm("Are you sure you want to delete this purchase return record?")) {
-      setReturns(returns.filter(r => r.id !== id));
+      try {
+        await api.delete(`/purchase-returns/${id}`);
+        setReturns(returns.filter(r => r._id !== id));
+      } catch (error) {
+        console.error('Error deleting return', error);
+      }
     }
   };
 
@@ -84,7 +110,7 @@ const PurchaseReturn = () => {
     alert("Downloading Purchase Return list PDF file...");
   };
 
-  const totalReturnedAmount = filteredReturns.reduce((sum, item) => sum + item.grandTotal, 0);
+  const totalReturnedAmount = filteredReturns.reduce((sum, item) => sum + (item.totals?.returnTotal || 0), 0);
 
   return (
     <div className="min-h-screen bg-white text-black p-6 rounded-lg shadow-md border border-blue-500">
@@ -226,37 +252,34 @@ const PurchaseReturn = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
-            {currentRecords.length > 0 ? (
-              currentRecords.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.reference}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.purchaseRef}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.warehouse}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{item.supplier}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${item.grandTotal.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+            {loading ? (
+              <tr><td colSpan="7" className="px-4 py-8 text-center text-sm text-gray-500 bg-white">Loading...</td></tr>
+            ) : currentRecords.length > 0 ? (
+              currentRecords.map((r) => (
+                <tr key={r._id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700">{r.returnDate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-indigo-700">{r.returnNo}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">{r.purchaseInvoice}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-800">{r.warehouse}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-800 font-medium">{r.supplier}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-900 font-bold">₹ {r.totals?.returnTotal?.toFixed(2) || '0.00'}</td>
+                  
+                  {/* Actions VIEW, EDIT, DELETE */}
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                     <div className="inline-flex items-center gap-1.5">
                       <button
-                        onClick={() => alert(`View Return Details: ${item.reference}`)}
-                        className="p-1.5 text-indigo-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                        title="View details"
+                        onClick={() => navigate(`/purchases/edit-purchase-return/${r._id}`)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded transition-colors"
+                        title="Edit Record"
                       >
-                        <Eye size={15} />
+                        <Edit size={16} />
                       </button>
                       <button
-                        onClick={() => alert(`Edit Return: ${item.reference}`)}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit return"
+                        onClick={() => handleDeleteReturn(r._id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 rounded transition-colors"
+                        title="Delete Record"
                       >
-                        <Edit size={15} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteReturn(item.id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete record"
-                      >
-                        <Trash2 size={15} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>

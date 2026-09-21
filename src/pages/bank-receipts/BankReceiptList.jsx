@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Search, Download, Upload, Printer, CheckCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const BankReceiptList = () => {
-  const [bankReceipts, setBankReceipts] = useState([
-    { id: 'BRCT-001', bankAccount: 'ICICI Current A/C', customerName: 'Ramesh Kumar & Sons', amount: 35000, date: '2024-05-11', refNo: 'UTR77112', bankCharges: 50, reconciled: true },
-    { id: 'BRCT-002', bankAccount: 'HDFC Business A/C', customerName: 'Apex Retailers', amount: 18000, date: '2024-05-14', refNo: 'CHQ44552', bankCharges: 0, reconciled: false }
-  ]);
+  const navigate = useNavigate();
+  const [bankReceipts, setBankReceipts] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -14,27 +15,57 @@ const BankReceiptList = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleToggleReconciliation = (id) => {
-    setBankReceipts(prev => prev.map(r => {
-      if (r.id === id) {
-        addLog(`Toggled reconciliation status of bank receipt ${r.id} to ${!r.reconciled ? 'Reconciled' : 'Unreconciled'}`);
-        return { ...r, reconciled: !r.reconciled };
-      }
-      return r;
-    }));
+  const handleToggleReconciliation = async (id, currentStatus) => {
+    try {
+      await api.put(`/bank-receipts/${id}`, { reconciled: !currentStatus });
+      setBankReceipts(prev => prev.map(r => {
+        if (r._id === id) {
+          addLog(`Toggled reconciliation status of bank receipt ${r.receiptNo} to ${!currentStatus ? 'Reconciled' : 'Unreconciled'}`);
+          return { ...r, reconciled: !currentStatus };
+        }
+        return r;
+      }));
+    } catch (error) {
+      console.error('Error toggling reconciliation', error);
+      addLog('Error toggling reconciliation');
+    }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete bank receipt ${id}?`)) {
-      setBankReceipts(prev => prev.filter(r => r.id !== id));
-      addLog(`Deleted bank receipt record ${id}`);
+  const fetchReceipts = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/bank-receipts');
+      if (data.success) {
+        setBankReceipts(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching bank receipts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReceipts();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this bank receipt?')) {
+      try {
+        await api.delete(`/bank-receipts/${id}`);
+        setBankReceipts(prev => prev.filter(r => r._id !== id));
+        addLog(`Deleted bank receipt record: ${id}`);
+      } catch (error) {
+        console.error('Error deleting bank receipt:', error);
+        addLog(`Error deleting bank receipt: ${id}`);
+      }
     }
   };
 
   const filtered = bankReceipts.filter(r =>
-    r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.bankAccount.toLowerCase().includes(searchTerm.toLowerCase())
+    (r.customerParty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.receiptNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.bankAccount || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Real CSV Export
@@ -42,13 +73,13 @@ const BankReceiptList = () => {
     addLog("Exporting bank receipts logs to CSV format...");
     const headers = ['Bank Receipt ID', 'Bank Account', 'Customer Name', 'Amount (₹)', 'Date', 'Reference No', 'Bank Charges (₹)', 'Reconciled'];
     const rows = bankReceipts.map(r => [
-      r.id,
+      r.receiptNo,
       r.bankAccount,
-      `"${r.customerName.replace(/"/g, '""')}"`,
+      `"${(r.customerParty || '').replace(/"/g, '""')}"`,
       r.amount,
-      r.date,
-      r.refNo,
-      r.bankCharges,
+      r.receiptDate,
+      r.utrNo,
+      r.otherDeduction || 0,
       r.reconciled ? 'Yes' : 'No'
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -189,30 +220,43 @@ const BankReceiptList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(r => (
-                <tr key={r.id} className="hover:bg-slate-50">
-                  <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{r.id}</td>
-                  <td className="p-2 font-medium text-gray-800">{r.bankAccount}</td>
-                  <td className="p-2 text-gray-650">{r.customerName}</td>
-                  <td className="p-2 text-right font-bold text-emerald-600">₹ {r.amount.toLocaleString()}</td>
-                  <td className="p-2 text-gray-500 whitespace-nowrap">{r.date}</td>
-                  <td className="p-2 font-mono text-gray-600">{r.refNo}</td>
-                  <td className="p-2 text-right text-gray-550">₹ {r.bankCharges}</td>
-                  <td className="p-2 text-center no-print">
-                    <button
-                      onClick={() => handleToggleReconciliation(r.id)}
-                      className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${r.reconciled ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
-                    >
-                      {r.reconciled ? 'Reconciled' : 'Unreconciled'}
-                    </button>
-                  </td>
-                  <td className="p-2 text-center no-print">
-                    <button onClick={() => handleDelete(r.id)} className="p-1 hover:bg-red-50 rounded text-red-600">
-                      <Trash2 size={13} />
-                    </button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">Loading receipts...</td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">No bank receipts found.</td>
+                </tr>
+              ) : (
+                filtered.map(r => (
+                  <tr key={r._id} className="hover:bg-slate-50">
+                    <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{r.receiptNo}</td>
+                    <td className="p-2 font-medium text-gray-800">{r.bankAccount || '-'}</td>
+                    <td className="p-2 text-gray-650">{r.customerParty || '-'}</td>
+                    <td className="p-2 text-right font-bold text-emerald-600">₹ {(r.amount || 0).toLocaleString()}</td>
+                    <td className="p-2 text-gray-500 whitespace-nowrap">{r.receiptDate}</td>
+                    <td className="p-2 font-mono text-gray-600">{r.utrNo || '-'}</td>
+                    <td className="p-2 text-right text-gray-550">₹ {r.otherDeduction || 0}</td>
+                    <td className="p-2 text-center no-print">
+                      <button
+                        onClick={() => handleToggleReconciliation(r._id, r.reconciled)}
+                        className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${r.reconciled ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                      >
+                        {r.reconciled ? 'Reconciled' : 'Unreconciled'}
+                      </button>
+                    </td>
+                    <td className="p-2 text-center no-print flex justify-center items-center gap-2">
+                      <button onClick={() => navigate(`/bank-receipt/edit/${r._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600">
+                        <Edit size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(r._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

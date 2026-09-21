@@ -1,40 +1,103 @@
-import React, { useState } from 'react';
-import { CreditCard, Building, ShieldAlert, FileText, Edit2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CreditCard, Building, ShieldAlert, FileText, Edit2, Users } from 'lucide-react';
+import api from '../../api';
 
 const FinancialDocs = () => {
-  const [employees, setEmployees] = useState([
-    { id: 'EMP-001', name: 'Amit Sharma', basicSalary: 45000, hra: 15000, allowance: 10000, bankName: 'ICICI Bank', bankAccount: '123400556677', bankIfsc: 'ICIC0000011', pan: 'AMITP1234S', aadhaar: '1234-5678-9012' },
-    { id: 'EMP-002', name: 'Pooja Verma', basicSalary: 30000, hra: 10000, allowance: 5000, bankName: 'SBI Bank', bankAccount: '332211005566', bankIfsc: 'SBIN0000234', pan: 'POOJAP5678V', aadhaar: '9876-5432-1098' }
-  ]);
-
-  const [selectedId, setSelectedId] = useState('EMP-001');
+  const [employees, setEmployees] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ basicSalary: 0, hra: 0, allowance: 0, bankName: '', bankAccount: '', bankIfsc: '', pan: '', aadhaar: '' });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const activeEmp = employees.find(e => e.id === selectedId) || employees[0];
+  const [editForm, setEditForm] = useState({ 
+    basicSalary: 0, 
+    hra: 0, 
+    allowance: 0, 
+    bank: '', 
+    accountNo: '', 
+    ifsc: '', 
+    pan: '', 
+    aadhaar: '' 
+  });
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/employees');
+      if (res.data?.success) {
+        setEmployees(res.data.data);
+        if (res.data.data.length > 0 && !selectedId) {
+          setSelectedId(res.data.data[0]._id);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch employees", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const activeEmp = employees.find(e => e._id === selectedId) || null;
 
   const handleEditClick = () => {
+    if (!activeEmp) return;
     setEditForm({
-      basicSalary: activeEmp.basicSalary,
-      hra: activeEmp.hra,
-      allowance: activeEmp.allowance,
-      bankName: activeEmp.bankName,
-      bankAccount: activeEmp.bankAccount,
-      bankIfsc: activeEmp.bankIfsc,
-      pan: activeEmp.pan,
-      aadhaar: activeEmp.aadhaar
+      basicSalary: activeEmp.basicSalary || 0,
+      hra: activeEmp.hra || 0,
+      allowance: activeEmp.allowance || 0,
+      bank: activeEmp.bank || '',
+      accountNo: activeEmp.accountNo || '',
+      ifsc: activeEmp.ifsc || '',
+      pan: activeEmp.pan || '',
+      aadhaar: activeEmp.aadhaar || ''
     });
     setIsEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setEmployees(employees.map(emp => emp.id === selectedId ? { ...emp, ...editForm } : emp));
-    setIsEditing(false);
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...activeEmp,
+        basicSalary: Number(editForm.basicSalary) || 0,
+        hra: Number(editForm.hra) || 0,
+        allowance: Number(editForm.allowance) || 0,
+        bank: editForm.bank,
+        accountNo: editForm.accountNo,
+        ifsc: editForm.ifsc,
+        pan: editForm.pan,
+        aadhaar: editForm.aadhaar,
+        // Auto-calculate gross and net for consistency
+        grossSalary: (Number(editForm.basicSalary) || 0) + (Number(editForm.hra) || 0) + (Number(editForm.allowance) || 0),
+        netSalary: (Number(editForm.basicSalary) || 0) + (Number(editForm.hra) || 0) + (Number(editForm.allowance) || 0)
+      };
+
+      delete payload._id;
+      delete payload.__v;
+
+      const res = await api.put(`/employees/${selectedId}`, payload);
+      
+      if (res.data?.success) {
+        setEmployees(employees.map(emp => emp._id === selectedId ? res.data.data : emp));
+        setIsEditing(false);
+        alert('Financial Docs updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error saving financial docs', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      alert('Failed to save financial docs. Error: ' + errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const calculateCTC = (emp) => {
-    return (emp.basicSalary + emp.hra + emp.allowance) * 12;
+    return ((emp.basicSalary || 0) + (emp.hra || 0) + (emp.allowance || 0)) * 12;
   };
 
   return (
@@ -49,16 +112,22 @@ const FinancialDocs = () => {
         <div className="border rounded-lg overflow-hidden h-[180px] lg:h-[450px] flex flex-col">
           <div className="bg-slate-100 p-2.5 border-b font-bold text-[11px] sm:text-xs text-slate-700">Employees Directory</div>
           <div className="divide-y overflow-y-auto flex-1 no-scrollbar text-[11px] sm:text-xs">
-            {employees.map(e => (
-              <div
-                key={e.id}
-                onClick={() => { setSelectedId(s => e.id); setIsEditing(false); }}
-                className={`p-3 cursor-pointer transition-colors ${selectedId === e.id ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-semibold' : 'hover:bg-slate-50'}`}
-              >
-                <div>{e.name}</div>
-                <div className="text-[9px] sm:text-[10px] text-gray-400 font-mono mt-0.5">{e.id}</div>
-              </div>
-            ))}
+            {isLoading ? (
+               <div className="p-4 text-center text-slate-500">Loading...</div>
+            ) : employees.length === 0 ? (
+               <div className="p-4 text-center text-slate-500">No employees found.</div>
+            ) : (
+              employees.map(e => (
+                <div
+                  key={e._id}
+                  onClick={() => { setSelectedId(e._id); setIsEditing(false); }}
+                  className={`p-3 cursor-pointer transition-colors ${selectedId === e._id ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-semibold' : 'hover:bg-slate-50'}`}
+                >
+                  <div>{e.employeeName}</div>
+                  <div className="text-[9px] sm:text-[10px] text-gray-400 font-mono mt-0.5">{e.employeeId}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -67,7 +136,7 @@ const FinancialDocs = () => {
           {activeEmp ? (
             <div className="border rounded-lg p-4 sm:p-5 space-y-4">
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-[10px] sm:text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">{activeEmp.id}</span>
+                <span className="text-[10px] sm:text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">{activeEmp.employeeId}</span>
                 {!isEditing && (
                   <button
                     onClick={handleEditClick}
@@ -88,7 +157,7 @@ const FinancialDocs = () => {
                         <input
                           type="number"
                           value={editForm.basicSalary}
-                          onChange={(e) => setEditForm({ ...editForm, basicSalary: Number(e.target.value) })}
+                          onChange={(e) => setEditForm({ ...editForm, basicSalary: e.target.value })}
                           className="w-full border p-2 rounded bg-white focus:outline-none"
                         />
                       </div>
@@ -97,7 +166,7 @@ const FinancialDocs = () => {
                         <input
                           type="number"
                           value={editForm.hra}
-                          onChange={(e) => setEditForm({ ...editForm, hra: Number(e.target.value) })}
+                          onChange={(e) => setEditForm({ ...editForm, hra: e.target.value })}
                           className="w-full border p-2 rounded bg-white focus:outline-none"
                         />
                       </div>
@@ -106,7 +175,7 @@ const FinancialDocs = () => {
                         <input
                           type="number"
                           value={editForm.allowance}
-                          onChange={(e) => setEditForm({ ...editForm, allowance: Number(e.target.value) })}
+                          onChange={(e) => setEditForm({ ...editForm, allowance: e.target.value })}
                           className="w-full border p-2 rounded bg-white focus:outline-none"
                         />
                       </div>
@@ -119,22 +188,22 @@ const FinancialDocs = () => {
                       <input
                         type="text"
                         placeholder="Bank Name"
-                        value={editForm.bankName}
-                        onChange={(e) => setEditForm({ ...editForm, bankName: e.target.value })}
+                        value={editForm.bank}
+                        onChange={(e) => setEditForm({ ...editForm, bank: e.target.value })}
                         className="border p-2 rounded focus:outline-none bg-white"
                       />
                       <input
                         type="text"
                         placeholder="Account Number"
-                        value={editForm.bankAccount}
-                        onChange={(e) => setEditForm({ ...editForm, bankAccount: e.target.value })}
+                        value={editForm.accountNo}
+                        onChange={(e) => setEditForm({ ...editForm, accountNo: e.target.value })}
                         className="border p-2 rounded focus:outline-none bg-white"
                       />
                       <input
                         type="text"
                         placeholder="IFSC"
-                        value={editForm.bankIfsc}
-                        onChange={(e) => setEditForm({ ...editForm, bankIfsc: e.target.value })}
+                        value={editForm.ifsc}
+                        onChange={(e) => setEditForm({ ...editForm, ifsc: e.target.value })}
                         className="border p-2 rounded focus:outline-none bg-white"
                       />
                     </div>
@@ -161,9 +230,11 @@ const FinancialDocs = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 justify-end pt-2 border-t">
-                    <button type="button" onClick={() => setIsEditing(false)} className="px-3 py-1.5 border rounded hover:bg-slate-50">Cancel</button>
-                    <button type="submit" className="px-4 py-1.5 bg-indigo-600 text-white rounded font-semibold hover:bg-indigo-700">Save Financials</button>
+                  <div className="flex gap-2 justify-end pt-2 border-t mt-4">
+                    <button type="button" onClick={() => setIsEditing(false)} className="px-3 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" disabled={isSaving} className="px-4 py-1.5 bg-indigo-600 text-white rounded font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                      {isSaving ? 'Saving...' : 'Save Financials'}
+                    </button>
                   </div>
                 </form>
               ) : (
@@ -171,31 +242,34 @@ const FinancialDocs = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                       <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><CreditCard size={14} className="text-indigo-600" /> Salary Configuration</h4>
-                      <p><span className="text-gray-500">Basic Monthly:</span> <strong className="text-gray-900">₹ {activeEmp.basicSalary.toLocaleString()}</strong></p>
-                      <p><span className="text-gray-500">HRA Allowance:</span> <strong className="text-gray-900">₹ {activeEmp.hra.toLocaleString()}</strong></p>
-                      <p><span className="text-gray-500">Other Allowance:</span> <strong className="text-gray-900">₹ {activeEmp.allowance.toLocaleString()}</strong></p>
+                      <p><span className="text-gray-500">Basic Monthly:</span> <strong className="text-gray-900">₹ {(activeEmp.basicSalary || 0).toLocaleString()}</strong></p>
+                      <p><span className="text-gray-500">HRA Allowance:</span> <strong className="text-gray-900">₹ {(activeEmp.hra || 0).toLocaleString()}</strong></p>
+                      <p><span className="text-gray-500">Other Allowance:</span> <strong className="text-gray-900">₹ {(activeEmp.allowance || 0).toLocaleString()}</strong></p>
                       <div className="border-t pt-1.5 font-bold text-slate-700">
                         Annual CTC: ₹ {calculateCTC(activeEmp).toLocaleString()}
                       </div>
                     </div>
                     <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                       <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><Building size={14} className="text-indigo-600" /> Bank Clearing details</h4>
-                      <p><span className="text-gray-500">Bank:</span> <strong className="text-gray-900">{activeEmp.bankName}</strong></p>
-                      <p><span className="text-gray-500">Account:</span> <strong className="font-mono text-gray-900">{activeEmp.bankAccount}</strong></p>
-                      <p><span className="text-gray-500">IFSC:</span> <strong className="font-mono text-gray-900">{activeEmp.bankIfsc}</strong></p>
+                      <p><span className="text-gray-500">Bank:</span> <strong className="text-gray-900">{activeEmp.bank || '-'}</strong></p>
+                      <p><span className="text-gray-500">Account:</span> <strong className="font-mono text-gray-900">{activeEmp.accountNo || '-'}</strong></p>
+                      <p><span className="text-gray-500">IFSC:</span> <strong className="font-mono text-gray-900">{activeEmp.ifsc || '-'}</strong></p>
                     </div>
                   </div>
 
                   <div className="bg-slate-50 p-3 sm:p-4 rounded border space-y-2">
                     <h4 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs"><FileText size={14} className="text-emerald-600" /> Statutory KYC Documents</h4>
-                    <p><span className="text-gray-500">PAN ID Number:</span> <strong className="font-mono text-gray-900">{activeEmp.pan}</strong></p>
-                    <p><span className="text-gray-500">Aadhaar Card:</span> <strong className="font-mono text-gray-900">{activeEmp.aadhaar}</strong></p>
+                    <p><span className="text-gray-500">PAN ID Number:</span> <strong className="font-mono text-gray-900">{activeEmp.pan || '-'}</strong></p>
+                    <p><span className="text-gray-500">Aadhaar Card:</span> <strong className="font-mono text-gray-900">{activeEmp.aadhaar || '-'}</strong></p>
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="p-8 text-center text-gray-500 border rounded">Select an employee to see details.</div>
+            <div className="p-8 text-center text-gray-500 border rounded flex flex-col items-center justify-center">
+              <Users size={32} className="text-slate-300 mb-2" />
+              <p>{isLoading ? 'Loading...' : 'Select an employee to see details.'}</p>
+            </div>
           )}
         </div>
       </div>

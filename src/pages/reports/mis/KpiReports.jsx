@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Filter, 
@@ -16,104 +16,34 @@ import {
   Wallet,
   Landmark
 } from 'lucide-react';
+import api from '../../../api';
 
 const KpiReports = () => {
   const [department, setDepartment] = useState('All');
   const [period, setPeriod] = useState('This Month');
 
-  // 10 Requested KPI metrics
-  const kpiData = [
-    { 
-      name: 'Total Sales KPI', 
-      value: '₹18,45,200', 
-      target: '₹20,00,000', 
-      pct: 92.2, 
-      status: 'On Track', 
-      icon: ShoppingCart, 
-      color: 'text-indigo-600 bg-blue-50 border-blue-100' 
-    },
-    { 
-      name: 'Total Purchase KPI', 
-      value: '₹11,20,400', 
-      target: '₹12,00,000', 
-      pct: 93.3, 
-      status: 'Optimal', 
-      icon: ShoppingBag, 
-      color: 'text-orange-600 bg-orange-50 border-orange-100' 
-    },
-    { 
-      name: 'Gross Profit KPI', 
-      value: '₹7,24,800', 
-      target: '₹8,00,000', 
-      pct: 90.6, 
-      status: 'On Track', 
-      icon: TrendingUp, 
-      color: 'text-emerald-600 bg-emerald-50 border-emerald-100' 
-    },
-    { 
-      name: 'Total Expenses KPI', 
-      value: '₹3,95,600', 
-      target: '₹4,20,000', 
-      pct: 94.1, 
-      status: 'Controlled', 
-      icon: DollarSign, 
-      color: 'text-rose-600 bg-rose-50 border-rose-100' 
-    },
-    { 
-      name: 'Net Profit KPI', 
-      value: '₹3,29,200', 
-      target: '₹3,80,000', 
-      pct: 86.6, 
-      status: 'Stable', 
-      icon: TrendingUp, 
-      color: 'text-teal-600 bg-teal-50 border-teal-100' 
-    },
-    { 
-      name: 'Receivables KPI', 
-      value: '₹6,40,000', 
-      target: '₹5,00,000', 
-      pct: 128.0, 
-      status: 'Needs Action', 
-      icon: Layers, 
-      color: 'text-indigo-600 bg-indigo-50 border-indigo-100' 
-    },
-    { 
-      name: 'Payables KPI', 
-      value: '₹4,10,200', 
-      target: '₹4,50,000', 
-      pct: 91.1, 
-      status: 'Optimal', 
-      icon: Layers, 
-      color: 'text-amber-600 bg-amber-50 border-amber-100' 
-    },
-    { 
-      name: 'Stock Value KPI', 
-      value: '₹24,80,000', 
-      target: '₹25,00,000', 
-      pct: 99.2, 
-      status: 'Stable', 
-      icon: Package, 
-      color: 'text-purple-600 bg-purple-50 border-purple-100' 
-    },
-    { 
-      name: 'Cash Balance KPI', 
-      value: '₹1,20,000', 
-      target: '₹1,50,000', 
-      pct: 80.0, 
-      status: 'Stable', 
-      icon: Wallet, 
-      color: 'text-cyan-600 bg-cyan-50 border-cyan-100' 
-    },
-    { 
-      name: 'Bank Balance KPI', 
-      value: '₹13,30,000', 
-      target: '₹12,00,000', 
-      pct: 110.8, 
-      status: 'Optimal', 
-      icon: Landmark, 
-      color: 'text-indigo-600 bg-indigo-50 border-indigo-100' 
-    }
-  ];
+  const [kpiData, setKpiData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const iconMap = {
+    ShoppingCart, ShoppingBag, TrendingUp, DollarSign, Layers, Package, Wallet, Landmark, ShieldCheck, CheckCircle
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/mis/kpi');
+        if (response.data && response.data.success) {
+          setKpiData(response.data.data.kpiList || []);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handlePrint = () => {
     window.print();
@@ -183,7 +113,7 @@ const KpiReports = () => {
       {/* 10 KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {kpiData.map((kpi, idx) => {
-          const Icon = kpi.icon;
+          const Icon = iconMap[kpi.iconName] || ShieldCheck;
           return (
             <div key={idx} className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition flex flex-col justify-between space-y-4 bg-white relative overflow-hidden">
               <div className="flex items-start justify-between">

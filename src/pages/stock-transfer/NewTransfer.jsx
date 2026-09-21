@@ -4,6 +4,8 @@ import {
   ArrowLeft, Plus, Trash2, CheckCircle2, AlertCircle, 
   Info, Save, ArrowRightLeft, Database
 } from 'lucide-react';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const PRODUCTS_LIST = [
   { name: 'Logitech Wireless Mouse', unit: 'Nos' },
@@ -52,35 +54,39 @@ const NewTransfer = () => {
 
   // Load Transfer on Edit
   useEffect(() => {
-    const saved = localStorage.getItem('stock_transfers');
-    let currentTransfers = saved ? JSON.parse(saved) : [];
-
     if (isEditMode) {
-      const existing = currentTransfers.find(st => st.id === id);
-      if (existing) {
-        setTransferNo(existing.id);
-        setDate(existing.date);
-        setFromWarehouse(existing.fromWarehouse);
-        setToWarehouse(existing.toWarehouse);
-        setReference(existing.reference);
-        setReason(existing.reason);
-        setRemarks(existing.remarks);
-        setStatus(existing.status);
-        // Map items back
-        setItems(existing.items.map(item => ({
-          product: item.product,
-          qty: String(item.qty),
-          unit: item.unit,
-          batch: item.batch || '',
-          serial: item.serial || ''
-        })));
-      } else {
-        alert('Stock transfer voucher not found!');
-        navigate('/stock-transfer/list');
-      }
+      const fetchTransfer = async () => {
+        try {
+          const res = await api.get(`/stock-transfers/${id}`);
+          if (res.data?.data) {
+            const existing = res.data.data;
+            setTransferNo(existing.transferNo);
+            setDate(existing.date);
+            setFromWarehouse(existing.fromWarehouse);
+            setToWarehouse(existing.toWarehouse);
+            setReference(existing.reference);
+            setReason(existing.reason);
+            setRemarks(existing.remarks);
+            setStatus(existing.status);
+            // Map items back
+            setItems((existing.items || []).map(item => ({
+              product: item.product,
+              qty: String(item.qty),
+              unit: item.unit,
+              batch: item.batch || '',
+              serial: item.serial || ''
+            })));
+          }
+        } catch (err) {
+          console.error("Failed to fetch stock transfer", err);
+          alert('Stock transfer voucher not found!');
+          navigate('/stock-transfer/list');
+        }
+      };
+      fetchTransfer();
     } else {
-      const nextNum = currentTransfers.length + 1;
-      setTransferNo(`ST-2024-${String(nextNum).padStart(3, '0')}`);
+      const nextNum = Math.floor(Math.random() * 90000) + 10000;
+      setTransferNo(`ST-2024-${nextNum}`);
     }
   }, [id, isEditMode, navigate]);
 
@@ -119,40 +125,39 @@ const NewTransfer = () => {
     setItems(updated);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!isValid) return;
 
-    const saved = localStorage.getItem('stock_transfers');
-    let currentTransfers = saved ? JSON.parse(saved) : [];
+    try {
+      const payload = {
+        transferNo,
+        voucherNo: transferNo, // To bypass E11000 unique index on voucherNo
+        date,
+        fromWarehouse,
+        toWarehouse,
+        reference,
+        reason,
+        status,
+        items: items.map(item => ({
+          ...item,
+          qty: Number(item.qty) || 0
+        })),
+        totalQty: Number(totalQty) || 0,
+        remarks
+      };
 
-    const newTransfer = {
-      id: transferNo,
-      date,
-      fromWarehouse,
-      toWarehouse,
-      reference,
-      reason,
-      status,
-      items: items.map(item => ({
-        product: item.product,
-        qty: Number(item.qty),
-        unit: item.unit,
-        batch: item.batch,
-        serial: item.serial
-      })),
-      totalQty,
-      remarks
-    };
+      if (isEditMode) {
+        await api.put(`/stock-transfers/${id}`, payload);
+      } else {
+        await api.post('/stock-transfers', payload);
+      }
 
-    if (isEditMode) {
-      currentTransfers = currentTransfers.map(st => st.id === transferNo ? newTransfer : st);
-    } else {
-      currentTransfers.push(newTransfer);
+      navigate('/stock-transfer/list');
+    } catch (err) {
+      console.error("Failed to save stock transfer", err);
+      alert('Failed to save stock transfer: ' + (err.response?.data?.message || err.message));
     }
-
-    localStorage.setItem('stock_transfers', JSON.stringify(currentTransfers));
-    navigate('/stock-transfer/list');
   };
 
   return (
@@ -207,32 +212,24 @@ const NewTransfer = () => {
 
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">From Warehouse *</label>
-                <select
+                <DynamicSelect
+                  name="fromWarehouse"
+                  category="Warehouse"
                   value={fromWarehouse}
                   onChange={(e) => setFromWarehouse(e.target.value)}
-                  required
-                  className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">-- Source Warehouse --</option>
-                  {WAREHOUSES_LIST.map((wh, wIdx) => (
-                    <option key={wIdx} value={wh}>{wh}</option>
-                  ))}
-                </select>
+                  defaultOptions={WAREHOUSES_LIST}
+                />
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">To Warehouse *</label>
-                <select
+                <DynamicSelect
+                  name="toWarehouse"
+                  category="Warehouse"
                   value={toWarehouse}
                   onChange={(e) => setToWarehouse(e.target.value)}
-                  required
-                  className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">-- Destination --</option>
-                  {WAREHOUSES_LIST.map((wh, wIdx) => (
-                    <option key={wIdx} value={wh}>{wh}</option>
-                  ))}
-                </select>
+                  defaultOptions={WAREHOUSES_LIST}
+                />
               </div>
             </div>
 
@@ -251,17 +248,13 @@ const NewTransfer = () => {
 
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Transfer Reason *</label>
-                <select
+                <DynamicSelect
+                  name="reason"
+                  category="Reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  required
-                  className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">-- Choose Reason --</option>
-                  {TRANSFER_REASONS.map((r, rIdx) => (
-                    <option key={rIdx} value={r}>{r}</option>
-                  ))}
-                </select>
+                  defaultOptions={TRANSFER_REASONS}
+                />
               </div>
             </div>
 
@@ -306,19 +299,14 @@ const NewTransfer = () => {
                   <tbody>
                     {items.map((item, idx) => (
                       <tr key={idx} className="border-b border-gray-150 dark:border-slate-200 hover:bg-gray-50/50 dark:hover:bg-slate-850/30 transition-colors">
-                        {/* Product */}
                         <td className="py-2 px-3">
-                          <select
+                          <DynamicSelect
+                            name="product"
+                            category="Product"
                             value={item.product}
                             onChange={(e) => handleRowChange(idx, 'product', e.target.value)}
-                            required
-                            className="w-full p-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 font-medium"
-                          >
-                            <option value="">-- Choose Product --</option>
-                            {PRODUCTS_LIST.map((prod, pIdx) => (
-                              <option key={pIdx} value={prod.name}>{prod.name}</option>
-                            ))}
-                          </select>
+                            defaultOptions={PRODUCTS_LIST.map(p => p.name)}
+                          />
                         </td>
 
                         {/* Quantity */}
@@ -336,16 +324,13 @@ const NewTransfer = () => {
 
                         {/* Unit */}
                         <td className="py-2 px-3">
-                          <select
+                          <DynamicSelect
+                            name="unit"
+                            category="Unit"
                             value={item.unit}
                             onChange={(e) => handleRowChange(idx, 'unit', e.target.value)}
-                            className="w-full p-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-750 dark:text-slate-200"
-                          >
-                            <option value="Nos">Nos</option>
-                            <option value="Pcs">Pcs</option>
-                            <option value="Kgs">Kgs</option>
-                            <option value="Mtrs">Mtrs</option>
-                          </select>
+                            defaultOptions={['Nos', 'Pcs', 'Kgs', 'Mtrs']}
+                          />
                         </td>
 
                         {/* Batch Number */}
@@ -430,16 +415,13 @@ const NewTransfer = () => {
             {/* Transfer Status options */}
             <div className="mb-4">
               <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Transfer Status</label>
-              <select
+              <DynamicSelect
+                name="status"
+                category="Status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 focus:outline-none"
-              >
-                <option value="Pending">Pending Dispatch</option>
-                <option value="Sent">Dispatched / In Transit</option>
-                <option value="Received">Received & Closed</option>
-                <option value="Draft">Draft</option>
-              </select>
+                defaultOptions={['Pending', 'Sent', 'Received', 'Draft']}
+              />
             </div>
 
             {/* Error badge for same warehouse */}

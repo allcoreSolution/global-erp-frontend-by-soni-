@@ -30,7 +30,7 @@ const SalesSummaryReports = () => {
       icon: Calendar,
       color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
       actionText: 'Check Daily Registers',
-      to: '/coming-soon'
+      to: '/reports/sales/daily'
     },
     {
       title: 'Monthly Sales',
@@ -38,7 +38,7 @@ const SalesSummaryReports = () => {
       icon: LineChart,
       color: 'text-purple-600 bg-purple-50 border-purple-100',
       actionText: 'Review Monthly Records',
-      to: '/coming-soon'
+      to: '/reports/sales/monthly'
     },
     {
       title: 'Yearly Sales',
@@ -46,7 +46,7 @@ const SalesSummaryReports = () => {
       icon: TrendingUp,
       color: 'text-cyan-600 bg-cyan-50 border-cyan-100',
       actionText: 'Audit Yearly Reports',
-      to: '/coming-soon'
+      to: '/reports/sales/yearly'
     },
     {
       title: 'Sales Invoice Register',
@@ -54,7 +54,7 @@ const SalesSummaryReports = () => {
       icon: FileText,
       color: 'text-amber-600 bg-amber-50 border-amber-100',
       actionText: 'Open Invoice Registers',
-      to: '/coming-soon'
+      to: '/reports/sales/invoice-register'
     },
     {
       title: 'Sales Return Report',
@@ -62,7 +62,7 @@ const SalesSummaryReports = () => {
       icon: RotateCcw,
       color: 'text-rose-600 bg-rose-50 border-rose-100',
       actionText: 'Open Returns Logs',
-      to: '/coming-soon'
+      to: '/reports/sales/return-report'
     },
     {
       title: 'Net Sales Report',
@@ -70,7 +70,7 @@ const SalesSummaryReports = () => {
       icon: Percent,
       color: 'text-teal-600 bg-teal-50 border-teal-100',
       actionText: 'Audit Net Profit Statements',
-      to: '/coming-soon'
+      to: '/reports/sales/net-sales'
     }
   ];
 

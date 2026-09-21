@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Plus, Trash2, UploadCloud, FileText, FileDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import DynamicSelect from '../../components/DynamicSelect';
+import api from '../../api';
 
 const NewReceipt = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // Basic Information State
   const [form, setForm] = useState({
-    receiptNo: 'REC-00001',
+    receiptNo: `REC-${Date.now().toString().slice(-5)}`,
     receiptDate: new Date().toISOString().split('T')[0],
     receiptType: 'Customer',
     company: '',
@@ -51,10 +54,57 @@ const NewReceipt = () => {
 
   // Totals State
   const [totals, setTotals] = useState({
-    received: 10000,
-    adjusted: 10000,
+    received: 0,
+    adjusted: 0,
     unadjusted: 0
   });
+
+  useEffect(() => {
+    if (id) {
+      const fetchReceipt = async () => {
+        try {
+          const { data } = await api.get(`/receipts/${id}`);
+          if (data.success && data.data) {
+            const ret = data.data;
+            setForm({
+              receiptNo: ret.receiptNo || `REC-${Date.now().toString().slice(-5)}`,
+              receiptDate: ret.receiptDate || new Date().toISOString().split('T')[0],
+              receiptType: ret.receiptType || 'Customer',
+              company: ret.company || '',
+              branch: ret.branch || '',
+              status: ret.status || 'Draft',
+              customerParty: ret.customerParty || '',
+              customerType: ret.customerType || 'Retailer',
+              contactNumber: ret.contactNumber || '',
+              referenceInvoice: ret.referenceInvoice || '',
+              referenceOrder: ret.referenceOrder || '',
+              paymentAmount: ret.paymentAmount || 0,
+              paymentMethod: ret.paymentMethod || 'UPI',
+              account: ret.account || '',
+              transactionRef: ret.transactionRef || '',
+              paymentDate: ret.paymentDate || new Date().toISOString().split('T')[0],
+              bankName: ret.bankName || '',
+              chequeNo: ret.chequeNo || '',
+              chequeDate: ret.chequeDate || '',
+              receiptAccount: ret.receiptAccount || '',
+              customerLedger: ret.customerLedger || '',
+              costCenter: ret.costCenter || '',
+              tdsAdjustment: ret.tdsAdjustment || '',
+              exchangeRate: ret.exchangeRate || '1.00',
+              receivedBy: ret.receivedBy || '',
+              approvedBy: ret.approvedBy || '',
+              remarks: ret.remarks || ''
+            });
+            setInvoices(ret.invoices || []);
+            setTotals(ret.totals || { received: 0, adjusted: 0, unadjusted: 0 });
+          }
+        } catch (error) {
+          console.error("Error fetching receipt data", error);
+        }
+      };
+      fetchReceipt();
+    }
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -102,10 +152,41 @@ const NewReceipt = () => {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert('Receipt Posted successfully!');
-    navigate('/receipt/list');
+    try {
+      const payload = {
+        ...form,
+        voucherNo: form.receiptNo,
+        paymentAmount: Number(form.paymentAmount) || 0,
+        tdsAdjustment: form.tdsAdjustment ? Number(form.tdsAdjustment) : 0,
+        invoices: invoices.map(inv => ({
+          ...inv,
+          invoiceAmount: Number(inv.invoiceAmount) || 0,
+          dueAmount: Number(inv.dueAmount) || 0,
+          adjustAmount: Number(inv.adjustAmount) || 0
+        })),
+        totals: {
+          received: Number(totals.received) || 0,
+          adjusted: Number(totals.adjusted) || 0,
+          unadjusted: Number(totals.unadjusted) || 0
+        }
+      };
+      
+      delete payload.documentFile;
+      
+      if (id) {
+        await api.put(`/receipts/${id}`, payload);
+        alert('Receipt Updated successfully!');
+      } else {
+        await api.post('/receipts', payload);
+        alert('Receipt Posted successfully!');
+      }
+      navigate('/receipt/list');
+    } catch (error) {
+      console.error('Error saving receipt', error);
+      alert('Failed to save receipt. Please check the inputs.');
+    }
   };
 
   return (
@@ -158,33 +239,19 @@ const NewReceipt = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Receipt Type *</label>
-                  <select name="receiptType" value={form.receiptType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Customer</option>
-                    <option>Supplier Refund</option>
-                    <option>Other Income</option>
-                  </select>
+                  <DynamicSelect category="Receipt Type" name="receiptType" value={form.receiptType} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Draft</option>
-                    <option>Posted</option>
-                    <option>Cancelled</option>
-                  </select>
+                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
+                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Branch</option>
-                    <option>HQ</option>
-                  </select>
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
                 </div>
               </div>
             </div>
@@ -195,19 +262,11 @@ const NewReceipt = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer / Party *</label>
-                  <select name="customerParty" value={form.customerParty} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Customer</option>
-                    <option>ABC Retailers</option>
-                    <option>XYZ Corp</option>
-                  </select>
+                  <DynamicSelect category="Customer" name="customerParty" value={form.customerParty} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Type</label>
-                  <select name="customerType" value={form.customerType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Retailer</option>
-                    <option>Wholesaler</option>
-                    <option>Corporate</option>
-                  </select>
+                  <DynamicSelect category="Customer Type" name="customerType" value={form.customerType} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Number</label>
@@ -215,10 +274,7 @@ const NewReceipt = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Reference Invoice</label>
-                  <select name="referenceInvoice" value={form.referenceInvoice} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Invoice</option>
-                    <option>INV-001</option>
-                  </select>
+                  <DynamicSelect category="Invoice" name="referenceInvoice" value={form.referenceInvoice} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Reference Order</label>
@@ -241,22 +297,11 @@ const NewReceipt = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method *</label>
-                  <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>UPI</option>
-                    <option>Bank Transfer</option>
-                    <option>Cash</option>
-                    <option>Cheque</option>
-                    <option>Credit Card</option>
-                  </select>
+                  <DynamicSelect category="Payment Method" name="paymentMethod" value={form.paymentMethod} onChange={handleChange} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Account *</label>
-                  <select name="account" value={form.account} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Account</option>
-                    <option>HDFC Bank - Current</option>
-                    <option>SBI - OD</option>
-                    <option>Cash in Hand</option>
-                  </select>
+                  <DynamicSelect category="Account" name="account" value={form.account} onChange={handleChange} />
                 </div>
                 
                 <div>
@@ -269,11 +314,7 @@ const NewReceipt = () => {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Name</label>
-                  <select name="bankName" value={form.bankName} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Bank (if applicable)</option>
-                    <option>HDFC Bank</option>
-                    <option>ICICI Bank</option>
-                  </select>
+                  <DynamicSelect category="Bank Name" name="bankName" value={form.bankName} onChange={handleChange} />
                 </div>
                 
                 {form.paymentMethod === 'Cheque' && (
@@ -366,24 +407,15 @@ const NewReceipt = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Receipt Account</label>
-                    <select name="receiptAccount" value={form.receiptAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Bank Receipts Acc</option>
-                    </select>
+                    <DynamicSelect category="Receipt Account" name="receiptAccount" value={form.receiptAccount} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Ledger</label>
-                    <select name="customerLedger" value={form.customerLedger} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>ABC Retailers Ledger</option>
-                    </select>
+                    <DynamicSelect category="Customer Ledger" name="customerLedger" value={form.customerLedger} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Center</label>
-                    <select name="costCenter" value={form.costCenter} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Sales Dept</option>
-                    </select>
+                    <DynamicSelect category="Cost Center" name="costCenter" value={form.costCenter} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Exchange Rate</label>
@@ -402,17 +434,11 @@ const NewReceipt = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Received By</label>
-                    <select name="receivedBy" value={form.receivedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Cashier 1</option>
-                    </select>
+                    <DynamicSelect category="Received By" name="receivedBy" value={form.receivedBy} onChange={handleChange} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                    <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select</option>
-                      <option>Finance Manager</option>
-                    </select>
+                    <DynamicSelect category="Approved By" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
@@ -420,9 +446,18 @@ const NewReceipt = () => {
                   </div>
                   <div className="col-span-2 mt-2">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Attachment</label>
-                     <button type="button" className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500">
-                        <UploadCloud size={18} /> Upload Document
-                     </button>
+                     <div className="flex items-center gap-2">
+                       <label className="flex-1 flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">
+                          <UploadCloud size={18} />
+                          <span className="truncate">{form.documentFile ? form.documentFile.name : 'Upload Document'}</span>
+                          <input type="file" className="hidden" onChange={(e) => setForm(prev => ({ ...prev, documentFile: e.target.files[0] }))} />
+                       </label>
+                       {form.documentFile && (
+                         <button type="button" onClick={() => setForm(prev => ({...prev, documentFile: null}))} className="p-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors">
+                           <Trash2 size={18} />
+                         </button>
+                       )}
+                     </div>
                   </div>
                 </div>
              </div>

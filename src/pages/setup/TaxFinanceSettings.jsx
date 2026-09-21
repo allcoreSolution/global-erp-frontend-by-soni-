@@ -1,20 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../api';
 import { Calculator, Save } from 'lucide-react';
 
 const TaxFinanceSettings = () => {
-  const [fy, setFy] = useState(() => localStorage.getItem('erp_fy') || '2024-2025');
+  const [formData, setFormData] = useState({
+    fiscalYearStart: 'April 1st',
+    baseCurrency: 'INR (Indian Rupee)',
+    defaultTaxSystem: 'GST (India)',
+    defaultGstRate: '18%',
+    hsnSacMandatory: true,
+    roundOffInvoices: true,
+    autoEInvoicing: false,
+    tcsApplicability: true
+  });
 
-  const handleSave = (e) => { 
-    e.preventDefault(); 
-    let list = JSON.parse(localStorage.getItem('financial_years')) || ['2023-2024', '2024-2025', '2025-2026'];
-    if (!list.includes(fy)) {
-      list.push(fy);
-      localStorage.setItem('financial_years', JSON.stringify(list));
-    }
-    localStorage.setItem('erp_fy', fy);
-    window.dispatchEvent(new Event('erp_config_changed'));
-    alert('Tax & Financial settings saved!'); 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await api.get('/settings/tax-finance');
+        if (data) setFormData(data);
+      } catch (err) {
+        console.error('Failed to fetch tax finance settings', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleSave = async (e) => { 
+    e.preventDefault(); 
+    try {
+      await api.put('/settings/tax-finance', formData);
+      alert('Tax & Financial settings saved!'); 
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save settings');
+    }
+  };
+
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6">
       <div className="flex justify-between items-center border-b pb-4">
@@ -29,8 +55,10 @@ const TaxFinanceSettings = () => {
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold uppercase text-slate-700">Financial Rules</h3>
         <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Current Financial Year</label><input type="text" className="w-full text-xs border rounded p-2" value={fy} onChange={(e) => setFy(e.target.value)} /></div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Base Tax Rate (%)</label><input type="number" className="w-full text-xs border rounded p-2" defaultValue="18" /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Fiscal Year Start</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.fiscalYearStart} onChange={e => handleChange('fiscalYearStart', e.target.value)} /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Base Currency</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.baseCurrency} onChange={e => handleChange('baseCurrency', e.target.value)} /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Default Tax System</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.defaultTaxSystem} onChange={e => handleChange('defaultTaxSystem', e.target.value)} /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Default GST Rate</label><input type="text" className="w-full text-xs border rounded p-2" value={formData.defaultGstRate} onChange={e => handleChange('defaultGstRate', e.target.value)} /></div>
         </div>
       </div>
     </div>

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Search, Download, Upload, Printer, CheckCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const BankPaymentList = () => {
-  const [bankPayments, setBankPayments] = useState([
-    { id: 'BPMT-001', bankAccount: 'ICICI Current A/C', supplierName: 'Rathi Steel Traders Ltd', amount: 55000, date: '2024-05-12', refNo: 'TXN44990', bankCharges: 25, reconciled: true },
-    { id: 'BPMT-002', bankAccount: 'HDFC Business A/C', supplierName: 'Saraswati Plastics', amount: 12000, date: '2024-05-15', refNo: 'CHQ88992', bankCharges: 0, reconciled: false }
-  ]);
+  const navigate = useNavigate();
+  const [bankPayments, setBankPayments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -14,27 +15,57 @@ const BankPaymentList = () => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleToggleReconciliation = (id) => {
-    setBankPayments(prev => prev.map(p => {
-      if (p.id === id) {
-        addLog(`Toggled reconciliation status of bank payment ${p.id} to ${!p.reconciled ? 'Reconciled' : 'Unreconciled'}`);
-        return { ...p, reconciled: !p.reconciled };
-      }
-      return p;
-    }));
+  const handleToggleReconciliation = async (id, currentStatus) => {
+    try {
+      await api.put(`/bank-payments/${id}`, { reconciled: !currentStatus });
+      setBankPayments(prev => prev.map(p => {
+        if (p._id === id) {
+          addLog(`Toggled reconciliation status of bank payment ${p.paymentNo} to ${!currentStatus ? 'Reconciled' : 'Unreconciled'}`);
+          return { ...p, reconciled: !currentStatus };
+        }
+        return p;
+      }));
+    } catch (error) {
+      console.error('Error toggling reconciliation', error);
+      addLog('Error toggling reconciliation');
+    }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete bank payment ${id}?`)) {
-      setBankPayments(prev => prev.filter(p => p.id !== id));
-      addLog(`Deleted bank payment voucher ${id}`);
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/bank-payments');
+      if (data.success) {
+        setBankPayments(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching bank payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this bank payment?')) {
+      try {
+        await api.delete(`/bank-payments/${id}`);
+        setBankPayments(prev => prev.filter(p => p._id !== id));
+        addLog(`Deleted bank payment voucher: ${id}`);
+      } catch (error) {
+        console.error('Error deleting bank payment:', error);
+        addLog(`Error deleting bank payment: ${id}`);
+      }
     }
   };
 
   const filtered = bankPayments.filter(p =>
-    p.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.bankAccount.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.supplierParty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.paymentNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.bankAccount || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Real CSV Export
@@ -42,13 +73,13 @@ const BankPaymentList = () => {
     addLog("Exporting bank payments data registers to CSV...");
     const headers = ['Bank Payment ID', 'Bank Account', 'Supplier Name', 'Amount (₹)', 'Date', 'Reference No', 'Bank Charges (₹)', 'Reconciled'];
     const rows = bankPayments.map(p => [
-      p.id,
+      p.paymentNo,
       p.bankAccount,
-      `"${p.supplierName.replace(/"/g, '""')}"`,
+      `"${(p.supplierParty || '').replace(/"/g, '""')}"`,
       p.amount,
-      p.date,
-      p.refNo,
-      p.bankCharges,
+      p.paymentDate,
+      p.utrNo || p.chequeNo,
+      p.bankCharges || 0,
       p.reconciled ? 'Yes' : 'No'
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -189,30 +220,43 @@ const BankPaymentList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(p => (
-                <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{p.id}</td>
-                  <td className="p-2 font-medium text-gray-900">{p.bankAccount}</td>
-                  <td className="p-2 text-gray-650">{p.supplierName}</td>
-                  <td className="p-2 text-right font-bold text-rose-600">₹ {p.amount.toLocaleString()}</td>
-                  <td className="p-2 text-gray-500 whitespace-nowrap">{p.date}</td>
-                  <td className="p-2 font-mono text-gray-600">{p.refNo}</td>
-                  <td className="p-2 text-right text-gray-550">₹ {p.bankCharges}</td>
-                  <td className="p-2 text-center no-print">
-                    <button
-                      onClick={() => handleToggleReconciliation(p.id)}
-                      className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${p.reconciled ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
-                    >
-                      {p.reconciled ? 'Reconciled' : 'Unreconciled'}
-                    </button>
-                  </td>
-                  <td className="p-2 text-center no-print">
-                    <button onClick={() => handleDelete(p.id)} className="p-1 hover:bg-red-50 rounded text-red-600">
-                      <Trash2 size={13} />
-                    </button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">Loading payments...</td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="p-4 text-center text-slate-500">No bank payments found.</td>
+                </tr>
+              ) : (
+                filtered.map(p => (
+                  <tr key={p._id} className="hover:bg-slate-50">
+                    <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{p.paymentNo}</td>
+                    <td className="p-2 font-medium text-gray-900">{p.bankAccount || '-'}</td>
+                    <td className="p-2 text-gray-650">{p.supplierParty || '-'}</td>
+                    <td className="p-2 text-right font-bold text-rose-600">₹ {(p.amount || 0).toLocaleString()}</td>
+                    <td className="p-2 text-gray-500 whitespace-nowrap">{p.paymentDate}</td>
+                    <td className="p-2 font-mono text-gray-600">{p.utrNo || p.chequeNo || '-'}</td>
+                    <td className="p-2 text-right text-gray-550">₹ {p.bankCharges || 0}</td>
+                    <td className="p-2 text-center no-print">
+                      <button
+                        onClick={() => handleToggleReconciliation(p._id, p.reconciled)}
+                        className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${p.reconciled ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                      >
+                        {p.reconciled ? 'Reconciled' : 'Unreconciled'}
+                      </button>
+                    </td>
+                    <td className="p-2 text-center no-print flex justify-center items-center gap-2">
+                      <button onClick={() => navigate(`/bank-payment/edit/${p._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600">
+                        <Edit size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(p._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

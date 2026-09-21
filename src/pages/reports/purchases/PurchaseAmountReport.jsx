@@ -1,14 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, Download, Printer, Filter, Search, ArrowUpDown, TrendingDown } from 'lucide-react';
+import api from '../../../api';
 
 const PurchaseAmountReport = () => {
-  const data = [
-    { invoice: 'PINV-26-0901', date: '2026-09-01', supplier: 'Global Supplies Inc.', amount: 150000, status: 'Paid', method: 'Bank Transfer' },
-    { invoice: 'PINV-26-0902', date: '2026-09-02', supplier: 'Prime Electronics', amount: 325000, status: 'Pending', method: '-' },
-    { invoice: 'PINV-26-0903', date: '2026-09-02', supplier: 'Delta Furniture', amount: 84000, status: 'Paid', method: 'NEFT' },
-    { invoice: 'PINV-26-0904', date: '2026-09-03', supplier: 'Tech Wholesale', amount: 410000, status: 'Partial', method: 'Cheque' },
-    { invoice: 'PINV-26-0905', date: '2026-09-04', supplier: 'Office Solutions', amount: 95000, status: 'Paid', method: 'Bank Transfer' },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/financial/purchase-amount');
+        if (response.data.success) {
+          setData(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
 

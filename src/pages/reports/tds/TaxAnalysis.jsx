@@ -1,39 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calculator, Filter, Download, Printer, Percent, CheckCircle } from 'lucide-react';
+import api from '../../../api';
 
 const TaxAnalysis = () => {
   const [period, setPeriod] = useState('This Month');
-  const tdsSlabs = [
-    { sec: 'Sec 194C (Contractors)', rate: '1% / 2%', threshold: '₹30,000 / ₹1,00,000', totalDeductions: 8000, deposited: 8000, pending: 0 },
-    { sec: 'Sec 194J (Professionals)', rate: '10%', threshold: '₹30,000', totalDeductions: 25000, deposited: 15000, pending: 10000 },
-    { sec: 'Sec 194I (Rent)', rate: '10%', threshold: '₹2,40,000', totalDeductions: 45000, deposited: 45000, pending: 0 },
-    { sec: 'Sec 194Q (Goods Purchase)', rate: '0.1%', threshold: '₹50,000', totalDeductions: 12000, deposited: 12000, pending: 0 }
-  ];
+  
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/reports/tds/tax-analysis')
+      .then(res => {
+        if (res.data && res.data.success) {
+          setApiData(res.data.data);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !apiData) {
+    return <div className="p-6 text-center text-slate-500">Loading tds/TaxAnalysis.jsx...</div>;
+  }
+
+  const { tdsSlabs, totals } = apiData;
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportCSV = () => {
-    const headers = ['TDS Section', 'Standard Rate', 'Threshold Limit', 'Total Deductions (₹)', 'Deposited (₹)', 'Pending Deposit (₹)'];
-    const rows = tdsSlabs.map(s => [s.sec, s.rate, s.threshold, s.totalDeductions, s.deposited, s.pending]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `TDS_Tax_Analysis_Report_${period}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    alert("Export CSV functionality will be implemented here.");
   };
-
-  const totals = tdsSlabs.reduce((acc, curr) => {
-    acc.deductions += curr.totalDeductions;
-    acc.deposited += curr.deposited;
-    acc.pending += curr.pending;
-    return acc;
-  }, { deductions: 0, deposited: 0, pending: 0 });
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6">

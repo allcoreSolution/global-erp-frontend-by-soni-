@@ -39,10 +39,10 @@ const TableWidget = ({ title, columns, data, viewAllText, onViewAll, greenTotal 
   </div>
 );
 
-export const DashboardTables = () => {
+export const DashboardTables = ({ data, loading }) => {
   const navigate = useNavigate();
 
-  const lowStockData = [
+  const lowStockData = data?.lowStockData || [
     { id: '1.', name: 'Premium Headphones', stock: '12', reorder: '50' },
     { id: '2.', name: 'Smart Fitness Band', stock: '8', reorder: '25' },
     { id: '3.', name: 'Mini Bluetooth Speaker', stock: '5', reorder: '20' },
@@ -50,7 +50,7 @@ export const DashboardTables = () => {
     { id: '5.', name: 'Stainless Steel Bottle', stock: '2', reorder: '10' },
   ];
   
-  const expiryData = [
+  const expiryData = data?.expiryData || [
     { id: '1.', name: 'Organic Green Tea', date: '31-10-2026', qty: '25' },
     { id: '2.', name: 'Roasted Almonds pack', date: '15-12-2026', qty: '18' },
     { id: '3.', name: 'Premium Green Coffee', date: '20-01-2027', qty: '30' },
@@ -58,7 +58,7 @@ export const DashboardTables = () => {
     { id: '5.', name: 'Flax Seeds premium', date: '05-04-2027', qty: '15' },
   ];
 
-  const topSellingData = [
+  const topSellingData = data?.topSellingData || [
     { id: '1.', name: 'Wireless Headphones', qty: '1,250', amount: '₹ 18,75,230.00' },
     { id: '2.', name: 'Smart Fitness Band', qty: '980', amount: '₹ 14,20,450.00' },
     { id: '3.', name: 'Classic Leather Wallet', qty: '875', amount: '₹ 12,45,320.00' },
@@ -66,7 +66,7 @@ export const DashboardTables = () => {
     { id: '5.', name: 'Mini Bluetooth Speaker', qty: '540', amount: '₹ 6,25,430.00' },
   ];
 
-  const recentActivities = [
+  const recentActivities = data?.recentActivities || [
     { activity: 'POS Sale Invoice Created', user: 'ADMIN', time: '11:20 AM' },
     { activity: 'Purchase Voucher Saved', user: 'ADMIN', time: '11:10 AM' },
     { activity: 'Payment Received', user: 'ACCOUNTANT', time: '10:55 AM' },

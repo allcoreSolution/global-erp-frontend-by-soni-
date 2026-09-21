@@ -1,66 +1,77 @@
-import React, { useState } from 'react';
-import { Target, Plus, Trash2, X, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Target, Plus, Trash2, X, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const EmployeeTargets = () => {
   const navigate = useNavigate();
-  const [targets, setTargets] = useState([
-    { id: 'TGT-201', name: 'Neha Gupta', kpi: 'Sales Revenue Target', metric: '₹ 5,00,000 / mo', progress: 85, deadline: '2026-08-31', priority: 'High', status: 'In Progress' },
-    { id: 'TGT-202', name: 'Vikram Singh', kpi: 'Core Migration Milestone', metric: '100% cloud migration', progress: 100, deadline: '2026-08-15', priority: 'High', status: 'Completed' },
-    { id: 'TGT-203', name: 'Priya Patel', kpi: 'POS UI Refactoring', metric: '8 Design Templates Spools', progress: 95, deadline: '2026-08-20', priority: 'Medium', status: 'In Progress' },
-    { id: 'TGT-204', name: 'Amit Sharma', kpi: 'Statutory Reconciliation', metric: 'All Q2 PF/TDS audits done', progress: 40, deadline: '2026-09-15', priority: 'Medium', status: 'Behind Schedule' },
-    { id: 'TGT-205', name: 'Rajesh Kumar', kpi: 'Inventory Reconciliation', metric: 'Stock counts vs actuals matching', progress: 100, deadline: '2026-08-12', priority: 'Low', status: 'Completed' }
-  ]);
+  const [targets, setTargets] = useState([]);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newTarget, setNewTarget] = useState({
-    name: '',
-    kpi: '',
-    metric: '',
-    progress: 0,
-    deadline: '',
-    priority: 'High',
-    status: 'In Progress'
-  });
+  const fetchTargets = async () => {
+    try {
+      const [tgtRes, empRes] = await Promise.all([
+        api.get('/employee-targets'),
+        api.get('/employees').catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      const employees = empRes.data?.data || [];
+      const empMap = employees.reduce((acc, emp) => {
+        acc[emp._id] = emp.employeeName;
+        return acc;
+      }, {});
 
-  const handleAddTarget = (e) => {
-    e.preventDefault();
-    if (!newTarget.name || !newTarget.kpi || !newTarget.metric) {
-      alert("Name, KPI and Target Metric are required!");
-      return;
-    }
-    const nextId = `TGT-${String(targets.length + 201).padStart(3, '0')}`;
-    const added = {
-      id: nextId,
-      name: newTarget.name,
-      kpi: newTarget.kpi,
-      metric: newTarget.metric,
-      progress: Number(newTarget.progress) || 0,
-      deadline: newTarget.deadline || new Date().toISOString().slice(0, 10),
-      priority: newTarget.priority,
-      status: Number(newTarget.progress) >= 100 ? 'Completed' : newTarget.status
-    };
+      if (tgtRes.data?.success) {
+        const formatted = tgtRes.data.data.map(t => {
+          const targetVal = Number(t.targetValue) || 0;
+          const achievedVal = Number(t.achieved) || 0;
+          const baselineVal = Number(t.baseline) || 0;
+          
+          let progress = 0;
+          if (targetVal - baselineVal > 0) {
+            progress = ((achievedVal - baselineVal) / (targetVal - baselineVal)) * 100;
+          }
+          progress = Math.min(100, Math.max(0, Math.round(progress)));
+          
+          const status = progress >= 100 ? 'Completed' : progress < 50 ? 'Behind Schedule' : 'In Progress';
 
-    setTargets([added, ...targets]);
-    setShowAddModal(false);
-    setNewTarget({ name: '', kpi: '', metric: '', progress: 0, deadline: '', priority: 'High', status: 'In Progress' });
-  };
-
-  const handleProgressChange = (id, amount) => {
-    setTargets(prev => prev.map(t => {
-      if (t.id === id) {
-        const nextProgress = Math.min(100, Math.max(0, t.progress + amount));
-        const status = nextProgress >= 100 ? 'Completed' : nextProgress < 50 ? 'Behind Schedule' : 'In Progress';
-        return { ...t, progress: nextProgress, status };
+          return {
+            id: t._id,
+            refCode: t.targetNo || `TGT-${t._id.substring(0, 5).toUpperCase()}`,
+            name: empMap[t.employee] || t.employee || 'Unknown',
+            kpi: t.targetTitle || t.kpi || 'No KPI Set',
+            metric: `${t.targetValue} ${t.unit}`,
+            progress: progress,
+            deadline: t.endDate || 'No Deadline',
+            priority: t.priority || 'Medium',
+            status: status,
+            rawData: t
+          };
+        });
+        setTargets(formatted);
       }
-      return t;
-    }));
+    } catch (err) {
+      console.error("Failed to fetch targets", err);
+    }
   };
 
-  const handleDelete = (id) => {
+  useEffect(() => {
+    fetchTargets();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this target log?")) {
-      setTargets(targets.filter(t => t.id !== id));
+      try {
+        await api.delete(`/employee-targets/${id}`);
+        fetchTargets();
+      } catch (err) {
+        console.error("Failed to delete target", err);
+        alert("Failed to delete target.");
+      }
     }
+  };
+
+  const handleEdit = (rawData) => {
+    navigate('/hrms/performance/targets/add', { state: { editData: rawData } });
   };
 
   const stats = {
@@ -163,7 +174,7 @@ const EmployeeTargets = () => {
             <tbody className="divide-y divide-gray-100">
               {targets.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50/30 font-medium">
-                  <td className="p-3 font-semibold text-gray-800">{t.id}</td>
+                  <td className="p-3 font-semibold text-gray-800">{t.refCode}</td>
                   <td className="p-3 text-slate-800 font-bold">{t.name}</td>
                   <td className="p-3 text-gray-700 font-semibold">{t.kpi}</td>
                   <td className="p-3 text-gray-500">{t.metric}</td>
@@ -205,20 +216,23 @@ const EmployeeTargets = () => {
                     </span>
                   </td>
                   
-                  <td className="p-3 text-right space-x-1.5 no-print">
-                    <button 
-                      onClick={() => handleProgressChange(t.id, 10)}
-                      className="px-1.5 py-0.5 text-[10px] bg-slate-100 border text-slate-700 hover:bg-slate-200 rounded font-bold"
-                      title="Add 10% Progress"
-                    >
-                      +10%
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(t.id)}
-                      className="p-1 hover:bg-slate-100 rounded text-rose-600 transition inline-block align-middle"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                  <td className="p-3 text-right no-print">
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => handleEdit(t.rawData)}
+                        className="p-1 hover:bg-indigo-50 rounded text-indigo-600 transition"
+                        title="Edit Target"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(t.id)}
+                        className="p-1 hover:bg-rose-50 rounded text-rose-600 transition"
+                        title="Delete Target"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -227,124 +241,7 @@ const EmployeeTargets = () => {
         </div>
       </div>
 
-      {/* NEW TARGET ASSIGNMENT MODAL */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-50/50 shadow-inner border border-slate-200/50 flex items-center justify-center z-50 p-4 no-print">
-          <div className="bg-white rounded-xl shadow-xl border w-full max-w-sm overflow-hidden text-xs">
-            <div className="bg-slate-50 px-4 py-3 border-b flex items-center justify-between">
-              <span className="font-bold text-slate-800 uppercase tracking-wider">Assign KPI Goal Target</span>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={16} />
-              </button>
-            </div>
-            <form onSubmit={handleAddTarget} className="p-4 space-y-3.5 font-semibold">
-              <div>
-                <label className="block text-gray-600 mb-1">Employee Name *</label>
-                <input 
-                  type="text" 
-                  value={newTarget.name}
-                  onChange={(e) => setNewTarget({...newTarget, name: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. Neha Gupta"
-                  required
-                />
-              </div>
 
-              <div>
-                <label className="block text-gray-600 mb-1">KPI Goal Title *</label>
-                <input 
-                  type="text" 
-                  value={newTarget.kpi}
-                  onChange={(e) => setNewTarget({...newTarget, kpi: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. Sales Revenue Target"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-600 mb-1">Target Metric Description *</label>
-                <input 
-                  type="text" 
-                  value={newTarget.metric}
-                  onChange={(e) => setNewTarget({...newTarget, metric: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g. ₹ 5,00,000 / mo"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-gray-600 mb-1">Initial Progress (%)</label>
-                  <input 
-                    type="number" 
-                    value={newTarget.progress}
-                    onChange={(e) => setNewTarget({...newTarget, progress: e.target.value})}
-                    className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500"
-                    min="0"
-                    max="100"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-600 mb-1">Target Deadline *</label>
-                  <input 
-                    type="date" 
-                    value={newTarget.deadline}
-                    onChange={(e) => setNewTarget({...newTarget, deadline: e.target.value})}
-                    className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-gray-600 mb-1">Priority Scale</label>
-                  <select 
-                    value={newTarget.priority}
-                    onChange={(e) => setNewTarget({...newTarget, priority: e.target.value})}
-                    className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-gray-600 mb-1">Current Status</label>
-                  <select 
-                    value={newTarget.status}
-                    onChange={(e) => setNewTarget({...newTarget, status: e.target.value})}
-                    className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Behind Schedule">Behind Schedule</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddModal(false)}
-                  className="px-3 py-1.5 border rounded text-gray-650 hover:bg-gray-50 font-bold"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-slate-800 rounded font-bold shadow-xs"
-                >
-                  Assign Target
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   );

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { 
   Upload, HelpCircle, FileSpreadsheet, Download, Info, CheckCircle 
 } from 'lucide-react';
+import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const ImportPurchaseCSV = () => {
   // States
@@ -10,7 +12,7 @@ const ImportPurchaseCSV = () => {
   const [purchaseStatus, setPurchaseStatus] = useState('Received');
   const [orderTax, setOrderTax] = useState('No Tax');
   const [discount, setDiscount] = useState('0');
-  const [shippingCost, setShippingCost] = useState('0.00');
+  const [shippingCost, setShippingCost] = useState('0');
   const [note, setNote] = useState('');
   
   const [documentFile, setDocumentFile] = useState(null);
@@ -21,7 +23,24 @@ const ImportPurchaseCSV = () => {
     alert("Downloading sample purchase import sheet schema: purchase_import_template.csv");
   };
 
-  // Submit Handle
+  const parseCSV = (text) => {
+    const lines = text.split('\n');
+    const result = [];
+    if(lines.length < 1) return result;
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const obj = {};
+      const currentline = lines[i].split(',');
+      for (let j = 0; j < headers.length; j++) {
+        obj[headers[j]] = currentline[j] ? currentline[j].trim() : '';
+      }
+      result.push(obj);
+    }
+    return result;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!warehouse) {
@@ -32,7 +51,41 @@ const ImportPurchaseCSV = () => {
       alert("Please select CSV File to upload.");
       return;
     }
-    alert(`CSV Purchase records imported successfully!\nWarehouse: ${warehouse}\nFile: ${csvFile.name}`);
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const csvData = event.target.result;
+      const items = parseCSV(csvData);
+      
+      const payload = {
+        warehouse,
+        supplier,
+        purchaseStatus,
+        orderTax,
+        discountValue: Number(discount) || 0,
+        shippingCost: Number(shippingCost) || 0,
+        note,
+        orderItems: items.map(item => ({
+          name: item.product_name || item.productname || item.name || item.product || 'Unknown Product',
+          code: item.product_code || item.productcode || item.code || item.sku || '',
+          quantity: Number(item.quantity || item.qty || 1),
+          netUnitCost: Number(item.product_cost || item.productcost || item.cost || item.unitcost || item.price || 0),
+          discount: Number(item.discount || 0),
+          taxPercent: Number(item.tax_percent || item.taxpercent || item.tax || 0)
+        }))
+      };
+
+      try {
+        const { data } = await api.post('/purchases/import', payload);
+        if (data.success) {
+          alert(`CSV Purchase records imported successfully!\nWarehouse: ${warehouse}\nFile: ${csvFile.name}`);
+        }
+      } catch (error) {
+        console.error('Import Error', error);
+        alert(error.response?.data?.message || 'Failed to import purchase');
+      }
+    };
+    reader.readAsText(csvFile);
   };
 
   return (
@@ -63,32 +116,23 @@ const ImportPurchaseCSV = () => {
           {/* Warehouse */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Warehouse *</label>
-            <select
+            <DynamicSelect
+              category="Warehouse"
+              name="warehouse"
               value={warehouse}
               onChange={(e) => setWarehouse(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-              required
-            >
-              <option value="">Select warehouse...</option>
-              <option value="Central Warehouse">Central Warehouse</option>
-              <option value="North Branch Warehouse">North Branch Warehouse</option>
-              <option value="East Side Storage">East Side Storage</option>
-            </select>
+            />
           </div>
 
           {/* Supplier */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Supplier</label>
-            <select
+            <DynamicSelect
+              category="Supplier"
+              name="supplier"
               value={supplier}
               onChange={(e) => setSupplier(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-            >
-              <option value="">Select supplier...</option>
-              <option value="Apple Global Corp">Apple Global Corp</option>
-              <option value="Dell Trading Co">Dell Trading Co</option>
-              <option value="Logitech Distribution">Logitech Distribution</option>
-            </select>
+            />
           </div>
 
           {/* Status */}
@@ -131,20 +175,22 @@ const ImportPurchaseCSV = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <label className="block text-sm font-bold text-gray-800 mb-1.5">Upload CSV File *</label>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-slate-800 rounded cursor-pointer text-xs font-bold shadow transition-colors">
-                  <FileSpreadsheet size={15} />
-                  <span>Choose CSV File</span>
-                  <input 
-                    type="file" 
-                    accept=".csv"
-                    onChange={(e) => setCsvFile(e.target.files[0])}
-                    className="hidden" 
-                  />
+              <div className="flex-1 w-full relative">
+                <input
+                  type="file"
+                  id="csvFile"
+                  name="csvFile"
+                  accept=".csv"
+                  onChange={(e) => setCsvFile(e.target.files[0])}
+                  className="hidden"
+                />
+                <label 
+                  htmlFor="csvFile"
+                  className="w-full border border-blue-500 bg-white text-gray-500 rounded px-3 py-2 text-sm outline-none cursor-pointer flex items-center justify-between"
+                >
+                  <span className="truncate">{csvFile ? csvFile.name : 'Select CSV file...'}</span>
+                  <Upload size={16} className="text-gray-400 flex-shrink-0 ml-2" />
                 </label>
-                <span className="text-xs text-gray-800 font-semibold truncate max-w-[250px]">
-                  {csvFile ? csvFile.name : 'No CSV file chosen'}
-                </span>
               </div>
             </div>
 
@@ -167,16 +213,12 @@ const ImportPurchaseCSV = () => {
           {/* Order Tax */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Order Tax</label>
-            <select
+            <DynamicSelect
+              category="TaxConfiguration"
+              name="orderTax"
               value={orderTax}
               onChange={(e) => setOrderTax(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
-            >
-              <option value="No Tax">No Tax</option>
-              <option value="5%">GST 5%</option>
-              <option value="10%">GST 10%</option>
-              <option value="18%">GST 18%</option>
-            </select>
+            />
           </div>
 
           {/* Discount */}

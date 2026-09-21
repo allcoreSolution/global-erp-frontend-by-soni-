@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Tag } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api';
+import DynamicSelect from '../../components/DynamicSelect';
 
 const AddCoupon = () => {
   const navigate = useNavigate();
@@ -148,11 +149,14 @@ const AddCoupon = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Coupon Type *</label>
-                <select name="couponType" value={form.couponType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white">
-                  <option>Percentage</option>
-                  <option>Fixed Amount</option>
-                  <option>Free Shipping</option>
-                </select>
+                <DynamicSelect 
+                  category="CouponType" 
+                  name="couponType" 
+                  value={form.couponType} 
+                  onChange={handleChange} 
+                  defaultOptions={['Percentage', 'Fixed Amount', 'Free Shipping']} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
@@ -163,17 +167,25 @@ const AddCoupon = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Branch</label>
-                <select name="branch" value={form.branch} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white">
-                  <option>Select</option>
-                  <option>Head Office</option>
-                </select>
+                <DynamicSelect 
+                  category="Branch" 
+                  name="branch" 
+                  value={form.branch} 
+                  onChange={handleChange} 
+                  defaultOptions={['Select', 'Head Office']} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white">
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
+                <DynamicSelect 
+                  category="Status" 
+                  name="status" 
+                  value={form.status} 
+                  onChange={handleChange} 
+                  defaultOptions={['Active', 'Inactive']} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all bg-white" 
+                />
               </div>
               <div className="md:col-span-3">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
@@ -190,10 +202,14 @@ const AddCoupon = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Discount Type *</label>
-                  <select name="discountType" value={form.discountType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Percentage</option>
-                    <option>Fixed Amount</option>
-                  </select>
+                  <DynamicSelect 
+                    category="DiscountType" 
+                    name="discountType" 
+                    value={form.discountType} 
+                    onChange={handleChange} 
+                    defaultOptions={['Percentage', 'Fixed Amount']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Discount Value *</label>
@@ -255,27 +271,36 @@ const AddCoupon = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Applicable To *</label>
-                  <select name="applicableTo" value={form.applicableTo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>All Customers</option>
-                    <option>Specific Customer Groups</option>
-                    <option>Specific Customers</option>
-                  </select>
+                  <DynamicSelect 
+                    category="ApplicableTo" 
+                    name="applicableTo" 
+                    value={form.applicableTo} 
+                    onChange={handleChange} 
+                    defaultOptions={['All Customers', 'Specific Customer Groups', 'Specific Customers']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Type</label>
-                  <select name="customerType" value={form.customerType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>All Types</option>
-                    <option>Retail</option>
-                    <option>Wholesale</option>
-                  </select>
+                  <DynamicSelect 
+                    category="CustomerType" 
+                    name="customerType" 
+                    value={form.customerType} 
+                    onChange={handleChange} 
+                    defaultOptions={['All Types', 'Retail', 'Wholesale']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer</label>
-                  <select name="customer" value={form.customer} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Walk-in Customer</option>
-                    <option>John Doe</option>
-                  </select>
+                  <DynamicSelect 
+                    category="Customer" 
+                    name="customer" 
+                    value={form.customer} 
+                    onChange={handleChange} 
+                    defaultOptions={['Select', 'Walk-in Customer', 'John Doe']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
               </div>
             </div>
@@ -286,32 +311,47 @@ const AddCoupon = () => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Applicable On *</label>
-                  <select name="applicableOn" value={form.applicableOn} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>All Products</option>
-                    <option>Specific Products</option>
-                    <option>Specific Categories</option>
-                  </select>
+                  <DynamicSelect 
+                    category="ApplicableOn" 
+                    name="applicableOn" 
+                    value={form.applicableOn} 
+                    onChange={handleChange} 
+                    defaultOptions={['All Products', 'Specific Products', 'Specific Categories']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Product</label>
-                  <select name="product" value={form.product} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Item A</option>
-                  </select>
+                  <DynamicSelect 
+                    category="Product" 
+                    name="product" 
+                    value={form.product} 
+                    onChange={handleChange} 
+                    defaultOptions={['Select', 'Item A']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
-                  <select name="category" value={form.category} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Electronics</option>
-                  </select>
+                  <DynamicSelect 
+                    category="Category" 
+                    name="category" 
+                    value={form.category} 
+                    onChange={handleChange} 
+                    defaultOptions={['Select', 'Electronics']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Brand</label>
-                  <select name="brand" value={form.brand} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Apple</option>
-                  </select>
+                  <DynamicSelect 
+                    category="Brand" 
+                    name="brand" 
+                    value={form.brand} 
+                    onChange={handleChange} 
+                    defaultOptions={['Select', 'Apple']} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                  />
                 </div>
               </div>
             </div>
@@ -375,18 +415,25 @@ const AddCoupon = () => {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Configuration</label>
-                    <select name="taxConfiguration" value={form.taxConfiguration} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option>Select</option>
-                      <option>Tax Included</option>
-                      <option>Tax Excluded</option>
-                    </select>
+                    <DynamicSelect 
+                      category="TaxConfiguration" 
+                      name="taxConfiguration" 
+                      value={form.taxConfiguration} 
+                      onChange={handleChange} 
+                      defaultOptions={['Select', 'Tax Included', 'Tax Excluded']} 
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Discount Account</label>
-                    <select name="discountAccount" value={form.discountAccount} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                      <option>Select</option>
-                      <option>Sales Discounts</option>
-                    </select>
+                    <DynamicSelect 
+                      category="DiscountAccount" 
+                      name="discountAccount" 
+                      value={form.discountAccount} 
+                      onChange={handleChange} 
+                      defaultOptions={['Select', 'Sales Discounts']} 
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white" 
+                    />
                   </div>
                 </div>
                 <div>

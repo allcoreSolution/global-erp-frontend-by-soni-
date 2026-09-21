@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GitBranch, Search, Filter, Download, MapPin, Building2, BarChart2 } from 'lucide-react';
+import api from '../../../api';
 
 const BranchWisePurchase = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const branches = [
-    { id: 1, name: 'Mumbai HQ', region: 'West', orders: 1250, value: 3500000, budgetUsed: 85 },
-    { id: 2, name: 'Delhi NCR Branch', region: 'North', orders: 850, value: 1850000, budgetUsed: 62 },
-    { id: 3, name: 'Bangalore Tech Hub', region: 'South', orders: 2100, value: 4200000, budgetUsed: 92 },
-    { id: 4, name: 'Kolkata Office', region: 'East', orders: 320, value: 650000, budgetUsed: 45 },
-    { id: 5, name: 'Pune Operations', region: 'West', orders: 650, value: 1250000, budgetUsed: 78 },
-  ];
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/analysis/branch-wise');
+        if (response.data.success) {
+          setBranches(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 bg-slate-50 min-h-screen space-y-6">
