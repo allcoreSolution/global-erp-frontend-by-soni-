@@ -1,0 +1,95 @@
+import React, { useState, useEffect } from 'react';
+import { Download, Printer, Layers } from 'lucide-react';
+import api from '../../../api';
+
+const PurchaseReturnReport = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/reports/purchases/return-report');
+        if (response.data.success) {
+          setData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const formatCurrency = (value) => {
+    if (typeof value === 'number') {
+      return "₹ " + value.toLocaleString('en-IN');
+    }
+    return value;
+  };
+
+  return (
+    <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm min-h-screen space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <div className="p-2 bg-indigo-50 rounded-lg">
+              <Layers className="text-indigo-600" size={24} />
+            </div>
+            Purchase Return Report
+          </h1>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-all shadow-sm">
+            <Download size={16} /> Export
+          </button>
+          <button onClick={() => window.print()} className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm">
+            <Printer size={16} /> Print
+          </button>
+        </div>
+      </div>
+
+      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
+              <tr>
+                <th className="p-4">Date</th>
+                <th className="p-4">Debit Note</th>
+                <th className="p-4">Supplier</th>
+                <th className="p-4">Original Invoice</th>
+                <th className="p-4">Amount</th>
+                <th className="p-4">Reason</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="p-4 text-center text-slate-500">Loading data...</td>
+                </tr>
+              ) : data.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-4 text-center text-slate-500">No records found.</td>
+                </tr>
+              ) : (
+                data.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="p-4">{['amount', 'totalAmount', 'grossPurchase', 'discountReceived', 'returns', 'net', 'netPurchase'].includes('date') ? formatCurrency(row['date']) : row['date']}</td>
+                    <td className="p-4">{['amount', 'totalAmount', 'grossPurchase', 'discountReceived', 'returns', 'net', 'netPurchase'].includes('debitNote') ? formatCurrency(row['debitNote']) : row['debitNote']}</td>
+                    <td className="p-4">{['amount', 'totalAmount', 'grossPurchase', 'discountReceived', 'returns', 'net', 'netPurchase'].includes('supplier') ? formatCurrency(row['supplier']) : row['supplier']}</td>
+                    <td className="p-4">{['amount', 'totalAmount', 'grossPurchase', 'discountReceived', 'returns', 'net', 'netPurchase'].includes('originalInvoice') ? formatCurrency(row['originalInvoice']) : row['originalInvoice']}</td>
+                    <td className="p-4">{['amount', 'totalAmount', 'grossPurchase', 'discountReceived', 'returns', 'net', 'netPurchase'].includes('amount') ? formatCurrency(row['amount']) : row['amount']}</td>
+                    <td className="p-4">{['amount', 'totalAmount', 'grossPurchase', 'discountReceived', 'returns', 'net', 'netPurchase'].includes('reason') ? formatCurrency(row['reason']) : row['reason']}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PurchaseReturnReport;

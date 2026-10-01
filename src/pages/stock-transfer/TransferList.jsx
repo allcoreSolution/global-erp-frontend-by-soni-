@@ -1,0 +1,605 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
+  Check, X, Printer, Calendar, Database, Filter, ArrowRightLeft, MoveRight, FileDown
+} from 'lucide-react';
+import api from '../../api';
+
+const TransferList = () => {
+  const navigate = useNavigate();
+
+  const [transfers, setTransfers] = useState([]);
+
+  useEffect(() => {
+    const fetchTransfers = async () => {
+      try {
+        const res = await api.get('/stock-transfers');
+        if (res.data?.data) {
+          setTransfers(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stock transfers", err);
+      }
+    };
+    fetchTransfers();
+  }, []);
+
+  // States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [fromFilter, setFromFilter] = useState('');
+  const [toFilter, setToFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedTransfer, setSelectedTransfer] = useState(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+  // Manage print modal body class for print styling targeting
+  useEffect(() => {
+    if (isPrintModalOpen) {
+      document.body.classList.add('voucher-modal-open');
+    } else {
+      document.body.classList.remove('voucher-modal-open');
+    }
+    return () => document.body.classList.remove('voucher-modal-open');
+  }, [isPrintModalOpen]);
+
+  // Filter Logic
+  const filteredTransfers = transfers.filter(st => {
+    const matchesSearch = (st.transferNo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (st.reason || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (st.reference || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFrom = fromFilter ? st.fromWarehouse === fromFilter : true;
+    const matchesTo = toFilter ? st.toWarehouse === toFilter : true;
+    const matchesStatus = statusFilter ? st.status === statusFilter : true;
+    const matchesStartDate = startDate ? (st.date || '') >= startDate : true;
+    const matchesEndDate = endDate ? (st.date || '') <= endDate : true;
+    return matchesSearch && matchesFrom && matchesTo && matchesStatus && matchesStartDate && matchesEndDate;
+  });
+
+  const handleDelete = async (id) => {
+    if (window.confirm(`Are you sure you want to delete stock transfer voucher?`)) {
+      try {
+        await api.delete(`/stock-transfers/${id}`);
+        setTransfers(transfers.filter(st => st._id !== id));
+      } catch (err) {
+        console.error("Failed to delete", err);
+        alert('Failed to delete stock transfer');
+      }
+    }
+  };
+
+  const handleApproveStatus = async (id, newStatus) => {
+    try {
+      await api.put(`/stock-transfers/${id}`, { status: newStatus });
+      setTransfers(transfers.map(st => st._id === id ? { ...st, status: newStatus } : st));
+    } catch (err) {
+      console.error("Failed to update status", err);
+      alert('Failed to update status');
+    }
+  };
+
+  const handlePrint = (st) => {
+    setSelectedTransfer(st);
+    setIsPrintModalOpen(true);
+  };
+
+  const triggerBrowserPrint = () => {
+    window.print();
+  };
+
+  // Export Filtered List to CSV
+  const handleExportCSV = () => {
+    const headers = ['Voucher No', 'Date', 'From Warehouse', 'To Warehouse', 'Reference', 'Reason', 'Total Qty', 'Status'];
+    const csvRows = filteredTransfers.map(st => {
+      const totalQty = (st.items || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
+      return [
+        `"${st.transferNo}"`,
+        `"${st.date}"`,
+        `"${st.fromWarehouse}"`,
+        `"${st.toWarehouse}"`,
+        `"${st.reference || ''}"`,
+        `"${(st.reason || '').replace(/"/g, '""')}"`,
+        totalQty,
+        `"${st.status}"`
+      ].join(',');
+    });
+
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `stock_transfers_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Download Sample CSV
+  const handleDownloadSample = () => {
+    const headers = ['Transfer No', 'Date', 'From Warehouse', 'To Warehouse', 'Reference', 'Reason', 'Total Qty', 'Status'];
+    const csvString = headers.join(',') + '\n';
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'stock_transfers_sample.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Import Voucher List from CSV File
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      
+      if (lines.length <= 1) {
+        alert('CSV file is empty or only contains headers.');
+        return;
+      }
+
+      const newEntries = [];
+      for (let i = 1; i < lines.length; i++) {
+        const columns = lines[i].split(',').map(c => c.replace(/"/g, '').trim());
+        // Require at least first few columns
+        if (columns.length < 5) continue; 
+
+        const transferNo = columns[0] || `ST-IMP-${Date.now()}-${i}`;
+        const date = columns[1] || new Date().toISOString().split('T')[0];
+        const fromWarehouse = columns[2] || 'Central Warehouse';
+        const toWarehouse = columns[3] || 'North Branch Warehouse';
+        const reference = columns[4] || '';
+        const reason = columns[5] || 'Imported Stock Transfer';
+        const totalQty = Number(columns[6]) || 1;
+        const status = columns[7] || 'Pending';
+
+        const items = [
+          { product: 'Imported Product Sample', qty: totalQty, unit: 'Nos', batch: 'BT-IMP-01', serial: 'SN-IMP-001' }
+        ];
+
+        newEntries.push({
+          transferNo,
+          date,
+          fromWarehouse,
+          toWarehouse,
+          reference,
+          reason,
+          status,
+          items,
+          remarks: 'Record generated via CSV data upload sheet'
+        });
+      }
+
+      if (newEntries.length === 0) {
+        alert('No new valid stock transfers were found in the file.');
+        return;
+      }
+
+      try {
+        const res = await api.post('/stock-transfers/import', newEntries);
+        if (res.data?.success) {
+          // Refetch to get updated list
+          const fetchedRes = await api.get('/stock-transfers');
+          if (fetchedRes.data?.data) {
+            setTransfers(fetchedRes.data.data);
+          }
+          alert(`Successfully imported ${res.data.count || res.data.data?.length} stock transfer vouchers!`);
+        }
+      } catch (error) {
+        console.error("Failed to import", error);
+        alert('Failed to import stock transfers. Some might be duplicates or invalid.');
+      }
+      
+      e.target.value = '';
+    };
+
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Top Banner / Heading */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 p-4 rounded-lg border border-gray-100 dark:border-slate-200 shadow-sm gap-4 transition-colors">
+        <div>
+          <h1 className="text-xl font-bold text-blue-900 dark:text-slate-700 tracking-wide uppercase">Stock Transfers</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Shift stock between warehouses, manage shipping challans, and track delivery status</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {/* Import CSV */}
+          <label className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 text-xs font-semibold px-3 py-2 rounded shadow transition-all cursor-pointer">
+            <Upload size={14} />
+            Import CSV
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImportCSV}
+              className="hidden"
+            />
+          </label>
+
+          {/* Sample CSV */}
+          <button
+            onClick={handleDownloadSample}
+            className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 text-xs font-semibold px-3 py-2 rounded shadow transition-all cursor-pointer"
+          >
+            <FileDown size={14} />
+            Sample File
+          </button>
+
+          {/* Export CSV */}
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 text-xs font-semibold px-3 py-2 rounded shadow transition-all cursor-pointer"
+          >
+            <Download size={14} />
+            Export CSV
+          </button>
+
+          <button
+            onClick={() => navigate('/stock-transfer/new')}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-slate-800 text-xs font-semibold px-4 py-2 rounded shadow transition-all cursor-pointer"
+          >
+            <Plus size={16} />
+            New Transfer
+          </button>
+        </div>
+      </div>
+
+      {/* Filter and Search Panel */}
+      <div className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 p-4 rounded-lg border border-gray-100 dark:border-slate-200 shadow-sm transition-colors">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+          {/* Search bar */}
+          <div className="relative col-span-1 md:col-span-2">
+            <Search className="absolute left-3 top-3 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="Search by ID, Reason, Ref..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* From Warehouse */}
+          <select
+            value={fromFilter}
+            onChange={(e) => setFromFilter(e.target.value)}
+            className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">From Warehouse</option>
+            <option value="Central Warehouse">Central Warehouse</option>
+            <option value="North Branch Warehouse">North Branch Warehouse</option>
+            <option value="East Side Storage">East Side Storage</option>
+          </select>
+
+          {/* To Warehouse */}
+          <select
+            value={toFilter}
+            onChange={(e) => setToFilter(e.target.value)}
+            className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">To Warehouse</option>
+            <option value="Central Warehouse">Central Warehouse</option>
+            <option value="North Branch Warehouse">North Branch Warehouse</option>
+            <option value="East Side Storage">East Side Storage</option>
+          </select>
+
+          {/* Status */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="Received">Received</option>
+            <option value="Sent">Sent</option>
+            <option value="Pending">Pending</option>
+            <option value="Draft">Draft</option>
+          </select>
+
+          {/* Date */}
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Main List Table */}
+      <div id="printable-list-area" className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 border border-gray-100 dark:border-slate-200 rounded-lg shadow-sm overflow-hidden transition-colors">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-slate-855/50 border-b border-gray-200 dark:border-slate-200 text-gray-700 dark:text-slate-350 font-bold uppercase tracking-wider">
+                <th className="py-3 px-4">Transfer No</th>
+                <th className="py-3 px-4">Date</th>
+                <th className="py-3 px-4">From Warehouse</th>
+                <th className="py-3 px-4 text-center w-8"></th>
+                <th className="py-3 px-4">To Warehouse</th>
+                <th className="py-3 px-4">Reference</th>
+                <th className="py-3 px-4">Transfer Reason</th>
+                <th className="py-3 px-4 text-center">Total Qty</th>
+                <th className="py-3 px-4 text-center">Status</th>
+                <th className="py-3 px-4 text-center no-print">Delivery Action</th>
+                <th className="py-3 px-4 text-right no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTransfers.length > 0 ? (
+                filteredTransfers.map((st) => {
+                  const totalQty = (st.items || []).reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+                  return (
+                    <tr key={st._id} className="border-b border-gray-100 dark:border-slate-200/60 hover:bg-gray-50 dark:hover:bg-slate-800/40 text-gray-700 dark:text-slate-300 transition-colors">
+                      <td className="py-3 px-4 font-bold text-indigo-600 dark:text-blue-400">{st.transferNo}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">{st.date}</td>
+                      <td className="py-3 px-4 font-semibold">{st.fromWarehouse}</td>
+                      <td className="py-3 px-4 text-center text-gray-400">
+                        <MoveRight size={14} />
+                      </td>
+                      <td className="py-3 px-4 font-semibold">{st.toWarehouse}</td>
+                      <td className="py-3 px-4">{st.reference || <span className="text-gray-400">-</span>}</td>
+                      <td className="py-3 px-4 max-w-xs truncate" title={st.reason}>{st.reason}</td>
+                      <td className="py-3 px-4 text-center font-bold">{totalQty}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
+                          ${st.status === 'Received' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
+                            st.status === 'Sent' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 
+                            st.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400' : 
+                            'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'}`}
+                        >
+                          {st.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center no-print">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {st.status === 'Pending' && (
+                            <button
+                              onClick={() => handleApproveStatus(st._id, 'Sent')}
+                              title="Dispatch Stock (Set Sent)"
+                              className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-indigo-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 text-[9px] rounded font-bold transition-all"
+                            >
+                              Dispatch
+                            </button>
+                          )}
+                          {st.status === 'Sent' && (
+                            <button
+                              onClick={() => handleApproveStatus(st._id, 'Received')}
+                              title="Receive Stock (Set Received)"
+                              className="px-2 py-0.5 bg-green-50 dark:bg-green-950/30 hover:bg-green-100 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900/40 text-[9px] rounded font-bold transition-all"
+                            >
+                              Receive
+                            </button>
+                          )}
+                          {st.status === 'Received' && (
+                            <span className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold italic">Settled</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right no-print">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handlePrint(st)}
+                            title="Print Delivery Challan"
+                            className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded"
+                          >
+                            <Printer size={15} />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/stock-transfer/edit/${st._id}`)}
+                            title="Edit Transfer"
+                            className="p-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded"
+                          >
+                            <Edit size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(st._id)}
+                            title="Delete Transfer"
+                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="11" className="py-8 text-center text-gray-500 dark:text-gray-400">
+                    No stock transfer vouchers found matching the filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Print Detail Preview Modal */}
+      {isPrintModalOpen && selectedTransfer && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 border dark:border-slate-200 rounded-lg max-w-3xl w-full shadow-xl overflow-hidden flex flex-col h-[85vh] no-print">
+            
+            {/* Modal Header */}
+            <div className="bg-slate-50 dark:bg-slate-850 px-6 py-4 border-b border-gray-200 dark:border-slate-200 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-slate-700">Stock Transfer Challan Preview</h3>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">Verify source, target destination, and inventory list</p>
+              </div>
+              <button 
+                onClick={() => setIsPrintModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-855 rounded"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Printable Content */}
+            <div className="flex-1 overflow-y-auto p-8" id="printable-voucher-area">
+              <div className="border border-gray-300 dark:border-slate-200 p-6 rounded bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200">
+                {/* Company Header */}
+                <div className="text-center pb-4 border-b border-gray-200 dark:border-slate-850">
+                  <h2 className="text-lg font-bold text-gray-800 dark:text-slate-700">ALLCORE SOLUTION PVT. LTD.</h2>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Plot 12, Gandhi Nagar, Jaipur - 302015</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">GSTIN: 08AAAAA1111A1Z1 | Database: ALLCORE_DB</p>
+                  <h3 className="text-md font-bold uppercase tracking-wider text-blue-900 dark:text-blue-400 mt-4">DELIVERY CHALLAN (STOCK TRANSFER)</h3>
+                </div>
+
+                {/* Voucher Meta details */}
+                <div className="grid grid-cols-2 gap-4 py-4 text-xs">
+                  <div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">Challan No:</span> <span className="font-bold text-gray-800 dark:text-slate-700">{selectedTransfer.transferNo}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">From Warehouse:</span> <span className="font-bold text-red-600">{selectedTransfer.fromWarehouse}</span></div>
+                    <div className="flex py-1"><span className="text-gray-500 font-medium w-24">To Warehouse:</span> <span className="font-bold text-green-600">{selectedTransfer.toWarehouse}</span></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Challan Date:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedTransfer.date}</span></div>
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Reference:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedTransfer.reference || 'N/A'}</span></div>
+                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Delivery Status:</span> <span className="font-bold text-indigo-600 uppercase">{selectedTransfer.status}</span></div>
+                  </div>
+                </div>
+
+                {/* Voucher Items Grid */}
+                <div className="mt-4">
+                  <table className="w-full text-left text-xs border border-gray-200 dark:border-slate-200">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-slate-855 border-b border-gray-200 dark:border-slate-200 text-gray-700 dark:text-slate-350 font-bold uppercase">
+                        <th className="py-2 px-3 border-r border-gray-200 dark:border-slate-200">Product / Item Description</th>
+                        <th className="py-2 px-3 border-r border-gray-200 dark:border-slate-200 w-28">Batch No</th>
+                        <th className="py-2 px-3 border-r border-gray-200 dark:border-slate-200 w-36">Serial Number</th>
+                        <th className="py-2 px-3 text-center w-28">Quantity (Unit)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedTransfer.items.map((item, idx) => (
+                        <tr key={idx} className="border-b border-gray-100 dark:border-slate-200/60 text-gray-750 dark:text-slate-300">
+                          <td className="py-2.5 px-3 border-r border-gray-200 dark:border-slate-200 font-bold">
+                            {item.product}
+                          </td>
+                          <td className="py-2.5 px-3 border-r border-gray-200 dark:border-slate-200 font-mono">
+                            {item.batch || <span className="text-gray-400">-</span>}
+                          </td>
+                          <td className="py-2.5 px-3 border-r border-gray-200 dark:border-slate-200 font-mono">
+                            {item.serial || <span className="text-gray-400">-</span>}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-semibold font-mono">
+                            {item.qty} {item.unit}
+                          </td>
+                        </tr>
+                      ))}
+                      {/* Total Qty Row */}
+                      <tr className="bg-slate-50 dark:bg-slate-850 font-bold border-t border-gray-300 dark:border-slate-200">
+                        <td colSpan="3" className="py-3 px-3 text-right uppercase">Total Transfer Quantity:</td>
+                        <td className="py-3 px-3 text-center font-mono">{(selectedTransfer.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)} Units</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Reason and Remarks */}
+                <div className="grid grid-cols-2 gap-4 mt-6 text-xs text-gray-700 dark:text-slate-350">
+                  <div>
+                    <div className="font-bold">Reason for Transfer:</div>
+                    <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200 italic">{selectedTransfer.reason}</p>
+                  </div>
+                  <div>
+                    <div className="font-bold">Shipping / Vehicle Remarks:</div>
+                    <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200">{selectedTransfer.remarks}</p>
+                  </div>
+                </div>
+
+                {/* Signatures */}
+                <div className="grid grid-cols-3 gap-6 mt-12 pt-8 text-center text-xs">
+                  <div>
+                    <div className="border-b border-gray-300 dark:border-slate-200 pb-1 mx-4"></div>
+                    <div className="text-gray-500 mt-2 font-medium">Dispatcher Sign</div>
+                  </div>
+                  <div>
+                    <div className="border-b border-gray-300 dark:border-slate-200 pb-1 mx-4"></div>
+                    <div className="text-gray-500 mt-2 font-medium">Receiver (Store Keeper)</div>
+                  </div>
+                  <div>
+                    <div className="border-b border-gray-300 dark:border-slate-200 pb-1 mx-4"></div>
+                    <div className="text-gray-500 mt-2 font-medium">Authorized Sign</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="bg-slate-50 dark:bg-slate-850 px-6 py-4 border-t border-gray-200 dark:border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => setIsPrintModalOpen(false)}
+                className="bg-white dark:bg-slate-50/50 shadow-inner border border-slate-200 border border-gray-300 dark:border-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-350 text-xs font-semibold px-4 py-2 rounded"
+              >
+                Close
+              </button>
+              <button
+                onClick={triggerBrowserPrint}
+                className="bg-indigo-600 hover:bg-indigo-700 text-slate-800 text-xs font-semibold px-4 py-2 rounded flex items-center gap-1.5 shadow"
+              >
+                <Printer size={14} />
+                Print Challan
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Embed print styles to support clean voucher printouts without headers/footers */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .voucher-modal-open #printable-voucher-area, 
+          .voucher-modal-open #printable-voucher-area * {
+            visibility: visible !important;
+          }
+          .voucher-modal-open #printable-voucher-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+          }
+          body:not(.voucher-modal-open) #printable-list-area,
+          body:not(.voucher-modal-open) #printable-list-area * {
+            visibility: visible !important;
+          }
+          body:not(.voucher-modal-open) #printable-list-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+          }
+          /* Hide print action columns during printing list */
+          body:not(.voucher-modal-open) th:nth-child(10),
+          body:not(.voucher-modal-open) td:nth-child(10),
+          body:not(.voucher-modal-open) th:nth-child(11),
+          body:not(.voucher-modal-open) td:nth-child(11) {
+            display: none !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default TransferList;
