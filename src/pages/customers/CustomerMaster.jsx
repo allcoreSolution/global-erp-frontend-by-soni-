@@ -11,6 +11,10 @@ import 'jspdf-autotable';
 
 const CustomerMaster = () => {
   const [customers, setCustomers] = useState([]);
+  
+  // Dynamic Data States
+  const [taxSlabs, setTaxSlabs] = useState([]);
+  const [priceLists, setPriceLists] = useState([]);
 
   const fetchCustomers = async () => {
     try {
@@ -23,8 +27,23 @@ const CustomerMaster = () => {
     }
   };
 
+  const fetchDynamicOptions = async () => {
+    try {
+      const [taxRes, priceRes] = await Promise.all([
+        api.get('/tax-slabs'),
+        api.get('/price-lists')
+      ]);
+      
+      if (taxRes.data && taxRes.data.success) setTaxSlabs(taxRes.data.data);
+      if (priceRes.data && priceRes.data.success) setPriceLists(priceRes.data.data);
+    } catch (err) {
+      console.error('Error fetching dynamic options:', err);
+    }
+  };
+
   useEffect(() => {
     fetchCustomers();
+    fetchDynamicOptions();
   }, []);
 
   // States
@@ -57,7 +76,6 @@ const CustomerMaster = () => {
     status: true,
     phone: '',
     email: '',
-    gstin: '',
     pan: '',
     gstCertificate: '',
     panCard: '',
@@ -65,26 +83,19 @@ const CustomerMaster = () => {
     otherDocuments: '',
     billingAddress: { street: '', city: '', state: '', zip: '' },
     shippingAddress: { street: '', city: '', state: '', zip: '' },
-    salesRep: '',
-    paymentTerms: 'Due on Receipt',
     creditLimit: 0,
     creditPeriod: 0,
     openingBalance: 0,
     balanceType: 'Dr',
     priceList: '',
     discount: 0,
-    taxType: '',
-    territory: '',
-    warehouseName: '',
     warehouseAddress: '',
-    warehouseCapacity: '',
     stockLocation: '',
     assignedRegion: '',
     commission: 0,
     logisticsWarehouse: '',
     deliveryVehicle: '',
     deliveryPerson: '',
-    transporter: '',
     deliveryCharges: 0,
     bankName: '',
     bankAccount: '',
@@ -223,18 +234,55 @@ const CustomerMaster = () => {
   };
 
   // Real CSV Export
-  const handleExport = () => {
-    const headers = ['Customer ID', 'Customer Name', 'Type', 'Category', 'Phone', 'Email', 'Active'];
+  const handleExportCSV = () => {
+    const headers = [
+      'Customer ID', 'Name', 'Owner Name', 'Business Name', 'Type', 'Category', 'Phone', 'Email', 'PAN',
+      'Billing Street', 'Billing City', 'Billing State', 'Billing Zip',
+      'Shipping Street', 'Shipping City', 'Shipping State', 'Shipping Zip',
+      'Credit Limit', 'Credit Period', 'Opening Balance', 'Balance Type', 'Price List', 'Discount',
+      'Warehouse Address', 'Stock Location', 'Assigned Region', 'Commission',
+      'Logistics Warehouse', 'Delivery Vehicle', 'Delivery Person', 'Delivery Charges',
+      'Bank Name', 'Bank Account', 'Bank IFSC', 'Active'
+    ];
     const rows = customers.map(c => [
-      c.customerCode,
-      `"${c.name.replace(/"/g, '""')}"`,
-      c.type,
-      c.category,
-      c.phone,
-      c.email,
+      c.customerCode || '',
+      `"${c.name || ''}"`,
+      `"${c.ownerName || ''}"`,
+      `"${c.businessName || ''}"`,
+      c.type || '',
+      c.category || '',
+      c.phone || '',
+      c.email || '',
+      c.pan || '',
+      `"${c.billingAddress?.street || ''}"`,
+      `"${c.billingAddress?.city || ''}"`,
+      `"${c.billingAddress?.state || ''}"`,
+      `"${c.billingAddress?.zip || ''}"`,
+      `"${c.shippingAddress?.street || ''}"`,
+      `"${c.shippingAddress?.city || ''}"`,
+      `"${c.shippingAddress?.state || ''}"`,
+      `"${c.shippingAddress?.zip || ''}"`,
+      c.creditLimit || 0,
+      c.creditPeriod || 0,
+      c.openingBalance || 0,
+      c.balanceType || 'Dr',
+      c.priceList || '',
+      c.discount || 0,
+      `"${c.warehouseAddress || ''}"`,
+      `"${c.stockLocation || ''}"`,
+      `"${c.assignedRegion || ''}"`,
+      c.commission || 0,
+      `"${c.logisticsWarehouse || ''}"`,
+      `"${c.deliveryVehicle || ''}"`,
+      `"${c.deliveryPerson || ''}"`,
+      c.deliveryCharges || 0,
+      `"${c.bankName || ''}"`,
+      `"${c.bankAccount || ''}"`,
+      `"${c.bankIfsc || ''}"`,
       c.status ? 'Yes' : 'No'
     ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const dummyData = ['CUST-001', 'Rahul Traders', 'Rahul', 'RT Pvt Ltd', 'Retailer', 'Regular', '9876543210', 'rahul@test.com', 'ABCDE1234F', '123 Main St', 'Delhi', 'Delhi', '110001', '123 Main St', 'Delhi', 'Delhi', '110001', '50000', '30', '1000', 'Dr', 'Standard', '5', 'Wh 1', 'Shelf A', 'North', '2', 'Log 1', 'Van', 'Ramesh', '100', 'SBI', '123456789', 'SBIN0001', 'Yes'];
+    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -257,27 +305,37 @@ const CustomerMaster = () => {
         const newCustomers = [];
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-          if (cols.length >= 6) {
+          if (cols.length >= 35) {
             newCustomers.push({
               customerCode: cols[0] || `CUST-NEW-${Date.now()}-${i}`,
               name: cols[1] || 'Imported Customer',
-              type: cols[2] || 'Retailer',
-              category: cols[3] || 'Regular',
-              status: cols[6] === 'Yes' ? true : false,
-              phone: cols[4] || '',
-              email: cols[5] || '',
-              billingAddress: { street: 'Imported', city: 'Imported', state: 'Imported', zip: '' },
-              shippingAddress: { street: 'Imported', city: 'Imported', state: 'Imported', zip: '' },
-              gstin: '',
-              pan: '',
-              bankName: '',
-              bankAccount: '',
-              bankIfsc: '',
-              openingBalance: 0,
-              balanceType: 'Dr',
-              creditLimit: 100000,
-              creditPeriod: 30,
-              paymentTerms: 'Net 30',
+              ownerName: cols[2] || '',
+              businessName: cols[3] || '',
+              type: cols[4] || 'Retailer',
+              category: cols[5] || 'Regular',
+              phone: cols[6] || '',
+              email: cols[7] || '',
+              pan: cols[8] || '',
+              billingAddress: { street: cols[9]||'', city: cols[10]||'', state: cols[11]||'', zip: cols[12]||'' },
+              shippingAddress: { street: cols[13]||'', city: cols[14]||'', state: cols[15]||'', zip: cols[16]||'' },
+              creditLimit: Number(cols[17]) || 0,
+              creditPeriod: Number(cols[18]) || 0,
+              openingBalance: Number(cols[19]) || 0,
+              balanceType: cols[20] || 'Dr',
+              priceList: cols[21] || '',
+              discount: Number(cols[22]) || 0,
+              warehouseAddress: cols[23] || '',
+              stockLocation: cols[24] || '',
+              assignedRegion: cols[25] || '',
+              commission: Number(cols[26]) || 0,
+              logisticsWarehouse: cols[27] || '',
+              deliveryVehicle: cols[28] || '',
+              deliveryPerson: cols[29] || '',
+              deliveryCharges: Number(cols[30]) || 0,
+              bankName: cols[31] || '',
+              bankAccount: cols[32] || '',
+              bankIfsc: cols[33] || '',
+              status: cols[34] === 'Yes' ? true : false,
               salesHistory: [],
               paymentHistory: [],
               salesReturnHistory: []
@@ -324,12 +382,42 @@ const CustomerMaster = () => {
 
   const handleDownloadSample = () => {
     const headers = ['Customer ID', 'Customer Name', 'Type', 'Category', 'Phone', 'Email', 'Active'];
-    const csvContent = headers.join(',');
+    const csvContent = headers.join(',') + '\n' + '1001,Sample Name,Standard,General,9876543210,test@example.com,Yes';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", "customer_sample.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExport = () => {
+    const headers = ['Customer ID', 'Customer Name', 'Type', 'Category', 'Phone', 'Email', 'Status', 'Balance'];
+    let csvContent = headers.join(',') + '\n';
+    
+    filteredCustomers.forEach(cust => {
+      const balance = calculateDue(cust);
+      const balanceStr = `Rs ${Math.abs(balance).toLocaleString()} ${balance >= 0 ? 'Dr' : 'Cr'}`;
+      const row = [
+        cust.customerCode || '',
+        `"${cust.name || ''}"`,
+        cust.type || '',
+        cust.category || '',
+        cust.phone || '',
+        cust.email || '',
+        cust.status ? 'Active' : 'Inactive',
+        `"${balanceStr}"`
+      ];
+      csvContent += row.join(',') + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customers_export_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -667,10 +755,7 @@ const CustomerMaster = () => {
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Email Address</label>
                       <input type="email" placeholder="e.g. contact@client.com" value={customerForm.email} onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
                     </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">GSTIN Number</label>
-                      <input type="text" placeholder="e.g. 08AAAAA1111A1Z1" value={customerForm.gstin} onChange={(e) => setCustomerForm({ ...customerForm, gstin: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                    </div>
+
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">PAN Number</label>
                       <input type="text" placeholder="e.g. AAAAA1111A" value={customerForm.pan} onChange={(e) => setCustomerForm({ ...customerForm, pan: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
@@ -727,20 +812,7 @@ const CustomerMaster = () => {
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">{customerForm.type} Code / ID *</label>
                       <input type="text" disabled value={customerForm.customerCode || 'Auto Generated'} className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs sm:text-sm text-gray-500 cursor-not-allowed" />
                     </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Sales Representative</label>
-                      <input type="text" placeholder="Sales Rep Name" value={customerForm.salesRep} onChange={(e) => setCustomerForm({ ...customerForm, salesRep: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Payment Terms</label>
-                      <select value={customerForm.paymentTerms} onChange={(e) => setCustomerForm({ ...customerForm, paymentTerms: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm bg-white focus:outline-none">
-                        <option value="Due on Receipt">Due on Receipt</option>
-                        <option value="Net 15">Net 15</option>
-                        <option value="Net 30">Net 30</option>
-                        <option value="Net 45">Net 45</option>
-                        <option value="Net 60">Net 60</option>
-                      </select>
-                    </div>
+
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Credit Limit (₹)</label>
                       <input type="number" value={customerForm.creditLimit} onChange={(e) => setCustomerForm({ ...customerForm, creditLimit: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
@@ -762,32 +834,16 @@ const CustomerMaster = () => {
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">{customerForm.type} Price List</label>
                       <select value={customerForm.priceList} onChange={(e) => setCustomerForm({ ...customerForm, priceList: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm bg-white focus:outline-none">
                         <option value="">Select Price List</option>
-                        <option value="Standard">Standard</option>
-                        <option value="Premium">Premium</option>
-                        <option value="Wholesale">Wholesale</option>
+                        {priceLists.map(pl => (
+                          <option key={pl._id} value={pl.name}>{pl.name}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Discount %</label>
                       <input type="number" value={customerForm.discount} onChange={(e) => setCustomerForm({ ...customerForm, discount: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
                     </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Tax Type / Settings</label>
-                      <select value={customerForm.taxType} onChange={(e) => setCustomerForm({ ...customerForm, taxType: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm bg-white focus:outline-none">
-                        <option value="">Select Tax Type</option>
-                        <option value="GST Regular">GST Regular</option>
-                        <option value="GST Composition">GST Composition</option>
-                        <option value="Exempt">Exempt</option>
-                      </select>
-                    </div>
 
-                    {/* Conditional Business Fields */}
-                    {(customerForm.type === 'Wholesaler' || customerForm.type === 'Distributor') && (
-                      <div>
-                        <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">{customerForm.type === 'Wholesaler' ? 'Territory / Area' : 'Distribution Area / Territory'}</label>
-                        <input type="text" placeholder="Area Name" value={customerForm.territory} onChange={(e) => setCustomerForm({ ...customerForm, territory: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                      </div>
-                    )}
 
                     {customerForm.type === 'Distributor' && (
                       <>
@@ -839,14 +895,7 @@ const CustomerMaster = () => {
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                       <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><Building size={14} className="text-indigo-600" /> Warehouse Details</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Warehouse Name</label>
-                          <input type="text" placeholder="Main Warehouse" value={customerForm.warehouseName} onChange={(e) => setCustomerForm({ ...customerForm, warehouseName: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Warehouse Capacity</label>
-                          <input type="text" placeholder="e.g. 5000 sq ft" value={customerForm.warehouseCapacity} onChange={(e) => setCustomerForm({ ...customerForm, warehouseCapacity: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
+
                         <div className="sm:col-span-2">
                           <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Warehouse Address</label>
                           <textarea rows="2" placeholder="Full address" value={customerForm.warehouseAddress} onChange={(e) => setCustomerForm({ ...customerForm, warehouseAddress: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
@@ -867,10 +916,7 @@ const CustomerMaster = () => {
                           <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Linked Warehouse</label>
                           <input type="text" placeholder="Warehouse Name" value={customerForm.logisticsWarehouse} onChange={(e) => setCustomerForm({ ...customerForm, logisticsWarehouse: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
                         </div>
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Transporter Name</label>
-                          <input type="text" placeholder="XYZ Transports" value={customerForm.transporter} onChange={(e) => setCustomerForm({ ...customerForm, transporter: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
+
                         <div>
                           <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Delivery Vehicle</label>
                           <input type="text" placeholder="Truck / Van Number" value={customerForm.deliveryVehicle} onChange={(e) => setCustomerForm({ ...customerForm, deliveryVehicle: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />

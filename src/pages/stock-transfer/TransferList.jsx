@@ -106,7 +106,7 @@ const TransferList = () => {
       ].join(',');
     });
 
-    const csvString = [headers.join(','), ...csvRows].join('\n');
+    const csvString = [headers.join(',') + '\n' + '1001,2023-12-01,Sample,Sample,Sample,Sample,Sample,Yes', ...csvRows].join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -121,7 +121,7 @@ const TransferList = () => {
   // Download Sample CSV
   const handleDownloadSample = () => {
     const headers = ['Transfer No', 'Date', 'From Warehouse', 'To Warehouse', 'Reference', 'Reason', 'Total Qty', 'Status'];
-    const csvString = headers.join(',') + '\n';
+    const csvString = headers.join(',') + '\n' + '1001,2023-12-01,Sample,Sample,Sample,Sample,Sample,Yes' + '\n';
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

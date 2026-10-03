@@ -152,7 +152,27 @@ const ProductList = () => {
   const categoriesList = ['All', ...new Set(products.map(p => p.category?.name || 'Uncategorized'))];
 
   const handleDownloadSample = () => {
-    const csvContent = "productName,productCode,brand,category,productCost,productPrice,currentStock\nSample Product,P-1001,Nike,Shoes,500,1000,50";
+    const headers = [
+      'Product Type', 'Product Name', 'Product Code', 'SKU', 'Barcode Symbology', 
+      'Brand', 'Category', 'Product Unit', 'Sale Unit', 'Purchase Unit', 
+      'Product Cost', 'Profit Margin Type', 'Profit Margin', 'Product Price', 'Wholesale Price', 
+      'Daily Sale Objective', 'Alert Quantity', 'Product Tax', 'Tax Method', 
+      'Warranty Value', 'Warranty Unit', 'Guarantee Value', 'Guarantee Unit', 
+      'Is Featured', 'Is Embedded Barcode', 'Has Initial Stock', 'Initial Stock Qty', 'Initial Stock Warehouse', 
+      'Current Stock', 'Is Active', 'Product Details', 'Has Variant', 'Has Different Price Per Warehouse', 
+      'Has Batch And Expiry', 'Has IMEI Or Serial', 'Has Promo Price'
+    ];
+    const dummyData = [
+      'Standard', 'Sample Shoes', 'PROD-1001', 'SKU-001', 'CODE128',
+      'Nike', 'Footwear', 'Pairs', 'Pairs', 'Pairs',
+      '500', 'Percentage', '50', '1000', '800',
+      '10', '5', '18%', 'Exclusive',
+      '1', 'Year', '1', 'Year',
+      'Yes', 'No', 'Yes', '50', 'Main Warehouse',
+      '50', 'Yes', 'Comfortable running shoes.', 'No', 'No',
+      'No', 'No', 'No'
+    ];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -264,11 +284,13 @@ const ProductList = () => {
         });
         
         // Deduplication by productCode
+        const pCode = pData['Product Code'];
+        const pName = pData['Product Name'];
         const isDuplicate = products.some(p => 
-          (pData.productCode && p.productCode.toLowerCase() === pData.productCode.toLowerCase())
+          (pCode && p.productCode && p.productCode.toLowerCase() === pCode.toLowerCase())
         );
         
-        if (!isDuplicate && pData.productCode && pData.productName) {
+        if (!isDuplicate && pCode && pName) {
           importedData.push(pData);
         }
       }
@@ -283,11 +305,42 @@ const ProductList = () => {
         Swal.fire({ title: 'Importing...', text: 'Please wait', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         for (const data of importedData) {
           const payload = {
-            productName: data.productName,
-            productCode: data.productCode,
-            productCost: data.productCost || '0',
-            productPrice: data.productPrice || '0',
-            currentStock: Number(data.currentStock) || 0
+            productType: data['Product Type'] || 'Standard',
+            productName: data['Product Name'],
+            productCode: data['Product Code'],
+            sku: data['SKU'] || '',
+            barcodeSymbology: data['Barcode Symbology'] || 'CODE128',
+            brand: data['Brand'] || '',
+            category: data['Category'] || '',
+            productUnit: data['Product Unit'] || 'Pcs',
+            saleUnit: data['Sale Unit'] || 'Pcs',
+            purchaseUnit: data['Purchase Unit'] || 'Pcs',
+            productCost: data['Product Cost'] || '0',
+            profitMarginType: data['Profit Margin Type'] || 'Percentage',
+            profitMargin: data['Profit Margin'] || '0',
+            productPrice: data['Product Price'] || '0',
+            wholesalePrice: data['Wholesale Price'] || '0',
+            dailySaleObjective: data['Daily Sale Objective'] || '0',
+            alertQuantity: data['Alert Quantity'] || '0',
+            productTax: data['Product Tax'] || '',
+            taxMethod: data['Tax Method'] || 'Exclusive',
+            warrantyValue: data['Warranty Value'] || '',
+            warrantyUnit: data['Warranty Unit'] || '',
+            guaranteeValue: data['Guarantee Value'] || '',
+            guaranteeUnit: data['Guarantee Unit'] || '',
+            isFeatured: data['Is Featured'] === 'Yes' || data['Is Featured'] === 'true',
+            isEmbeddedBarcode: data['Is Embedded Barcode'] === 'Yes' || data['Is Embedded Barcode'] === 'true',
+            hasInitialStock: data['Has Initial Stock'] === 'Yes' || data['Has Initial Stock'] === 'true',
+            initialStockQty: data['Initial Stock Qty'] || '0',
+            initialStockWarehouse: data['Initial Stock Warehouse'] || '',
+            currentStock: Number(data['Current Stock']) || 0,
+            isActive: data['Is Active'] === 'Yes' || data['Is Active'] === 'true' || data['Is Active'] === '',
+            productDetails: data['Product Details'] || '',
+            hasVariant: data['Has Variant'] === 'Yes' || data['Has Variant'] === 'true',
+            hasDifferentPricePerWarehouse: data['Has Different Price Per Warehouse'] === 'Yes' || data['Has Different Price Per Warehouse'] === 'true',
+            hasBatchAndExpiry: data['Has Batch And Expiry'] === 'Yes' || data['Has Batch And Expiry'] === 'true',
+            hasImeiOrSerial: data['Has IMEI Or Serial'] === 'Yes' || data['Has IMEI Or Serial'] === 'true',
+            hasPromoPrice: data['Has Promo Price'] === 'Yes' || data['Has Promo Price'] === 'true'
           };
           await api.post('/products', payload);
         }
@@ -308,21 +361,15 @@ const ProductList = () => {
       {/* Title Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-blue-500 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-black">Product List</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-black">Stock List</h1>
           <p className="text-sm text-gray-600">Track current items warehouse stock, prices and values.</p>
         </div>
 
         {/* Global Toolbar buttons */}
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
           <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
-            <Download size={14} /> CSV
+            <Download size={14} /> Export
           </button>
           <button onClick={() => navigate('/purchases/add-purchase')} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
             <Plus size={14} /> Add Product
@@ -454,14 +501,18 @@ const ProductList = () => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Product</th>
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Code</th>
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Brand</th>
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Category</th>
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Cost</th>
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Price</th>
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Stock Qty</th>
-              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 text-right">Action</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Product</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Code</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Brand</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Category</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">HSN</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Cost</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Price</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Stock Qty</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Alert Qty</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Warranty</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 whitespace-nowrap">Guarantee</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 text-right whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
@@ -484,6 +535,10 @@ const ProductList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {product.category?.name || 'N/A'}
                   </td>
+                  {/* HSN */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {product.hsnNumber || '-'}
+                  </td>
                   {/* Cost */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     ${Number(product.productCost || 0).toFixed(2)}
@@ -496,6 +551,18 @@ const ProductList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                     {product.currentStock || 0} {product.productUnit || ''}
                   </td>
+                  {/* Alert Qty */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-600 font-semibold">
+                    {product.alertQuantity || 0}
+                  </td>
+                  {/* Warranty */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {product.warrantyValue ? `${product.warrantyValue} ${product.warrantyUnit}` : '-'}
+                  </td>
+                  {/* Guarantee */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {product.guaranteeValue ? `${product.guaranteeValue} ${product.guaranteeUnit}` : '-'}
+                  </td>
                   {/* Actions (View, Edit, Delete) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                     <div className="inline-flex items-center gap-1.5">
@@ -507,15 +574,6 @@ const ProductList = () => {
                         title="View Details"
                       >
                         <Eye size={16} />
-                      </button>
-
-                      {/* Edit Action */}
-                      <button
-                        onClick={() => navigate(`/products/edit-product/${product._id}`)}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit Product"
-                      >
-                        <Edit size={16} />
                       </button>
 
                       {/* Delete Action */}
@@ -708,7 +766,7 @@ const ProductList = () => {
       {/* --- VIEW PRODUCT DETAILS DIALOG MODAL --- */}
       {isViewModalOpen && selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-lg border border-blue-500 shadow-2xl max-w-md w-full p-6 relative text-black animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-lg border border-blue-500 shadow-2xl max-w-2xl w-full p-6 relative text-black animate-in fade-in zoom-in-95 duration-200">
             
             <button 
               onClick={() => setIsViewModalOpen(false)}
@@ -717,46 +775,62 @@ const ProductList = () => {
               <X size={18} />
             </button>
 
-            <h3 className="text-lg font-bold text-gray-900 mb-4 border-b border-blue-500 pb-2">
+            <h3 className="text-xl font-bold text-gray-900 mb-6 border-b border-blue-500 pb-2">
               Product Overview Details
             </h3>
 
-            <div className="space-y-4 py-2 text-sm">
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Product Name:</span>
-                <span className="font-bold text-gray-900">{selectedProduct.productName}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-2 text-sm">
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Product Name</span>
+                <span className="font-bold text-gray-900 text-base">{selectedProduct.productName}</span>
               </div>
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Product Code:</span>
-                <span className="text-gray-900 font-mono font-medium">{selectedProduct.productCode}</span>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Product Code</span>
+                <span className="text-gray-900 font-mono font-bold text-base">{selectedProduct.productCode}</span>
               </div>
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Brand:</span>
-                <span className="text-gray-900">{selectedProduct.brand?.name || selectedProduct.brand}</span>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Brand</span>
+                <span className="text-gray-900 font-medium">{selectedProduct.brand?.name || selectedProduct.brand || '-'}</span>
               </div>
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Category:</span>
-                <span className="text-gray-900">{selectedProduct.category?.name || selectedProduct.category}</span>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Category</span>
+                <span className="text-gray-900 font-medium">{selectedProduct.category?.name || selectedProduct.category || '-'}</span>
               </div>
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Product Cost:</span>
-                <span className="text-gray-900 font-semibold">${Number(selectedProduct.productCost || 0).toFixed(2)}</span>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Product Cost</span>
+                <span className="text-gray-900 font-bold">${Number(selectedProduct.productCost || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Product Price:</span>
-                <span className="font-bold text-emerald-700">${Number(selectedProduct.productPrice || 0).toFixed(2)}</span>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Product Price</span>
+                <span className="font-bold text-emerald-700 text-base">${Number(selectedProduct.productPrice || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="font-semibold text-gray-600">Stock Available:</span>
-                <span className="font-bold text-gray-900">{selectedProduct.currentStock || 0} {selectedProduct.productUnit || ''}</span>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">HSN Number</span>
+                <span className="text-gray-900 font-medium">{selectedProduct.hsnNumber || '-'}</span>
+              </div>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Stock Available</span>
+                <span className="font-bold text-indigo-700 text-base">{selectedProduct.currentStock || 0} {selectedProduct.productUnit || ''}</span>
+              </div>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Alert Quantity</span>
+                <span className="text-rose-600 font-bold">{selectedProduct.alertQuantity || 0}</span>
+              </div>
+              <div className="flex flex-col border-b border-blue-200 pb-2">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Warranty</span>
+                <span className="text-gray-900 font-medium">{selectedProduct.warrantyValue ? `${selectedProduct.warrantyValue} ${selectedProduct.warrantyUnit}` : '-'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-gray-500 text-xs uppercase mb-1">Guarantee</span>
+                <span className="text-gray-900 font-medium">{selectedProduct.guaranteeValue ? `${selectedProduct.guaranteeValue} ${selectedProduct.guaranteeUnit}` : '-'}</span>
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-blue-500 mt-4">
+            <div className="flex justify-end pt-4 border-t border-blue-500 mt-6">
               <button
                 type="button"
                 onClick={() => setIsViewModalOpen(false)}
-                className="px-5 py-2 bg-gray-900 hover:bg-gray-800 text-slate-800 rounded text-sm font-semibold transition-colors"
+                className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded shadow-md text-sm font-bold tracking-wide transition-colors"
               >
                 Close View
               </button>

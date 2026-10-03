@@ -60,7 +60,7 @@ const SaleReturn = () => {
   };
 
   const handleExportCSV = () => {
-    const csvContent = "Return #,Date,Customer Name,Invoice #,Status\n";
+    const csvContent = "Return #,Date,Customer Name,Invoice #,Status\nSample,2023-12-01,Sample Name,Sample,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -72,7 +72,7 @@ const SaleReturn = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Return #,Date,Customer Name,Invoice #,Status\n";
+    const csvContent = "Return #,Date,Customer Name,Invoice #,Status\nSample,2023-12-01,Sample Name,Sample,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

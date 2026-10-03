@@ -3,6 +3,8 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import ComingSoon from './pages/ComingSoon';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Super Admin Pages
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
@@ -287,8 +289,10 @@ function App() {
   }, [navigate]);
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
+    <>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <Routes>
+        <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/" element={<Layout />}>
         {/* Admin Dashboard */}
@@ -537,6 +541,7 @@ function App() {
         <Route path="*" element={<ComingSoon />} />
       </Route>
     </Routes>
+    </>
   );
 }
 

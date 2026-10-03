@@ -99,10 +99,10 @@ const BranchInfo = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setCurrentBranch({ ...currentBranch, documentUrl: res.data.url });
-      alert('Document uploaded successfully!');
+      Swal.fire('Success', 'Document uploaded successfully!', 'success');
     } catch (error) {
       console.error('Error uploading document:', error);
-      alert('Failed to upload document.');
+      Swal.fire('Error', 'Failed to upload document.', 'error');
     } finally {
       setUploading(false);
     }
@@ -120,10 +120,10 @@ const BranchInfo = () => {
       
       if (isEdit) {
         await api.put(`/branches/${payload._id || payload.id}`, payload);
-        alert('Branch updated successfully');
+        Swal.fire('Success', 'Branch updated successfully', 'success');
       } else {
         await api.post('/branches', payload);
-        alert('Branch added successfully');
+        Swal.fire('Success', 'Branch added successfully', 'success');
       }
       fetchBranches();
       setIsModalOpen(false);
@@ -157,7 +157,17 @@ const BranchInfo = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Code,Branch Name,Phone,Email,GSTIN\n";
+    const headers = [
+      'Branch Code', 'Branch Name', 'Branch Manager', 'Status', 'Contact Person', 'Mobile', 'Email', 'Phone',
+      'Address Line 1', 'Address Line 2', 'State', 'City', 'District', 'Pincode',
+      'GST Status', 'GSTIN', 'PAN', 'TAN', 'HSN'
+    ];
+    const dummyData = [
+      'BR-1001', 'Lucknow Branch', 'Manager Name', 'Active', 'Amit Kumar', '9876543210', 'lucknow@branch.com', '0522-1234567',
+      '123 Main Street', 'Sector 4', 'Uttar Pradesh', 'Lucknow', 'Lucknow', '226001',
+      'Registered', '09ABCDE1234F1Z5', 'ABCDE1234F', 'LKOA12345B', '9988'
+    ];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -169,7 +179,38 @@ const BranchInfo = () => {
   };
 
   const handleExportCSV = () => {
-    const csvContent = "Code,Branch Name,Phone,Email,GSTIN\n";
+    const headers = [
+      'Branch Code', 'Branch Name', 'Branch Manager', 'Status', 'Contact Person', 'Mobile', 'Email', 'Phone',
+      'Address Line 1', 'Address Line 2', 'State', 'City', 'District', 'Pincode',
+      'GST Status', 'GSTIN', 'PAN', 'TAN', 'HSN'
+    ];
+    const rows = filtered.map(b => [
+      `"${b.code || ''}"`,
+      `"${b.name || ''}"`,
+      `"${b.manager || ''}"`,
+      `"${b.status || ''}"`,
+      `"${b.contactPerson || ''}"`,
+      `"${b.mobile || ''}"`,
+      `"${b.email || ''}"`,
+      `"${b.phone || ''}"`,
+      `"${b.address1 || ''}"`,
+      `"${b.address2 || ''}"`,
+      `"${b.state || ''}"`,
+      `"${b.city || ''}"`,
+      `"${b.district || ''}"`,
+      `"${b.pincode || ''}"`,
+      `"${b.gstStatus || ''}"`,
+      `"${b.gstin || ''}"`,
+      `"${b.pan || ''}"`,
+      `"${b.tan || ''}"`,
+      `"${b.hsn || ''}"`
+    ]);
+    const dummyData = [
+      'BR-1001', 'Lucknow Branch', 'Manager Name', 'Active', 'Amit Kumar', '9876543210', 'lucknow@branch.com', '0522-1234567',
+      '123 Main Street', 'Sector 4', 'Uttar Pradesh', 'Lucknow', 'Lucknow', '226001',
+      'Registered', '09ABCDE1234F1Z5', 'ABCDE1234F', 'LKOA12345B', '9988'
+    ];
+    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

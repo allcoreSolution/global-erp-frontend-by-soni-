@@ -62,7 +62,7 @@ const ReceiptList = () => {
 
   // Real CSV Export
   const handleExportCSV = () => {
-    const csvContent = "Receipt ID,Customer Name,Invoice Ref,Amount (₹),Date,Payment Mode,Ref No,Advance\n";
+    const csvContent = "Receipt ID,Customer Name,Invoice Ref,Amount (₹),Date,Payment Mode,Ref No,Advance\n1001,Sample Name,Sample,100,2023-12-01,Sample,1001,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -74,7 +74,7 @@ const ReceiptList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Receipt ID,Customer Name,Invoice Ref,Amount (₹),Date,Payment Mode,Ref No,Advance\n";
+    const csvContent = "Receipt ID,Customer Name,Invoice Ref,Amount (₹),Date,Payment Mode,Ref No,Advance\n1001,Sample Name,Sample,100,2023-12-01,Sample,1001,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

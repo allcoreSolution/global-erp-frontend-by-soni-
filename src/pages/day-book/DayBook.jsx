@@ -120,7 +120,7 @@ const DayBook = () => {
       entry.debit || 0,
       entry.credit || 0
     ]);
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + '2023-12-01,1001,Standard,Sample,Sample,Sample', ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -133,7 +133,7 @@ const DayBook = () => {
 
   const handleDownloadSample = () => {
     const headers = ['Voucher No', 'Date', 'Type', 'Account ID', 'Debit', 'Credit', 'Narration'];
-    const csvContent = headers.join(',') + '\n';
+    const csvContent = headers.join(',') + '\n' + '2023-12-01,1001,Standard,Sample,Sample,Sample' + '\n';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

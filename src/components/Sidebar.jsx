@@ -240,18 +240,17 @@ const Sidebar = ({ onClose }) => {
                   icon={Package}
                   text="Item / Product Master"
                   subItems={[
+                    { text: 'Add Purchase', to: '/purchases/add-purchase' },
+                    { text: 'Purchase List', to: '/purchases/purchase-list' },
+                    { text: 'Purchase Return', to: '/purchases/purchase-return' },
                     { text: 'Brand', to: '/products/brand' },
                     { text: 'Category', to: '/products/category' },
                     { text: 'Unit', to: '/products/unit' },
-                    { text: 'Product List', to: '/products/product-list' },
+                    { text: 'Stock List', to: '/products/product-list' },
                     { text: 'Add Adjustment', to: '/products/add-adjustment' },
                     { text: 'Adjustment List', to: '/products/adjustment-list' },
-                    { text: 'Stock Count', to: '/products/stock-count' },
                     { text: 'Group', to: '/products/group' },
-                    { text: 'Ledger', to: '/products/ledger' },
-                    { text: 'Add Purchase', to: '/purchases/add-purchase' },
-                    { text: 'Purchase List', to: '/purchases/purchase-list' },
-                    { text: 'Purchase Return', to: '/purchases/purchase-return' }
+                    { text: 'Ledger', to: '/products/ledger' }
                   ]}
                 />
 

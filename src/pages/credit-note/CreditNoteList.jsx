@@ -57,7 +57,7 @@ const CreditNoteList = () => {
         item.status
       ];
     });
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + '1001,Sample Name,Sample,2023-12-01,100,Sample,100,Sample,Yes', ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -71,7 +71,7 @@ const CreditNoteList = () => {
 
   const handleDownloadSample = () => {
     const headers = ['Credit Note ID', 'Customer Name', 'Original Invoice', 'Date', 'Amount', 'Tax', 'Total Amount', 'Reason', 'Status'];
-    const csvContent = headers.join(',') + '\n';
+    const csvContent = headers.join(',') + '\n' + '1001,Sample Name,Sample,2023-12-01,100,Sample,100,Sample,Yes' + '\n';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

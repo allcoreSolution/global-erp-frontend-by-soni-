@@ -176,7 +176,7 @@ const ChallanList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Date,Reference No,Order No,Courier,Status,Closing Date,Total Amount,Created By,Closed By\n";
+    const csvContent = "Date,Reference No,Order No,Courier,Status,Closing Date,Total Amount,Created By,Closed By\n2023-12-01,1001,1001,Sample,Yes,2023-12-01,100,Sample,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -188,7 +188,7 @@ const ChallanList = () => {
   };
 
   const handleExportCSV = () => {
-    const csvContent = "Date,Reference No,Order No,Courier,Status,Closing Date,Total Amount,Created By,Closed By\n";
+    const csvContent = "Date,Reference No,Order No,Courier,Status,Closing Date,Total Amount,Created By,Closed By\n2023-12-01,1001,1001,Sample,Yes,2023-12-01,100,Sample,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

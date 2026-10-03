@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Plus, Upload, AlertCircle, Info } from 'lucide-react';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const AddAdjustment = () => {
   const [products, setProducts] = useState([]);
@@ -42,9 +43,11 @@ const AddAdjustment = () => {
     const pCode = product.productCode || product.sku || 'N/A';
     const pName = product.productName;
     const pCost = Number(product.productCost) || 0;
-    const pStock = Number(product.currentStock) || 0;
     
-    // Check if product already exists in orderItems
+    // Find warehouse specific stock
+    const whStockObj = product.warehouseStocks?.find(ws => ws.warehouse === warehouse);
+    const pStock = whStockObj ? whStockObj.stock : 0;
+    
     const exists = orderItems.find(item => item.code === pCode);
     if (exists) {
       setOrderItems(orderItems.map(item => 
@@ -57,6 +60,7 @@ const AddAdjustment = () => {
         code: pCode, 
         cost: pCost, 
         currentStock: pStock,
+        actionType: 'Subtract',
         quantity: 1 
       }]);
     }
@@ -89,11 +93,11 @@ const AddAdjustment = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!warehouse) {
-      alert("Please select a warehouse.");
+      Swal.fire({ icon: 'warning', title: 'Missing Information', text: 'Please select a warehouse.' });
       return;
     }
     if (orderItems.length === 0) {
-      alert("Please add at least one product to the adjustment order table.");
+      Swal.fire({ icon: 'warning', title: 'No Items', text: 'Please add at least one product to the adjustment order table.' });
       return;
     }
 
@@ -111,21 +115,32 @@ const AddAdjustment = () => {
           }
         } catch (error) {
           console.error('Error uploading document:', error);
-          alert('Note: Server upload failed (500 Error). We will proceed creating the adjustment without the document.');
+          Swal.fire({ icon: 'info', title: 'Upload Failed', text: 'Note: Server upload failed (500 Error). We will proceed creating the adjustment without the document.' });
           // Do not return, allow the process to continue
         }
       }
 
+      const formattedItems = orderItems.map(item => ({
+        name: item.name,
+        code: item.code,
+        cost: item.cost,
+        quantity: item.actionType === 'Subtract' ? -Math.abs(item.quantity) : Math.abs(item.quantity)
+      }));
+
       const payload = {
         warehouse,
         documentName: docUrl,
-        items: orderItems,
+        items: formattedItems,
         note
       };
 
       const res = await api.post('/products/adjustments', payload);
       if (res.data.success) {
-        alert(`Stock Adjustment Created successfully!\nWarehouse: ${warehouse}\nTotal items adjusted: ${totalQuantity}`);
+        Swal.fire({
+          icon: 'success',
+          title: 'Adjustment Created!',
+          text: `Warehouse: ${warehouse} | Total items adjusted: ${totalQuantity}`
+        });
         // Reset Form
         setWarehouse('');
         setDocumentFile(null);
@@ -135,7 +150,7 @@ const AddAdjustment = () => {
     } catch (error) {
       console.error('Error creating adjustment:', error);
       const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
-      alert('Failed to create adjustment: ' + errorMsg);
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to create adjustment: ' + errorMsg });
     }
   };
 
@@ -202,12 +217,18 @@ const AddAdjustment = () => {
               }}
               className="w-full border border-blue-500 rounded pl-9 pr-3 py-2.5 text-sm bg-white text-black outline-none focus:border-blue-450 appearance-none"
             >
-              <option value="">-- View and select a product from database --</option>
-              {products.map(product => (
-                <option key={product._id} value={product._id}>
-                  {product.productName} (Code: {product.productCode}) - Stock: {product.currentStock || 0}
-                </option>
-              ))}
+              <option value="">{warehouse ? "-- View and select a product from this warehouse --" : "-- Please select a warehouse first --"}</option>
+              {warehouse && products
+                .filter(p => p.warehouseStocks?.some(ws => ws.warehouse === warehouse))
+                .map(product => {
+                  const whStockObj = product.warehouseStocks.find(ws => ws.warehouse === warehouse);
+                  const whStock = whStockObj ? whStockObj.stock : 0;
+                  return (
+                    <option key={product._id} value={product._id}>
+                      {product.productName} (Code: {product.productCode}) - Available Stock: {whStock}
+                    </option>
+                  );
+                })}
             </select>
           </div>
         </div>
@@ -245,16 +266,36 @@ const AddAdjustment = () => {
                       <td className="px-6 py-3.5 text-sm text-gray-700 font-medium">${Number(item.cost || 0).toFixed(2)}</td>
                       {/* Quantity */}
                       <td className="px-6 py-3.5 whitespace-nowrap">
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            setOrderItems(orderItems.map(i => i.code === item.code ? { ...i, quantity: val } : i));
-                          }}
-                          placeholder="e.g. 5 or -2"
-                          className="w-24 border border-blue-500 rounded px-2 py-1 text-sm bg-white text-black outline-none focus:border-blue-450 font-semibold text-center"
-                        />
+                        <div className="flex items-center gap-2">
+                          <select 
+                            value={item.actionType || 'Subtract'}
+                            onChange={(e) => {
+                              setOrderItems(orderItems.map(i => i.code === item.code ? { ...i, actionType: e.target.value } : i));
+                            }}
+                            className={`border rounded px-2 py-1 text-sm outline-none font-semibold ${item.actionType === 'Add' ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-rose-500 text-rose-700 bg-rose-50'}`}
+                          >
+                            <option value="Subtract">(-) Subtract</option>
+                            <option value="Add">(+) Add</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity === '' ? '' : item.quantity}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (val !== '') {
+                                val = Math.max(1, parseInt(val) || 1);
+                              }
+                              setOrderItems(orderItems.map(i => i.code === item.code ? { ...i, quantity: val } : i));
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value === '' || e.target.value === '0') {
+                                setOrderItems(orderItems.map(i => i.code === item.code ? { ...i, quantity: 1 } : i));
+                              }
+                            }}
+                            className="w-20 border border-blue-500 rounded px-2 py-1 text-sm bg-white text-black outline-none focus:border-blue-450 font-semibold text-center"
+                          />
+                        </div>
                       </td>
                       {/* Action */}
                       <td className="px-6 py-3.5 text-right whitespace-nowrap">

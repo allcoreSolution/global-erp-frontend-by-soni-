@@ -47,7 +47,7 @@ const JournalList = () => {
 
   // Export Filtered List to CSV
   const handleExportCSV = () => {
-    const csvContent = "Voucher No,Date,Reference,Narration,Total Amount,Status\n";
+    const csvContent = "Voucher No,Date,Reference,Narration,Total Amount,Status\n1001,2023-12-01,Sample,Sample,100,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -60,7 +60,7 @@ const JournalList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Voucher No,Date,Reference,Narration,Total Amount,Status\n";
+    const csvContent = "Voucher No,Date,Reference,Narration,Total Amount,Status\n1001,2023-12-01,Sample,Sample,100,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

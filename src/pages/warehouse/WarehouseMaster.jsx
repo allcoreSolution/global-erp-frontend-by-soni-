@@ -108,7 +108,7 @@ const WarehouseMaster = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "code,name,location,phone,email,status\nWH-001,Main Warehouse,Mumbai,9876543210,main@warehouse.com,true";
+    const csvContent = "code,name,location,branch,phone,email,status\nWH-001,Main Warehouse,Mumbai,Head Office,9876543210,main@warehouse.com,true";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -163,10 +163,20 @@ const WarehouseMaster = () => {
       
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',');
-        const wData = {};
+        const rawData = {};
         headers.forEach((header, index) => {
-          wData[header.trim()] = values[index] ? values[index].trim() : '';
+          rawData[header.trim()] = values[index] ? values[index].trim() : '';
         });
+        
+        const wData = {
+          code: rawData['Code'] || rawData['code'],
+          name: rawData['Name'] || rawData['name'],
+          location: rawData['Location'] || rawData['location'],
+          branch: rawData['Branch'] || rawData['branch'],
+          phone: rawData['Phone'] || rawData['phone'],
+          email: rawData['Email'] || rawData['email'],
+          status: (rawData['Status'] || rawData['status']) === 'Active' || (rawData['Status'] || rawData['status']) === 'true'
+        };
         
         const isDuplicate = warehouses.some(w => 
           (wData.code && w.code === wData.code) ||

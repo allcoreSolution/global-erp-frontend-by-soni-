@@ -182,7 +182,7 @@ const Category = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Category,Parent Category,Description,Company,Display Order,Status\n";
+    const csvContent = "Category,Parent Category,Description,Company,Display Order,Status\nGeneral,General,Sample description,Company1,Sample,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -194,7 +194,7 @@ const Category = () => {
   };
 
   const handleExportCSV = () => {
-    const csvContent = "Category,Parent Category,Description,Company,Display Order,Status\n";
+    const csvContent = "Category,Parent Category,Description,Company,Display Order,Status\nGeneral,General,Sample description,Company1,Sample,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

@@ -68,7 +68,7 @@ const CourierList = () => {
   };
 
   const handleExportCSV = () => {
-    const csvContent = "Name,Type,Phone Number,Address\n";
+    const csvContent = "Name,Type,Phone Number,Address\nSample Name,Standard,9876543210,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -80,7 +80,7 @@ const CourierList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Name,Type,Phone Number,Address\n";
+    const csvContent = "Name,Type,Phone Number,Address\nSample Name,Standard,9876543210,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

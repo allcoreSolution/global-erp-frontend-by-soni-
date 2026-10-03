@@ -76,7 +76,7 @@ const BankPaymentList = () => {
 
   // Real CSV Export
   const handleExportCSV = () => {
-    const csvContent = "Bank Payment ID,Bank Account,Supplier Name,Amount (₹),Date,Reference No,Bank Charges (₹),Reconciled\n";
+    const csvContent = "Bank Payment ID,Bank Account,Supplier Name,Amount (₹),Date,Reference No,Bank Charges (₹),Reconciled\n1001,Sample,Sample Name,100,2023-12-01,1001,Sample,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -88,7 +88,7 @@ const BankPaymentList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Bank Payment ID,Bank Account,Supplier Name,Amount (₹),Date,Reference No,Bank Charges (₹),Reconciled\n";
+    const csvContent = "Bank Payment ID,Bank Account,Supplier Name,Amount (₹),Date,Reference No,Bank Charges (₹),Reconciled\n1001,Sample,Sample Name,100,2023-12-01,1001,Sample,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

@@ -114,16 +114,22 @@ const TaxConfig = () => {
       Swal.fire('No Data', 'No data available to export.', 'warning');
       return;
     }
-    const headers = ['Code', 'Tax Slab Name', 'GST %', 'CGST / SGST / IGST', 'Cess %', 'Pricing Type'];
+    const headers = ['Tax Code', 'Tax Name', 'Total GST %', 'CGST %', 'SGST %', 'IGST %', 'Cess %', 'Pricing Type', 'Status'];
     const rows = taxes.map(t => [
-      `"${t.id || ''}"`,
+      `"${t.id || t.code || ''}"`,
       `"${t.name || ''}"`,
-      `"${t.rate || 0}%"`,
-      `"C: ${t.cgst || 0}% | S: ${t.sgst || 0}% | I: ${t.igst || 0}%"`,
-      `"${t.cess || 0}%"`,
-      `"${t.inclusive ? 'Inclusive' : 'Exclusive'}"`
+      `"${t.rate || 0}"`,
+      `"${t.cgst || 0}"`,
+      `"${t.sgst || 0}"`,
+      `"${t.igst || 0}"`,
+      `"${t.cess || 0}"`,
+      `"${t.inclusive ? 'Inclusive' : 'Exclusive'}"`,
+      `"${t.status || 'Active'}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const dummyData = [
+      'TAX-18', 'GST 18%', '18', '9', '9', '18', '0', 'Exclusive', 'Active'
+    ];
+    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -135,8 +141,11 @@ const TaxConfig = () => {
   };
 
   const handleDownloadSample = () => {
-    const headers = ['Code', 'Tax Slab Name', 'GST %', 'CGST / SGST / IGST', 'Cess %', 'Pricing Type'];
-    const csvContent = headers.join('\n'); // Just headers
+    const headers = ['Tax Code', 'Tax Name', 'Total GST %', 'CGST %', 'SGST %', 'IGST %', 'Cess %', 'Pricing Type', 'Status'];
+    const dummyData = [
+      'TAX-18', 'GST 18%', '18', '9', '9', '18', '0', 'Exclusive', 'Active'
+    ];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

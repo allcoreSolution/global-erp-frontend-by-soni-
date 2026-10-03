@@ -44,18 +44,69 @@ const EmployeeList = () => {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Employee ID', 'Name', 'Email', 'Mobile', 'Department', 'Designation', 'Joining Date', 'Status'];
+    const headers = [
+      'Employee ID', 'Name', 'DOB', 'Gender', 'Marital Status', 'Mobile', 'Email', 
+      'Company', 'Branch', 'Department', 'Designation', 'Employee Type', 'Joining Date', 'Status',
+      'Reporting Manager', 'Shift', 'Current Address', 'Current State', 'Current City', 'Current Pincode', 'Permanent Address',
+      'PAN', 'UAN', 'PF No', 'ESIC No',
+      'Bank', 'Account No', 'IFSC', 'Salary Type', 'Basic Salary', 'HRA', 'Allowance', 'Gross Salary', 'Net Salary',
+      'Emergency Name', 'Emergency Relationship', 'Emergency Mobile',
+      'Create Login', 'Username', 'Role', 'Login Status', 'Remarks'
+    ];
     const rows = employees.map(emp => [
-      emp.employeeId || '',
+      `"${emp.employeeId || ''}"`,
       `"${emp.employeeName || ''}"`,
-      emp.email || '',
-      emp.mobile || '',
+      `"${emp.dob || ''}"`,
+      `"${emp.gender || ''}"`,
+      `"${emp.maritalStatus || ''}"`,
+      `"${emp.mobile || ''}"`,
+      `"${emp.email || ''}"`,
+      `"${emp.company || ''}"`,
+      `"${emp.branch || ''}"`,
       `"${emp.department || ''}"`,
       `"${emp.designation || ''}"`,
-      emp.joiningDate || '',
-      emp.status || ''
+      `"${emp.employeeType || ''}"`,
+      `"${emp.joiningDate || ''}"`,
+      `"${emp.status || ''}"`,
+      `"${emp.reportingManager || ''}"`,
+      `"${emp.shift || ''}"`,
+      `"${emp.currentAddress || ''}"`,
+      `"${emp.currentState || ''}"`,
+      `"${emp.currentCity || ''}"`,
+      `"${emp.currentPincode || ''}"`,
+      `"${emp.permanentAddress || ''}"`,
+      `"${emp.pan || ''}"`,
+      `"${emp.uan || ''}"`,
+      `"${emp.pfNo || ''}"`,
+      `"${emp.esicNo || ''}"`,
+      `"${emp.bank || ''}"`,
+      `"${emp.accountNo || ''}"`,
+      `"${emp.ifsc || ''}"`,
+      `"${emp.salaryType || ''}"`,
+      `"${emp.basicSalary || 0}"`,
+      `"${emp.hra || 0}"`,
+      `"${emp.allowance || 0}"`,
+      `"${emp.grossSalary || 0}"`,
+      `"${emp.netSalary || 0}"`,
+      `"${emp.emergencyName || ''}"`,
+      `"${emp.emergencyRelationship || ''}"`,
+      `"${emp.emergencyMobile || ''}"`,
+      `"${emp.createLogin || ''}"`,
+      `"${emp.username || ''}"`,
+      `"${emp.role || ''}"`,
+      `"${emp.loginStatus || ''}"`,
+      `"${emp.remarks || ''}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const dummyData = [
+      'EMP-1001', 'Rahul Sharma', '1990-01-01', 'Male', 'Single', '9876543210', 'rahul@test.com',
+      'ABC Corp', 'Delhi Branch', 'IT', 'Developer', 'Permanent', '2023-01-15', 'Active',
+      'Ramesh', 'Morning', '123 Main St', 'Delhi', 'Delhi', '110001', 'Same as current',
+      'ABCDE1234F', '100123456789', 'MH/BAN/12345/678', '11-00-123456-000-1001',
+      'SBI', '30012345678', 'SBIN0001', 'Monthly', '50000', '25000', '5000', '80000', '75000',
+      'Anita Sharma', 'Mother', '9988776655',
+      'Yes', 'rahul123', 'User', 'Active', 'Good performance'
+    ];
+    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -67,8 +118,25 @@ const EmployeeList = () => {
   };
 
   const handleDownloadSample = () => {
-    const headers = ['Employee ID', 'Name', 'Email', 'Mobile', 'Department', 'Designation', 'Joining Date', 'Status'];
-    const csvContent = headers.join(',') + '\n';
+    const headers = [
+      'Employee ID', 'Name', 'DOB', 'Gender', 'Marital Status', 'Mobile', 'Email', 
+      'Company', 'Branch', 'Department', 'Designation', 'Employee Type', 'Joining Date', 'Status',
+      'Reporting Manager', 'Shift', 'Current Address', 'Current State', 'Current City', 'Current Pincode', 'Permanent Address',
+      'PAN', 'UAN', 'PF No', 'ESIC No',
+      'Bank', 'Account No', 'IFSC', 'Salary Type', 'Basic Salary', 'HRA', 'Allowance', 'Gross Salary', 'Net Salary',
+      'Emergency Name', 'Emergency Relationship', 'Emergency Mobile',
+      'Create Login', 'Username', 'Role', 'Login Status', 'Remarks'
+    ];
+    const dummyData = [
+      'EMP-1001', 'Rahul Sharma', '1990-01-01', 'Male', 'Single', '9876543210', 'rahul@test.com',
+      'ABC Corp', 'Delhi Branch', 'IT', 'Developer', 'Permanent', '2023-01-15', 'Active',
+      'Ramesh', 'Morning', '123 Main St', 'Delhi', 'Delhi', '110001', 'Same as current',
+      'ABCDE1234F', '100123456789', 'MH/BAN/12345/678', '11-00-123456-000-1001',
+      'SBI', '30012345678', 'SBIN0001', 'Monthly', '50000', '25000', '5000', '80000', '75000',
+      'Anita Sharma', 'Mother', '9988776655',
+      'Yes', 'rahul123', 'User', 'Active', 'Good performance'
+    ];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -94,19 +162,70 @@ const EmployeeList = () => {
       }
 
       const newEmployees = [];
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+
       for (let i = 1; i < lines.length; i++) {
-        const columns = lines[i].split(',').map(c => c.replace(/"/g, '').trim());
-        if (columns.length < 2) continue; 
+        const line = lines[i];
+        let values = [];
+        let curVal = '';
+        let inQuotes = false;
+        for(let j=0; j<line.length; j++) {
+            if(line[j] === '"') inQuotes = !inQuotes;
+            else if(line[j] === ',' && !inQuotes) { values.push(curVal); curVal = ''; }
+            else curVal += line[j];
+        }
+        values.push(curVal);
+
+        const row = {};
+        headers.forEach((h, idx) => {
+          row[h] = values[idx] ? values[idx].trim() : '';
+        });
+
+        if (Object.keys(row).length < 5) continue; 
 
         newEmployees.push({
-          employeeId: columns[0] || `EMP-${Date.now()}-${i}`,
-          employeeName: columns[1] || 'Unknown Employee',
-          email: columns[2] || '',
-          mobile: columns[3] || '',
-          department: columns[4] || '',
-          designation: columns[5] || '',
-          joiningDate: columns[6] || new Date().toISOString().split('T')[0],
-          status: columns[7] || 'Active'
+          employeeId: row['Employee ID'] || `EMP-${Date.now()}-${i}`,
+          employeeName: row['Name'] || 'Unknown Employee',
+          dob: row['DOB'] || '',
+          gender: row['Gender'] || '',
+          maritalStatus: row['Marital Status'] || '',
+          mobile: row['Mobile'] || '',
+          email: row['Email'] || '',
+          company: row['Company'] || '',
+          branch: row['Branch'] || '',
+          department: row['Department'] || '',
+          designation: row['Designation'] || '',
+          employeeType: row['Employee Type'] || 'Permanent',
+          joiningDate: row['Joining Date'] || new Date().toISOString().split('T')[0],
+          status: row['Status'] || 'Active',
+          reportingManager: row['Reporting Manager'] || '',
+          shift: row['Shift'] || '',
+          currentAddress: row['Current Address'] || '',
+          currentState: row['Current State'] || '',
+          currentCity: row['Current City'] || '',
+          currentPincode: row['Current Pincode'] || '',
+          permanentAddress: row['Permanent Address'] || '',
+          pan: row['PAN'] || '',
+          uan: row['UAN'] || '',
+          pfNo: row['PF No'] || '',
+          esicNo: row['ESIC No'] || '',
+          bank: row['Bank'] || '',
+          accountNo: row['Account No'] || '',
+          ifsc: row['IFSC'] || '',
+          salaryType: row['Salary Type'] || 'Monthly',
+          basicSalary: Number(row['Basic Salary']) || 0,
+          hra: Number(row['HRA']) || 0,
+          allowance: Number(row['Allowance']) || 0,
+          grossSalary: Number(row['Gross Salary']) || 0,
+          netSalary: Number(row['Net Salary']) || 0,
+          emergencyName: row['Emergency Name'] || '',
+          emergencyRelationship: row['Emergency Relationship'] || '',
+          emergencyMobile: row['Emergency Mobile'] || '',
+          createLogin: row['Create Login'] || 'No',
+          username: row['Username'] || '',
+          role: row['Role'] || '',
+          loginStatus: row['Login Status'] || 'Active',
+          remarks: row['Remarks'] || ''
         });
       }
 

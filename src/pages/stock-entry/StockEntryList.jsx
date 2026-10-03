@@ -84,7 +84,7 @@ const StockEntryList = () => {
 
   // Export Filtered List to CSV
   const handleExportCSV = () => {
-    const csvContent = "Voucher No,Type,Date,Warehouse,Reference,Reason,Total Qty,Status\n";
+    const csvContent = "Voucher No,Type,Date,Warehouse,Reference,Reason,Total Qty,Status\n1001,Standard,2023-12-01,Sample,Sample,Sample,Sample,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -97,7 +97,7 @@ const StockEntryList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Voucher No,Type,Date,Warehouse,Reference,Reason,Total Qty,Status\n";
+    const csvContent = "Voucher No,Type,Date,Warehouse,Reference,Reason,Total Qty,Status\n1001,Standard,2023-12-01,Sample,Sample,Sample,Sample,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

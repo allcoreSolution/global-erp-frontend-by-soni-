@@ -108,7 +108,10 @@ const PurchaseList = () => {
         `"${p.paymentStatus || ''}"`
       ];
     });
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const dummyData = [
+      '2023-12-01', 'PUR-1001', 'Admin', 'ABC Suppliers', 'Received', '10000', '0', '10000', '0', 'Net 30', '2023-12-31', 'Paid'
+    ];
+    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -121,7 +124,10 @@ const PurchaseList = () => {
 
   const handleDownloadSample = () => {
     const headers = ['Date', 'Reference', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
-    const csvContent = headers.join('\n'); // Just headers
+    const dummyData = [
+      '2023-12-01', 'PUR-1001', 'Admin', 'ABC Suppliers', 'Received', '10000', '0', '10000', '0', 'Net 30', '2023-12-31', 'Paid'
+    ];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -273,6 +279,11 @@ const PurchaseList = () => {
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Reference</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Created By</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Supplier</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Product</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Code</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Brand</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Category</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700 text-center">Qty</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Purchase Status</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Grand Total</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Returned Amount</th>
@@ -295,7 +306,36 @@ const PurchaseList = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-medium">{p.purchaseDate}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.referenceNo}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">Admin</td>
-                  <td className="px-4 py-3 text-sm text-gray-800 font-medium">{p.supplier}</td>
+                  <td className="px-4 py-3 text-sm text-gray-800 font-medium">
+                    {typeof p.supplier === 'object' && p.supplier 
+                      ? (p.supplier.companyName || p.supplier.name || p.supplier.supplierCode || 'Unknown') 
+                      : (p.supplier || 'N/A')}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-800 font-semibold min-w-[120px]">
+                    <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
+                      {p.orderItems?.map((i, idx) => <span key={idx} className="block truncate" title={i.name}>{i.name}</span>)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
+                      {p.orderItems?.map((i, idx) => <span key={idx} className="block">{i.code || '-'}</span>)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
+                      {p.orderItems?.map((i, idx) => <span key={idx} className="block truncate" title={i.product?.brand?.name}>{i.product?.brand?.name || 'N/A'}</span>)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
+                      {p.orderItems?.map((i, idx) => <span key={idx} className="block truncate" title={i.product?.category?.name}>{i.product?.category?.name || 'N/A'}</span>)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 font-bold text-center">
+                    <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
+                      {p.orderItems?.map((i, idx) => <span key={idx} className="block">{i.quantity}</span>)}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
                     <span className="inline-flex px-2.5 py-0.5 rounded text-xs font-bold bg-green-50 text-green-700 border border-green-100">
                       {p.purchaseStatus}

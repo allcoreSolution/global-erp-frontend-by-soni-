@@ -167,7 +167,7 @@ const Unit = () => {
       `"${u.operator || 'None'}"`,
       `"${u.operationValue || '1'}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + '1001,Sample Name,Sample,Sample,Sample', ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

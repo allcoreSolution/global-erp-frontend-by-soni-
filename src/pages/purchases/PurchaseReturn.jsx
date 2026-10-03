@@ -12,9 +12,23 @@ const PurchaseReturn = () => {
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [warehouses, setWarehouses] = useState([]);
+
   useEffect(() => {
     fetchReturns();
+    fetchWarehouses();
   }, []);
+
+  const fetchWarehouses = async () => {
+    try {
+      const { data } = await api.get('/catalogs/warehouses');
+      if (data.success) {
+        setWarehouses(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching warehouses:', error);
+    }
+  };
 
   const fetchReturns = async () => {
     try {
@@ -29,9 +43,12 @@ const PurchaseReturn = () => {
       setLoading(false);
     }
   };
-  // States
-  const [startDate, setStartDate] = useState('2025-08-13');
-  const [endDate, setEndDate] = useState('2026-08-13');
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+  
+  const [startDate, setStartDate] = useState(thirtyDaysAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   const [selectedWarehouse, setSelectedWarehouse] = useState('All Warehouse');
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,11 +70,14 @@ const PurchaseReturn = () => {
   const filteredReturns = returns.filter(r => {
     const rNo = r.returnNo || '';
     const pInv = r.purchaseInvoice || '';
-    const supp = r.supplier || '';
+    const supp = typeof r.supplier === 'object' ? (r.supplier?.supplierName || r.supplier?.companyName || '') : (r.supplier || '');
     const matchesSearch = rNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           pInv.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           supp.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesWarehouse = selectedWarehouse === 'All Warehouse' || r.warehouse === selectedWarehouse;
+                          
+    const rWhId = typeof r.warehouse === 'object' ? r.warehouse?._id : r.warehouse;
+    const matchesWarehouse = selectedWarehouse === 'All Warehouse' || rWhId === selectedWarehouse;
+    
     return matchesSearch && matchesWarehouse;
   });
 
@@ -117,7 +137,7 @@ const PurchaseReturn = () => {
       `"${r.supplier || ''}"`,
       `"${r.totals?.returnTotal || r.grandTotal || 0}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + '2023-12-01,Sample,Sample,Sample,Sample,Sample', ...rows.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -247,9 +267,9 @@ const PurchaseReturn = () => {
             className="w-full border border-blue-500 rounded px-2 py-1.5 text-xs bg-white text-black outline-none focus:border-blue-400"
           >
             <option value="All Warehouse">All Warehouse</option>
-            <option value="Central Warehouse">Central Warehouse</option>
-            <option value="North Branch Warehouse">North Branch Warehouse</option>
-            <option value="East Side Storage">East Side Storage</option>
+            {warehouses.map(w => (
+              <option key={w._id} value={w._id}>{w.warehouseName || w.name}</option>
+            ))}
           </select>
         </div>
 
@@ -323,8 +343,12 @@ const PurchaseReturn = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700">{r.returnDate}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-indigo-700">{r.returnNo}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">{r.purchaseInvoice}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-800">{r.warehouse}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-800 font-medium">{r.supplier}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-800">
+                    {typeof r.warehouse === 'object' ? (r.warehouse?.name || r.warehouse?.warehouseName) : r.warehouse}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-800 font-medium">
+                    {typeof r.supplier === 'object' ? (r.supplier?.supplierName || r.supplier?.companyName || r.supplier?.name) : r.supplier}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-900 font-bold">₹ {r.totals?.returnTotal?.toFixed(2) || '0.00'}</td>
                   
                   {/* Actions VIEW, EDIT, DELETE */}

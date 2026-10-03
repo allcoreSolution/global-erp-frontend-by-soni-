@@ -116,7 +116,7 @@ const SaleExchangeList = () => {
   };
 
   const handleExportCSV = () => {
-    const csvContent = "Date,Reference,Sale Reference,Warehouse,Biller,Customer,Payment Type,Grand Total\n";
+    const csvContent = "Date,Reference,Sale Reference,Warehouse,Biller,Customer,Payment Type,Grand Total\n2023-12-01,Sample,Sample,Sample,Sample,Sample,Standard,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -128,7 +128,7 @@ const SaleExchangeList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Date,Reference,Sale Reference,Warehouse,Biller,Customer,Payment Type,Grand Total\n";
+    const csvContent = "Date,Reference,Sale Reference,Warehouse,Biller,Customer,Payment Type,Grand Total\n2023-12-01,Sample,Sample,Sample,Sample,Sample,Standard,Sample\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

@@ -166,7 +166,7 @@ const PackingSlipList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Reference,Sale Reference,Delivery Reference,Product List,Amount,Status\n";
+    const csvContent = "Reference,Sale Reference,Delivery Reference,Product List,Amount,Status\nSample,Sample,Sample,Sample,100,Yes\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -187,7 +187,7 @@ const PackingSlipList = () => {
       p.amount,
       `"${p.status}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + 'Sample,Sample,Sample,Sample,100,Yes', ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

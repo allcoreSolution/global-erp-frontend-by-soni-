@@ -7,14 +7,9 @@ import Swal from 'sweetalert2';
 import api from '../../api';
 
 const StockCount = () => {
-  // Mock Stock Count Records Data
-  const [counts, setCounts] = useState([
-    { id: 1, date: '2026-08-09', reference: 'STK-00912', warehouse: 'Central Warehouse', category: 'Electronics', brand: 'Apple', type: 'Full Count', initialFile: 'initial_stock_central.xlsx', finalFile: 'final_stock_central.xlsx' },
-    { id: 2, date: '2026-08-10', reference: 'STK-00913', warehouse: 'North Branch Warehouse', category: 'Laptops', brand: 'Dell', type: 'Partial Count', initialFile: 'initial_dell_north.xlsx', finalFile: 'final_dell_north.xlsx' },
-    { id: 3, date: '2026-08-11', reference: 'STK-00914', warehouse: 'East Side Storage', category: 'Mobile Accessories', brand: 'Logitech', type: 'Full Count', initialFile: 'initial_logi_east.xlsx', finalFile: 'final_logi_east.xlsx' },
-    { id: 4, date: '2026-08-12', reference: 'STK-00915', warehouse: 'Central Warehouse', category: 'Office Goods', brand: 'HP', type: 'Partial Count', initialFile: 'initial_hp_central.xlsx', finalFile: 'final_hp_central.xlsx' },
-    { id: 5, date: '2026-08-13', reference: 'STK-00916', warehouse: 'North Branch Warehouse', category: 'Electronics', brand: 'Samsung', type: 'Full Count', initialFile: 'initial_sam_north.xlsx', finalFile: 'final_sam_north.xlsx' },
-  ]);
+  // State for Stock Count Records
+  const [counts, setCounts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,20 +29,24 @@ const StockCount = () => {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [branchRes, whRes, catRes, brandRes, countTypeRes] = await Promise.all([
+        const [branchRes, whRes, catRes, brandRes, countTypeRes, stockCountsRes] = await Promise.all([
           api.get('/branches'),
           api.get('/catalogs/warehouses'),
           api.get('/products/categories'),
           api.get('/products/brands'),
-          api.get('/count-types')
+          api.get('/count-types').catch(() => ({ data: { data: [] } })),
+          api.get('/products/stock-counts')
         ]);
         if (branchRes.data?.data) setBranches(branchRes.data.data);
         if (whRes.data?.data) setWarehouses(whRes.data.data);
         if (catRes.data?.data) setCategories(catRes.data.data);
         if (brandRes.data?.data) setBrands(brandRes.data.data);
         if (countTypeRes.data?.data) setCountTypes(countTypeRes.data.data);
+        if (stockCountsRes.data?.success) setCounts(stockCountsRes.data.data);
       } catch (err) {
         console.error("Error fetching data:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchData();
@@ -68,13 +67,15 @@ const StockCount = () => {
   });
 
   // Handle Search Filter (Reference, Warehouse, Category, Brand, Type)
-  const filteredCounts = counts.filter(c => 
-    c.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.warehouse.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCounts = counts.filter(c => {
+    const s = searchTerm.toLowerCase();
+    const ref = c.reference || '';
+    const wh = c.warehouse || '';
+    const typ = c.type || '';
+    return ref.toLowerCase().includes(s) ||
+           wh.toLowerCase().includes(s) ||
+           typ.toLowerCase().includes(s);
+  });
 
   // Pagination calculation
   const indexOfLastRecord = currentPage * recordsPerPage;
@@ -140,7 +141,7 @@ const StockCount = () => {
       `"${item.initialFile || ''}"`,
       `"${item.finalFile || ''}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + '2023-12-01,Sample,Sample,General,Sample,Standard,Sample,Sample', ...rows.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -296,14 +297,16 @@ const StockCount = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
-            {currentRecords.length > 0 ? (
-              currentRecords.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
+            {isLoading ? (
+              <tr><td colSpan="9" className="text-center py-4 text-gray-500">Loading stock counts...</td></tr>
+            ) : currentRecords.length > 0 ? (
+              currentRecords.map((item, index) => (
+                <tr key={item._id || index} className="hover:bg-gray-50/70 transition-colors">
                   {/* Date */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
                     <div className="flex items-center gap-1.5">
                       <Calendar size={14} className="text-gray-400" />
-                      <span>{item.date}</span>
+                      <span>{new Date(item.createdAt || item.date).toLocaleDateString()}</span>
                     </div>
                   </td>
                   {/* Reference */}
@@ -337,7 +340,7 @@ const StockCount = () => {
                       className="inline-flex items-center gap-1 text-indigo-600 hover:text-blue-800 hover:underline"
                     >
                       <FileSpreadsheet size={14} />
-                      <span className="truncate max-w-[120px]">{item.initialFile}</span>
+                      <span className="truncate max-w-[120px]">{item.initialFile || 'N/A'}</span>
                     </button>
                   </td>
                   {/* Final File */}
@@ -347,7 +350,7 @@ const StockCount = () => {
                       className="inline-flex items-center gap-1 text-indigo-600 hover:text-blue-800 hover:underline"
                     >
                       <FileSpreadsheet size={14} />
-                      <span className="truncate max-w-[120px]">{item.finalFile}</span>
+                      <span className="truncate max-w-[120px]">{item.finalFile || 'N/A'}</span>
                     </button>
                   </td>
                   {/* Actions (View, Edit, Delete) */}

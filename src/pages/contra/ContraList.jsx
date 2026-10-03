@@ -54,7 +54,7 @@ const ContraList = () => {
 
   // Real CSV Export
   const handleExportCSV = () => {
-    const csvContent = "Contra ID,From Account,To Account,Amount (₹),Date,Transfer Mode,Reference No\n";
+    const csvContent = "Contra ID,From Account,To Account,Amount (₹),Date,Transfer Mode,Reference No\n1001,Sample,Sample,100,2023-12-01,Sample,1001\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -66,7 +66,7 @@ const ContraList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Contra ID,From Account,To Account,Amount (₹),Date,Transfer Mode,Reference No\n";
+    const csvContent = "Contra ID,From Account,To Account,Amount (₹),Date,Transfer Mode,Reference No\n1001,Sample,Sample,100,2023-12-01,Sample,1001\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

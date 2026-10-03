@@ -131,7 +131,7 @@ const PriceList = () => {
       pl.customerType,
       pl.status ? 'Yes' : 'No'
     ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + '1001,Sample Name,Standard,Yes', ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -144,7 +144,10 @@ const PriceList = () => {
 
   const handleDownloadSample = () => {
     const headers = ['Price List Code', 'Price List Name', 'Customer Type', 'Active'];
-    const csvContent = headers.join('\n');
+    const dummyData = [
+      'PL-001', 'Summer Sale Prices', 'Retailer', 'Yes'
+    ];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

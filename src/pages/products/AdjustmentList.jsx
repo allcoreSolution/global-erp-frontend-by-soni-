@@ -1,21 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2, 
-  ChevronLeft, ChevronRight, AlertCircle, X, Calendar 
+import {
+  Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2,
+  ChevronLeft, ChevronRight, AlertCircle, X, Calendar
 } from 'lucide-react';
+import api from '../../api';
 
 const AdjustmentList = () => {
   const navigate = useNavigate();
 
-  // Mock Adjustment Records Data
-  const [adjustments, setAdjustments] = useState([
-    { id: 1, date: '2026-08-10', reference: 'ADJ-00192', warehouse: 'Central Warehouse', products: 'iPhone 15 Pro (2), Dell XPS 15 (1)', note: 'Damaged item return replacement adjustment.' },
-    { id: 2, date: '2026-08-11', reference: 'ADJ-00193', warehouse: 'North Branch Warehouse', products: 'MX Master 3S (10)', note: 'Discrepancy count stock fix.' },
-    { id: 3, date: '2026-08-12', reference: 'ADJ-00194', warehouse: 'East Side Storage', products: 'Galaxy S24 Ultra (3), Sony WH-1000XM5 (2)', note: 'Correction update parameters.' },
-    { id: 4, date: '2026-08-12', reference: 'ADJ-00195', warehouse: 'Central Warehouse', products: 'HP LaserJet Pro (1)', note: 'Office demo writeoff.' },
-    { id: 5, date: '2026-08-13', reference: 'ADJ-00196', warehouse: 'North Branch Warehouse', products: 'Dell XPS 15 (2)', note: 'Testing stock valuation unit.' },
-  ]);
+  // State for Adjustments Data
+  const [adjustments, setAdjustments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAdjustments();
+  }, []);
+
+  const fetchAdjustments = async () => {
+    try {
+      const res = await api.get('/products/adjustments');
+      if (res.data.success) {
+        setAdjustments(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching adjustments:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,12 +38,17 @@ const AdjustmentList = () => {
   const [selectedAdjustment, setSelectedAdjustment] = useState(null);
 
   // Handle Search Filter (Reference, Warehouse, Products, Note)
-  const filteredAdjustments = adjustments.filter(adj => 
-    adj.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    adj.warehouse.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    adj.products.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    adj.note.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAdjustments = adjustments.filter(adj => {
+    const searchLow = searchTerm.toLowerCase();
+    const ref = adj._id || '';
+    const wh = adj.warehouse || '';
+    const n = adj.note || '';
+    const itemNames = adj.items ? adj.items.map(i => i.name).join(' ') : '';
+    return ref.toLowerCase().includes(searchLow) ||
+      wh.toLowerCase().includes(searchLow) ||
+      n.toLowerCase().includes(searchLow) ||
+      itemNames.toLowerCase().includes(searchLow);
+  });
 
   // Pagination calculation
   const indexOfLastRecord = currentPage * recordsPerPage;
@@ -64,7 +82,7 @@ const AdjustmentList = () => {
       `"${item.products || ''}"`,
       `"${item.note || ''}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + '2023-12-01,Sample,Sample,Sample,1001', ...rows.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -122,7 +140,7 @@ const AdjustmentList = () => {
 
   return (
     <div className="min-h-screen bg-white text-black p-6 rounded-lg shadow-md border border-blue-500">
-      
+
       {/* Title Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-blue-500 pb-4">
         <div>
@@ -133,32 +151,32 @@ const AdjustmentList = () => {
         {/* Global Toolbar buttons */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Hidden file input for import */}
-          <input 
-            type="file" 
-            accept=".csv" 
-            id="import-csv" 
-            className="hidden" 
-            onChange={handleImport} 
+          <input
+            type="file"
+            accept=".csv"
+            id="import-csv"
+            className="hidden"
+            onChange={handleImport}
           />
-          <label 
+          <label
             htmlFor="import-csv"
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <Upload size={14} /> Import
           </label>
-          <button 
+          <button
             onClick={handleDownloadSample}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
           >
             <FileText size={14} /> Sample
           </button>
-          <button 
+          <button
             onClick={handleExport}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
           >
             <Download size={14} /> Export
           </button>
-          <button 
+          <button
             onClick={() => navigate('/products/add-adjustment')}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
           >
@@ -171,7 +189,7 @@ const AdjustmentList = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-700">Records per page:</span>
-          <select 
+          <select
             value={recordsPerPage}
             onChange={(e) => {
               setRecordsPerPage(Number(e.target.value));
@@ -216,36 +234,40 @@ const AdjustmentList = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
-            {currentRecords.length > 0 ? (
-              currentRecords.map((adj) => (
-                <tr key={adj.id} className="hover:bg-gray-50/70 transition-colors">
+            {isLoading ? (
+              <tr><td colSpan="6" className="text-center py-4 text-gray-500">Loading adjustments...</td></tr>
+            ) : currentRecords.length > 0 ? (
+              currentRecords.map((adj, index) => (
+                <tr key={adj._id || index} className="hover:bg-gray-50/70 transition-colors">
                   {/* Date */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
                     <div className="flex items-center gap-1.5">
                       <Calendar size={14} className="text-gray-400" />
-                      <span>{adj.date}</span>
+                      <span>{new Date(adj.createdAt).toLocaleDateString()}</span>
                     </div>
                   </td>
                   {/* Reference */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {adj.reference}
+                    ADJ-{String(adj._id).slice(-5).toUpperCase()}
                   </td>
                   {/* Warehouse */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {adj.warehouse}
                   </td>
                   {/* Products Adjusted list summary */}
-                  <td className="px-6 py-4 text-sm text-gray-800 font-medium max-w-xs truncate" title={adj.products}>
-                    {adj.products}
+                  <td className="px-6 py-4 text-sm text-gray-800 font-medium max-w-xs truncate" title={adj.items?.map(i => `${i.name} (${i.quantity})`).join(', ')}>
+                    {adj.items && adj.items.length > 0
+                      ? adj.items.map(i => `${i.name} (${i.quantity > 0 ? '+' : ''}${i.quantity})`).join(', ')
+                      : 'No items'}
                   </td>
                   {/* Note summary */}
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={adj.note}>
-                    {adj.note}
+                    {adj.note || 'No notes'}
                   </td>
                   {/* Actions (View, Edit, Delete) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                     <div className="inline-flex items-center gap-1.5">
-                      
+
                       {/* View Action */}
                       <button
                         onClick={() => handleOpenViewModal(adj)}
@@ -309,16 +331,15 @@ const AdjustmentList = () => {
             >
               <ChevronLeft size={16} />
             </button>
-            
+
             {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`px-3.5 py-1.5 text-xs font-bold transition-colors ${
-                  currentPage === i + 1 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                className={`px-3.5 py-1.5 text-xs font-bold transition-colors ${currentPage === i + 1
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 {i + 1}
               </button>
@@ -340,8 +361,8 @@ const AdjustmentList = () => {
       {isViewModalOpen && selectedAdjustment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
           <div className="bg-white rounded-lg border border-blue-500 shadow-2xl max-w-md w-full p-6 relative text-black animate-in fade-in zoom-in-95 duration-200">
-            
-            <button 
+
+            <button
               onClick={() => setIsViewModalOpen(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
             >

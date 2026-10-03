@@ -12,9 +12,11 @@ const AddSale = () => {
   const navigate = useNavigate();
   // Fetch dynamic catalogs
   const [productsCatalog, setProductsCatalog] = useState([]);
-  const [allCustomers, setAllCustomers] = useState([{ name: 'Walk-in Customer' }]);
+  const [allCustomers, setAllCustomers] = useState([{ name: 'Walk-in Customer', warehouseName: '' }]);
+  const [allBillers, setAllBillers] = useState([{ name: 'Admin Biller', branch: '' }]);
 
-  const [warehousesList, setWarehousesList] = useState([]);
+  const [branchesList, setBranchesList] = useState([]); // [{_id, name}]
+  const [allWarehouses, setAllWarehouses] = useState([]); // [{_id, name, branch: {_id, name}}]
   const [billersList, setBillersList] = useState([]);
   const [currenciesList, setCurrenciesList] = useState([]);
   const [taxSlabsList, setTaxSlabsList] = useState([]);
@@ -28,16 +30,17 @@ const AddSale = () => {
   useEffect(() => {
     const fetchCatalogs = async () => {
       try {
-        const [prodRes, custRes, whRes, bilRes, curRes, taxRes, discRes, saleStatRes, payStatRes] = await Promise.all([
+        const [prodRes, custRes, whRes, bilRes, curRes, taxRes, discRes, saleStatRes, payStatRes, branchRes] = await Promise.all([
           api.get('/products'),
           api.get('/customers').catch(() => ({ data: { data: [] } })),
           api.get('/catalogs/warehouses').catch(() => ({ data: { data: [] } })),
-          api.get('/catalogs/billers').catch(() => ({ data: { data: [] } })),
+          api.get('/employees').catch(() => ({ data: { data: [] } })),
           api.get('/catalogs/currencies').catch(() => ({ data: { data: [] } })),
           api.get('/tax-slabs').catch(() => ({ data: { data: [] } })),
           api.get('/discount-types').catch(() => ({ data: { data: [] } })),
           api.get('/sale-statuses').catch(() => ({ data: { data: [] } })),
-          api.get('/payment-statuses').catch(() => ({ data: { data: [] } }))
+          api.get('/payment-statuses').catch(() => ({ data: { data: [] } })),
+          api.get('/branches').catch(() => ({ data: { data: [] } }))
         ]);
         const pData = prodRes.data?.data || prodRes.data || [];
         setProductsCatalog(pData.map(p => ({
@@ -46,7 +49,8 @@ const AddSale = () => {
           code: p.productCode || p.sku || p.code,
           price: p.productPrice || p.salePrice || p.price || 0,
           tax: p.productTax || p.taxRate || 0,
-          stock: p.currentStock || 0
+          stock: p.currentStock || 0,
+          warehouseStocks: p.warehouseStocks || []
         })));
 
         const cData = custRes.data?.data || custRes.data || [];
@@ -57,36 +61,51 @@ const AddSale = () => {
             email: c.email || 'N/A',
             address: c.billingAddress?.city || c.billingAddress?.street || 'N/A',
             balance: c.openingBalance || 0,
-            warehouseName: c.warehouseName || ''
+            warehouseName: c.warehouseAddress || c.warehouseName || ''
           }))]);
         }
 
-        const wData = whRes.data?.data || [];
-        setWarehousesList(wData.length > 0 ? wData.map(w => w.name) : ['Test Shop', 'Main Warehouse']);
-        if (!warehouse && wData.length > 0) setWarehouse(wData[0].name);
+        const brData = branchRes.data?.data || [];
+        // ✅ Store full objects with _id for proper ObjectId linking
+        setBranchesList(brData.map(b => ({ _id: b._id, name: b.name })));
 
+        const wData = whRes.data?.data || [];
+        // ✅ Store full objects with _id and branch._id for cascading filter
+        setAllWarehouses(wData.map(w => ({
+          _id: w._id,
+          name: w.name,
+          branchId: w.branch?._id || w.branch || null,
+          branchName: w.branch?.name || ''
+        })));
+        
         const bData = bilRes.data?.data || [];
-        setBillersList(bData.length > 0 ? bData.map(b => b.name) : ['Admin Biller']);
-        if (!biller) setBiller(bData.length > 0 ? bData[0].name : 'Admin Biller');
+        if (bData.length > 0) {
+          setAllBillers(bData.map(b => ({
+            name: b.employeeName || b.name,
+            branch: b.branch || ''
+          })));
+        } else {
+          setAllBillers([]);
+        }
 
         const curData = curRes.data?.data || [];
-        setCurrenciesList(curData.length > 0 ? curData.map(c => c.code) : ['INR', 'USD']);
+        setCurrenciesList(curData.map(c => c.code));
         if (!currency && curData.length > 0) setCurrency(curData[0].code);
 
         const taxData = taxRes.data?.data || taxRes.data || [];
-        setTaxSlabsList(taxData.length > 0 ? taxData.map(t => t.name) : ['No Tax', 'GST 18%']);
+        setTaxSlabsList(taxData.map(t => t.name));
         if (!orderTax && taxData.length > 0) setOrderTax(taxData[0].name);
 
         const discData = discRes.data?.data || discRes.data || [];
-        setDiscountTypesList(discData.length > 0 ? discData.map(d => d.name) : ['Flat', 'Percentage']);
+        setDiscountTypesList(discData.map(d => d.name));
         if (!discountType && discData.length > 0) setDiscountType(discData[0].name);
 
         const saleStatData = saleStatRes.data?.data || saleStatRes.data || [];
-        setSaleStatusesList(saleStatData.length > 0 ? saleStatData.map(s => s.name) : ['Completed', 'Pending']);
+        setSaleStatusesList(saleStatData.map(s => s.name));
         if (!saleStatus && saleStatData.length > 0) setSaleStatus(saleStatData[0].name);
 
         const payStatData = payStatRes.data?.data || payStatRes.data || [];
-        setPaymentStatusesList(payStatData.length > 0 ? payStatData.map(p => p.name) : ['Pending', 'Paid', 'Due', 'Partial']);
+        setPaymentStatusesList(payStatData.map(p => p.name));
         if (!paymentStatus && payStatData.length > 0) setPaymentStatus(payStatData[0].name);
 
       } catch (err) {
@@ -101,9 +120,10 @@ const AddSale = () => {
   // Form States
   const [saleDate, setSaleDate] = useState('2026-08-13');
   const [referenceNo, setReferenceNo] = useState('');
-  const [customer, setCustomer] = useState('John Doe');
-  const [warehouse, setWarehouse] = useState('Test Shop');
-  const [biller, setBiller] = useState('Admin Biller');
+  const [branch, setBranch] = useState('');         // stores _id
+  const [warehouse, setWarehouse] = useState('');    // stores _id
+  const [customer, setCustomer] = useState('');      // stores _id
+  const [biller, setBiller] = useState('');
   const [currency, setCurrency] = useState('INR');
   const [exchangeRate, setExchangeRate] = useState('1');
 
@@ -111,8 +131,10 @@ const AddSale = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
 
-  // Derived filtered customers
-  const customers = allCustomers.filter(c => c.name === 'Walk-in Customer' || c.warehouseName === warehouse);
+  // ✅ Derived filtered dropdowns (Cascading by _id)
+  const filteredWarehouses = allWarehouses.filter(w => !branch || w.branchId === branch);
+  const customers = allCustomers.filter(c => c.name === 'Walk-in Customer' || c.warehouseId === warehouse || !c.warehouseId);
+  const billers = allBillers.filter(b => b.name === 'Admin Biller' || b.branch === warehouse || !b.branch);
 
   // Footer configurations
   const [orderTax, setOrderTax] = useState('No Tax');
@@ -126,12 +148,12 @@ const AddSale = () => {
   const [saleNote, setSaleNote] = useState('');
   const [staffNote, setStaffNote] = useState('');
 
-  // Handle autocomplete search
+  // Handle autocomplete search with Warehouse Stock Filtering
   const handleProductSearch = (e) => {
     const val = e.target.value;
     setProductSearch(val);
     if (val.trim() === '') {
-      setSearchResults(productsCatalog);
+      setSearchResults([]);
       return;
     }
     const filtered = productsCatalog.filter(p =>
@@ -143,8 +165,21 @@ const AddSale = () => {
 
   // Add Item to Order list
   const handleSelectProduct = (prod) => {
+    // Check stock for current warehouse
+    const whStockData = prod.warehouseStocks?.find(w => w.warehouse === warehouse);
+    const availableStock = whStockData ? whStockData.stock : prod.stock;
+
+    if (availableStock <= 0) {
+      alert(`Out of stock in ${warehouse}! Available: 0`);
+      return;
+    }
+
     const exists = orderItems.find(item => item.code === prod.code);
     if (exists) {
+      if (exists.quantity + 1 > availableStock) {
+        alert(`Cannot add more! Only ${availableStock} in stock at ${warehouse}.`);
+        return;
+      }
       setOrderItems(orderItems.map(item =>
         item.code === prod.code ? { ...item, quantity: item.quantity + 1 } : item
       ));
@@ -166,6 +201,15 @@ const AddSale = () => {
   // Table element modifiers
   const handleQtyChange = (code, val) => {
     const num = Math.max(1, Number(val));
+    const prod = productsCatalog.find(p => p.code === code);
+    const whStockData = prod?.warehouseStocks?.find(w => w.warehouse === warehouse);
+    const availableStock = whStockData ? whStockData.stock : (prod?.stock || 0);
+
+    if (num > availableStock) {
+      alert(`Cannot exceed available stock (${availableStock}) in ${warehouse}.`);
+      return;
+    }
+
     setOrderItems(orderItems.map(item =>
       item.code === code ? { ...item, quantity: num } : item
     ));
@@ -250,20 +294,34 @@ const AddSale = () => {
     }
 
     try {
+      // ✅ Send _id values (ObjectId) for proper backend linking
       const payload = {
         saleDate,
         referenceNo,
-        customer,
-        warehouse,
+        branch,        // ObjectId of selected branch
+        warehouse,     // ObjectId of selected warehouse
+        customer,      // ObjectId of selected customer
         biller,
         currency,
         exchangeRate,
-        orderItems,
+        orderItems: orderItems.map(item => ({
+          name: item.name,
+          code: item.code,
+          product: item.productId,   // ObjectId of product
+          quantity: item.quantity,
+          netUnitPrice: item.netUnitPrice,
+          discount: item.discount,
+          taxPercent: item.taxPercent,
+          total: getSubtotal(item)
+        })),
         orderTax,
         discountType,
         discountValue,
         discountTotal: calculatedGlobalDiscount,
         shippingCost,
+        grandTotal,
+        subTotal: calculatedItemsSubtotal,
+        taxTotal: calculatedGlobalTax,
         saleStatus,
         paymentStatus,
         saleNote,
@@ -329,7 +387,8 @@ const AddSale = () => {
               disabled={!warehouse}
             >
               <option value="">{warehouse ? "Select customer..." : "Select warehouse first"}</option>
-              {customers.map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
+              {/* ✅ value = _id for proper ObjectId linking */}
+              {customers.map((c, i) => <option key={i} value={c._id || c.name}>{c.name}</option>)}
             </select>
             {customer && customers.find(c => c.name === customer) && customers.find(c => c.name === customer).name !== 'Walk-in Customer' && (
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-900 grid grid-cols-2 gap-2 shadow-sm">
@@ -341,20 +400,57 @@ const AddSale = () => {
             )}
           </div>
 
+          {/* Branch */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Branch *</label>
+            <select
+              value={branch}
+              onChange={(e) => {
+                setBranch(e.target.value);  // stores _id
+                setWarehouse('');
+                setCustomer('');
+                setBiller('');
+              }}
+              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
+              required
+            >
+              <option value="">Select branch...</option>
+              {/* ✅ value = _id for proper ObjectId linking */}
+              {branchesList.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+            </select>
+          </div>
+
           {/* Warehouse */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Warehouse *</label>
             <select
               value={warehouse}
               onChange={(e) => {
-                setWarehouse(e.target.value);
-                setCustomer(''); // Reset customer when warehouse changes
+                setWarehouse(e.target.value); // stores _id
+                setCustomer('');
+                setBiller('');
               }}
               className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
               required
             >
-              <option value="">Select warehouse...</option>
-              {warehousesList.map((w, i) => <option key={i} value={w}>{w}</option>)}
+              <option value="">{branch ? "Select warehouse..." : "Select branch first"}</option>
+              {/* ✅ value = _id, filtered by selected branch's _id */}
+              {filteredWarehouses.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+
+          {/* Biller */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Biller *</label>
+            <select
+              value={biller}
+              onChange={(e) => setBiller(e.target.value)}
+              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450 disabled:opacity-50"
+              required
+              disabled={!warehouse}
+            >
+              <option value="">{warehouse ? "Select biller..." : "Select warehouse first"}</option>
+              {billers.map((b, i) => <option key={i} value={b.name}>{b.name}</option>)}
             </select>
           </div>
 

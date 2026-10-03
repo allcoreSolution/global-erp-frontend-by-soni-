@@ -101,7 +101,15 @@ const SaleList = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "Date,Reference,Customer,Status,Grand Total,Paid,Due,Payment Status\n";
+    const headers = [
+      'Date', 'Reference', 'Created By', 'Customer', 'Warehouse', 'Biller', 
+      'Grand Total', 'Paid', 'Due', 'Status', 'Payment Status'
+    ];
+    const dummyData = [
+      '2023-12-01', 'INV-1001', 'Admin', 'Rahul Traders', 'Main Warehouse', 'Admin',
+      '15000', '15000', '0', 'Completed', 'Paid'
+    ];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -113,7 +121,28 @@ const SaleList = () => {
   };
 
   const handleExport = () => {
-    const csvContent = "Date,Reference,Customer,Status,Grand Total,Paid,Due,Payment Status\n";
+    const headers = [
+      'Date', 'Reference', 'Created By', 'Customer', 'Warehouse', 'Biller', 
+      'Grand Total', 'Paid', 'Due', 'Status', 'Payment Status'
+    ];
+    const rows = filteredSales.map(s => [
+      `"${s.date ? new Date(s.date).toISOString().split('T')[0] : ''}"`,
+      `"${s.referenceNo || ''}"`,
+      `"${s.createdBy || ''}"`,
+      `"${s.customer || ''}"`,
+      `"${s.warehouse || ''}"`,
+      `"${s.biller || ''}"`,
+      `"${s.grandTotal || 0}"`,
+      `"${s.paid || 0}"`,
+      `"${s.due || 0}"`,
+      `"${s.status || ''}"`,
+      `"${s.paymentStatus || ''}"`
+    ]);
+    const dummyData = [
+      '2023-12-01', 'INV-1001', 'Admin', 'Rahul Traders', 'Main Warehouse', 'Admin',
+      '15000', '15000', '0', 'Completed', 'Paid'
+    ];
+    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

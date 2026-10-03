@@ -189,7 +189,7 @@ const Brand = () => {
       `"${b.company || ''}"`,
       `"${b.branch || ''}"`
     ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + 'Sample Name,Sample description,Yes,Sample,Sample,Company1,Sample', ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

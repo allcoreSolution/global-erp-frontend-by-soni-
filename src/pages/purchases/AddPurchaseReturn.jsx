@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, Plus, Trash2, Search, UploadCloud, FileText } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import api from '../../api';
 import DynamicSelect from '../../components/DynamicSelect';
 
@@ -41,7 +42,9 @@ const AddPurchaseReturn = () => {
     remarks: ''
   });
 
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState([
+    { id: 1, product: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 0, amount: 0 }
+  ]);
   const [totals, setTotals] = useState({
     goodsValue: 0,
     discount: 0,
@@ -59,18 +62,20 @@ const AddPurchaseReturn = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
         // Fetch data from main tables
-        const [compRes, branchRes, whRes, suppRes, purRes, empRes] = await Promise.all([
+        const [compRes, branchRes, whRes, suppRes, purRes, empRes, prodRes] = await Promise.all([
           api.get('/companies').catch(() => ({ data: { data: [] } })),
           api.get('/branches').catch(() => ({ data: { data: [] } })),
           api.get('/catalogs/warehouses').catch(() => ({ data: { data: [] } })),
           api.get('/suppliers').catch(() => ({ data: { data: [] } })),
           api.get('/purchases').catch(() => ({ data: { data: [] } })),
-          api.get('/employees').catch(() => ({ data: { data: [] } }))
+          api.get('/employees').catch(() => ({ data: { data: [] } })),
+          api.get('/products').catch(() => ({ data: { data: [] } }))
         ]);
         if (compRes.data?.data) setCompanies(compRes.data.data);
         if (branchRes.data?.data) setBranches(branchRes.data.data);
@@ -78,6 +83,7 @@ const AddPurchaseReturn = () => {
         if (suppRes.data?.data) setSuppliers(suppRes.data.data);
         if (purRes.data?.data) setPurchases(purRes.data.data);
         if (empRes.data?.data) setEmployees(empRes.data.data);
+        if (prodRes.data?.data) setProducts(prodRes.data.data);
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
       }
@@ -145,10 +151,21 @@ const AddPurchaseReturn = () => {
   const handleItemChange = (id, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        if (field === 'returnQty' || field === 'rate') {
-          updated.amount = Number(updated.returnQty) * Number(updated.rate);
+        let updated = { ...item, [field]: value };
+        
+        // Auto-fill product rate when a product is selected
+        if (field === 'product' && value) {
+          const selectedProduct = products.find(p => p._id === value);
+          if (selectedProduct) {
+            updated.rate = Number(selectedProduct.productCost || 0);
+          }
         }
+
+        // Recalculate base amount if qty, rate, or product changes
+        if (['returnQty', 'rate', 'product'].includes(field)) {
+          updated.amount = Number(updated.returnQty || 0) * Number(updated.rate || 0);
+        }
+        
         return updated;
       }
       return item;
@@ -157,7 +174,7 @@ const AddPurchaseReturn = () => {
 
   const addItem = () => {
     const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
-    setItems([...items, { id: newId, product: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 18, amount: 0 }]);
+    setItems([...items, { id: newId, product: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 0, amount: 0 }]);
   };
 
   const removeItem = (id) => {
@@ -197,18 +214,23 @@ const AddPurchaseReturn = () => {
       totals
     };
 
+    if (!payload.supplier) delete payload.supplier;
+    if (!payload.warehouse) delete payload.warehouse;
+    if (!payload.company) delete payload.company;
+    if (!payload.branch) delete payload.branch;
+
     try {
       if (id) {
         await api.put(`/purchase-returns/${id}`, payload);
-        alert('Purchase Return Updated successfully!');
+        await Swal.fire({ title: 'Success!', text: 'Purchase Return Updated successfully!', icon: 'success', confirmButtonColor: '#4f46e5' });
       } else {
         await api.post('/purchase-returns', payload);
-        alert('Purchase Return Processed successfully!');
+        await Swal.fire({ title: 'Success!', text: 'Purchase Return Processed successfully!', icon: 'success', confirmButtonColor: '#4f46e5' });
       }
       navigate('/purchases/purchase-return');
     } catch (error) {
       console.error('Error saving purchase return', error);
-      alert('Failed to save purchase return');
+      Swal.fire({ title: 'Error!', text: 'Failed to save purchase return', icon: 'error', confirmButtonColor: '#4f46e5' });
     }
   };
 
@@ -279,7 +301,9 @@ const AddPurchaseReturn = () => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse *</label>
                   <select required name="warehouse" value={form.warehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
                     <option value="">Select Warehouse</option>
-                    {warehouses.map(w => <option key={w._id} value={w._id}>{w.warehouseName || w.name}</option>)}
+                    {warehouses
+                      .filter(w => form.branch && (typeof w.branch === 'object' ? w.branch?._id : w.branch) === form.branch)
+                      .map(w => <option key={w._id} value={w._id}>{w.warehouseName || w.name}</option>)}
                   </select>
                 </div>
                 <div className="col-span-2 lg:col-span-3">
@@ -312,7 +336,7 @@ const AddPurchaseReturn = () => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier *</label>
                   <select required name="supplier" value={form.supplier} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
                     <option value="">Select Supplier</option>
-                    {suppliers.map(s => <option key={s._id} value={s._id}>{s.supplierName || s.name}</option>)}
+                    {suppliers.map(s => <option key={s._id} value={s._id}>{s.companyName || s.supplierName || s.name}</option>)}
                   </select>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
@@ -351,7 +375,10 @@ const AddPurchaseReturn = () => {
                   {items.map((item) => (
                     <tr key={item.id}>
                       <td className="px-3 py-2">
-                        <input type="text" required placeholder="Select Product" value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white" />
+                        <select required value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white">
+                          <option value="">Select Product</option>
+                          {products.map(p => <option key={p._id} value={p._id}>{p.productName || p.name}</option>)}
+                        </select>
                       </td>
                       <td className="px-3 py-2">
                         <input type="text" placeholder="---" value={item.batch} onChange={(e) => handleItemChange(item.id, 'batch', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white" />
@@ -386,18 +413,13 @@ const AddPurchaseReturn = () => {
                   ))}
                 </tbody>
               </table>
+              <div className="mt-3 flex justify-end">
+                <button type="button" onClick={addItem} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded text-sm font-semibold transition-colors">
+                  <Plus size={16} /> Add Return Item
+                </button>
+              </div>
             </div>
             
-            <div className="flex gap-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-               <div className="w-64">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Return Reason</label>
-                  <DynamicSelect category="Return Reason" name="returnReason" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} hideAddButton />
-               </div>
-               <div className="w-64">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Item Condition</label>
-                  <DynamicSelect category="Item Condition" name="itemCondition" value={itemCondition} onChange={(e) => setItemCondition(e.target.value)} hideAddButton />
-               </div>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -422,10 +444,6 @@ const AddPurchaseReturn = () => {
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Dispatch Date</label>
                       <input type="date" name="dispatchDate" value={form.dispatchDate} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Transporter</label>
-                      <DynamicSelect category="Transporter" name="transporter" value={form.transporter} onChange={handleChange} hideAddButton />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle No.</label>
@@ -480,14 +498,14 @@ const AddPurchaseReturn = () => {
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Requested By</label>
                       <select name="requestedBy" value={form.requestedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
                         <option value="">Select Employee</option>
-                        {employees.map(e => <option key={e._id} value={e._id}>{e.firstName} {e.lastName}</option>)}
+                        {employees.map(e => <option key={e._id} value={e._id}>{e.employeeName || e.name}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
                       <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
                         <option value="">Select Employee</option>
-                        {employees.map(e => <option key={e._id} value={e._id}>{e.firstName} {e.lastName}</option>)}
+                        {employees.map(e => <option key={e._id} value={e._id}>{e.employeeName || e.name}</option>)}
                       </select>
                     </div>
                     <div className="col-span-2">

@@ -90,6 +90,8 @@ const SupplierMaster = () => {
   const handleFormSubmit = async (supplierData) => {
     try {
       const payload = { ...supplierData, supplierCode: supplierData.id || supplierData.supplierCode };
+      if (!payload.branch) delete payload.branch;
+      if (!payload.company) delete payload.company;
       if (isEditMode) {
         await api.put(`/suppliers/${supplierData._id}`, payload);
       } else {
@@ -109,7 +111,9 @@ const SupplierMaster = () => {
 
   // Download CSV Sample
   const handleDownloadSample = () => {
-    const csvContent = "supplierCode,companyName,type,contactPerson,phone,status\nSUP-001,ABC Supplies,Manufacturer,Raju,9988776655,true";
+    const headers = ['Supplier ID', 'Company Name', 'Type', 'Category', 'Branch', 'Warehouse', 'Contact Person', 'Phone', 'Email', 'GST Status', 'GSTIN', 'PAN', 'Currency', 'Status'];
+    const dummyData = ['SUP-001', 'ABC Supplies', 'Manufacturer', 'Raw Materials', 'Head Office', 'Main Warehouse', 'Raju', '9988776655', 'info@abc.com', 'Registered', '27AAAAA0000A1Z5', 'AAAAA0000A', 'INR', 'Active'];
+    const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -126,26 +130,25 @@ const SupplierMaster = () => {
       Swal.fire('No Data', 'There are no suppliers to export.', 'warning');
       return;
     }
-    const headers = ['Supplier ID', 'Company Name', 'Legal Name', 'Type', 'Category', 'Contact Person', 'Phone', 'Alternate Mobile', 'Email', 'Website', 'GST Status', 'GSTIN', 'PAN', 'TAN', 'MSME', 'Status'];
+    const headers = ['Supplier ID', 'Company Name', 'Type', 'Category', 'Branch', 'Warehouse', 'Contact Person', 'Phone', 'Email', 'GST Status', 'GSTIN', 'PAN', 'Currency', 'Status'];
     const rows = suppliers.map(s => [
       `"${s.supplierCode || s.id || s._id}"`,
       `"${s.companyName || ''}"`,
-      `"${s.legalName || ''}"`,
       `"${s.type || ''}"`,
       `"${s.category || ''}"`,
+      `"${s.branch?.name || s.branch || ''}"`,
+      `"${s.warehouse || ''}"`,
       `"${s.contactPerson || ''}"`,
       `"${s.phone || ''}"`,
-      `"${s.alternateMobile || ''}"`,
       `"${s.email || ''}"`,
-      `"${s.website || ''}"`,
       `"${s.gstStatus || ''}"`,
       `"${s.gstin || ''}"`,
       `"${s.pan || ''}"`,
-      `"${s.tan || ''}"`,
-      `"${s.msme || ''}"`,
+      `"${s.currency || ''}"`,
       s.status ? 'Active' : 'Inactive'
     ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const dummyData = ['SUP-001', 'ABC Supplies', 'Manufacturer', 'Raw Materials', 'Head Office', 'Main Warehouse', 'Raju', '9988776655', 'info@abc.com', 'Registered', '27AAAAA0000A1Z5', 'AAAAA0000A', 'INR', 'Active'];
+    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
