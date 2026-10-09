@@ -343,8 +343,8 @@ const PurchaseList = () => {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${grandTotal.toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">$0.00</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">$0.00</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">${grandTotal.toFixed(2)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">₹{(p.amountPaid || 0).toFixed(2)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">₹{(grandTotal - (p.amountPaid || 0)).toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{p.paymentTerm}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{p.dueDate}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">

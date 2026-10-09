@@ -62,7 +62,9 @@ import AddSale from './pages/sales/AddSale';
 import SaleList from './pages/sales/SaleList';
 import ViewSaleInvoice from './pages/sales/ViewSaleInvoice';
 import PackingSlipList from './pages/sales/PackingSlipList';
+import AddPackingSlip from './pages/sales/AddPackingSlip';
 import ChallanList from './pages/sales/ChallanList';
+import AddChallan from './pages/sales/AddChallan';
 import AddDriver from './pages/sales/AddDriver';
 import CourierList from './pages/sales/CourierList';
 import AddCourier from './pages/sales/AddCourier';
@@ -323,9 +325,9 @@ function App() {
         <Route path="department/list" element={<DepartmentList />} />
         <Route path="department/add" element={<AddDepartment />} />
         <Route path="department/reports-status" element={<DepartmentReportsStatus />} />
-        <Route path="designation/list" element={<DesignationList />} />
-        <Route path="designation/add" element={<AddDesignation />} />
-        <Route path="designation/salary-employees" element={<DesignationSalaryEmployees />} />
+        {/* <Route path="designation/list" element={<DesignationList />} /> */}
+        {/* <Route path="designation/add" element={<AddDesignation />} /> */}
+        {/* <Route path="designation/salary-employees" element={<DesignationSalaryEmployees />} /> */}
         <Route path="products/add-product" element={<AddProduct />} />
         <Route path="products/brand" element={<Brand />} />
         <Route path="products/category" element={<Category />} />
@@ -493,7 +495,9 @@ function App() {
         <Route path="sales/sale-list" element={<SaleList />} />
         <Route path="sales/view-invoice" element={<ViewSaleInvoice />} />
         <Route path="sales/packing-slip-list" element={<PackingSlipList />} />
+        <Route path="sales/add-packing-slip" element={<AddPackingSlip />} />
         <Route path="sales/challan-list" element={<ChallanList />} />
+        <Route path="sales/add-challan" element={<AddChallan />} />
         <Route path="sales/add-driver" element={<AddDriver />} />
         <Route path="sales/courier-list" element={<CourierList />} />
         <Route path="sales/add-courier" element={<AddCourier />} />

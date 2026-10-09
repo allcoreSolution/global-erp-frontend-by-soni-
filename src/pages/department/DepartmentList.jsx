@@ -85,14 +85,12 @@ const DepartmentList = () => {
 
   // Real CSV Export
   const handleExport = () => {
-    const headers = ['Department Code', 'Department Name', 'Branch', 'Head', 'Employees', 'Budget (₹)'];
+    const headers = ['Department Code', 'Department Name', 'Description', 'Status'];
     const rows = departments.map(d => [
       d.deptCode,
       `"${(d.deptName || '').replace(/"/g, '""')}"`,
-      d.branch || '',
-      `"${(d.deptHead || '').replace(/"/g, '""')}"`,
-      '0', // empCount not tracked in DB yet
-      d.budget || 0
+      `"${(d.description || '').replace(/"/g, '""')}"`,
+      d.status || 'Active'
     ]);
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -110,34 +108,41 @@ const DepartmentList = () => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const text = event.target.result;
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        const newDepts = [];
+        let successCount = 0;
+        
+        // Loop through lines (skipping header)
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-          if (cols.length >= 6) {
-            newDepts.push({
-              id: `DEPT-NEW-${Date.now()}-${i}`,
-              code: cols[0] || 'NEW',
-              name: cols[1] || 'Imported Dept',
-              branch: cols[2] || 'Jaipur HQ Office',
-              head: cols[3] || 'N/A',
-              empCount: Number(cols[4]) || 0,
-              budget: Number(cols[5]) || 0,
-              desc: ''
-            });
+          // Expecting: Dept Code, Dept Name, Description, Status
+          if (cols.length >= 2) { // Minimum required is Code and Name, but backend auto-generates code if missing
+            const deptData = {
+              deptCode: cols[0] || `DPT-${Math.floor(Math.random() * 1000)}`,
+              deptName: cols[1],
+              description: cols[2] || '',
+              status: cols[3] || 'Active'
+            };
+            
+            // Call API to save to DB
+            if (deptData.deptName) {
+              await api.post('/departments', deptData);
+              successCount++;
+            }
           }
         }
-        if (newDepts.length > 0) {
-          setDepartments(prev => [...prev, ...newDepts]);
-          alert(`Successfully imported ${newDepts.length} departments!`);
+        
+        if (successCount > 0) {
+          alert(`Successfully imported ${successCount} departments!`);
+          fetchDepartments(); // Refresh list from DB
         } else {
-          alert("Import failed. Headers should match: Department Code, Department Name, Branch, Head, Employees, Budget");
+          alert("Import failed. Headers should match: Department Code, Department Name, Description, Status");
         }
       } catch (err) {
-        alert("Failed to parse CSV file.");
+        alert("Failed to parse CSV file or upload to server.");
+        console.error(err);
       }
     };
     reader.readAsText(file);
@@ -212,10 +217,8 @@ const DepartmentList = () => {
             <tr className="bg-slate-100 border-b font-semibold text-gray-700">
               <th className="p-2.5 sm:p-3">Code</th>
               <th className="p-2.5 sm:p-3">Department Name</th>
-              <th className="p-2.5 sm:p-3">Branch</th>
-              <th className="p-2.5 sm:p-3">Manager Head</th>
-              <th className="p-2.5 sm:p-3 text-right">Staff Count</th>
-              <th className="p-2.5 sm:p-3 text-right">Budget (₹)</th>
+              <th className="p-2.5 sm:p-3">Description</th>
+              <th className="p-2.5 sm:p-3 text-center">Status</th>
               <th className="p-2.5 sm:p-3 text-center no-print">Actions</th>
             </tr>
           </thead>
@@ -234,12 +237,13 @@ const DepartmentList = () => {
                   <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono">{d.deptCode}</td>
                   <td className="p-2.5 sm:p-3">
                     <div className="font-medium text-gray-900">{d.deptName}</div>
-                    <div className="text-[10px] text-gray-400 truncate max-w-[150px]">{d.description}</div>
                   </td>
-                  <td className="p-2.5 sm:p-3 text-gray-650">{d.branch}</td>
-                  <td className="p-2.5 sm:p-3 text-gray-800 font-medium">{d.deptHead}</td>
-                  <td className="p-2.5 sm:p-3 text-right">0 Staff</td>
-                  <td className="p-2.5 sm:p-3 text-right font-semibold">₹ {Number(d.budget || 0).toLocaleString()}</td>
+                  <td className="p-2.5 sm:p-3 text-gray-500 text-xs">{d.description || '-'}</td>
+                  <td className="p-2.5 sm:p-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${d.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {d.status || 'Active'}
+                    </span>
+                  </td>
                   <td className="p-2.5 sm:p-3 text-center no-print">
                     <div className="flex items-center justify-center gap-1.5">
                       <button onClick={() => handleOpenEdit(d)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
@@ -290,46 +294,15 @@ const DepartmentList = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Dept Head *</label>
-                  <input
-                    type="text"
-                    required
-                    value={currentDept.deptHead || ''}
-                    onChange={(e) => setCurrentDept({ ...currentDept, deptHead: e.target.value })}
-                    className="w-full border p-2 rounded focus:outline-none text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Branch</label>
+                  <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Status</label>
                   <select
-                    value={currentDept.branch}
-                    onChange={(e) => setCurrentDept({ ...currentDept, branch: e.target.value })}
-                    className="w-full border p-2 rounded focus:outline-none bg-white text-xs"
+                    value={currentDept.status || 'Active'}
+                    onChange={(e) => setCurrentDept({ ...currentDept, status: e.target.value })}
+                    className="w-full border p-2 rounded focus:outline-none bg-white text-xs text-emerald-600 font-semibold"
                   >
-                    <option value="Jaipur HQ Office">Jaipur HQ Office</option>
-                    <option value="Kota Regional Center">Kota Regional Center</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                   </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t pt-3.5">
-                <div>
-                  <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Budget Allocation (₹)</label>
-                  <input
-                    type="number"
-                    value={currentDept.budget || ''}
-                    onChange={(e) => setCurrentDept({ ...currentDept, budget: Number(e.target.value) })}
-                    className="w-full border p-2 rounded focus:outline-none text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Employees Count</label>
-                  <input
-                    type="number"
-                    value={0}
-                    disabled
-                    className="w-full border p-2 rounded focus:outline-none text-xs bg-slate-50"
-                  />
                 </div>
               </div>
 
@@ -339,8 +312,8 @@ const DepartmentList = () => {
                   rows="2"
                   value={currentDept.description || ''}
                   onChange={(e) => setCurrentDept({ ...currentDept, description: e.target.value })}
-                  className="w-full border p-2 rounded focus:outline-none text-xs"
-                />
+                  className="w-full border p-2 rounded focus:outline-none text-xs resize-none"
+                ></textarea>
               </div>
 
               <div className="flex justify-end gap-2 border-t pt-3">

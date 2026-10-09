@@ -22,31 +22,47 @@ const Login = () => {
       return;
     }
 
-    // --- ALWAYS BYPASS LOGIN FOR TESTING ---
-    setTimeout(() => {
-      if (username === 'superadmin@gmail.com' && password === 'Super123') {
-        localStorage.setItem('erp_token', 'dummy_superadmin_token_123');
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userName', 'SUPERADMIN');
-        localStorage.setItem('userRole', 'SuperAdmin');
-        localStorage.setItem('companyName', 'GLOBAL ERP CORP');
+    try {
+      const response = await api.post('/auth/login', {
+        email: username,
+        password: password
+      });
+
+      const { token, user, role } = response.data; // assuming typical structure, adapt if backend returns flat data
+
+      // Safely extract role name
+      const roleName = user?.role?.name || role?.name || response.data.role || 'Admin';
+      
+      localStorage.setItem('erp_token', token || response.data.data?.token || response.data.token);
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userName', user?.username || response.data.username || username);
+      localStorage.setItem('userRole', roleName);
+      localStorage.setItem('companyName', user?.company?.name || response.data.companyName || 'GLOBAL ERP');
+      
+      if (roleName === 'SuperAdmin') {
         navigate('/super-admin');
-      } else if (username === 'admin@gmail.com' && password === 'Admin123') {
-        localStorage.setItem('erp_token', 'dummy_admin_token_123');
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userName', 'ADMIN');
-        localStorage.setItem('userRole', 'Admin');
-        localStorage.setItem('companyName', 'DEMO COMPANY PVT LTD');
-        navigate('/');
       } else {
-        setError('Invalid email or password');
+        navigate('/');
       }
+    } catch (err) {
+      console.error("Login Error:", err);
+      setError(err.response?.data?.message || 'Invalid email or password');
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 font-sans relative overflow-hidden">
+    <>
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+          .font-varela {
+            font-family: 'Varela Round', sans-serif;
+          }
+        `}
+      </style>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 font-varela relative overflow-hidden">
       
       {/* Premium Tech Mesh Gradient Background (Vercel/Stripe style) */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-300/30 dark:bg-indigo-600/10 rounded-full blur-[100px] animate-pulse"></div>
@@ -54,7 +70,7 @@ const Login = () => {
       <div className="absolute top-10 right-10 w-72 h-72 bg-pink-300/20 dark:bg-pink-600/5 rounded-full blur-[90px]"></div>
 
       {/* Main Glassmorphic Login Card */}
-      <div className="w-full max-w-md bg-white/75 dark:bg-slate-50/50 shadow-inner border border-slate-200/80 backdrop-blur-xl border border-white/40 dark:border-slate-200 rounded-3xl shadow-xl p-8 relative z-10 mx-4 space-y-6">
+      <div className="w-full max-w-md bg-white shadow-2xl drop-shadow-2xl border border-slate-200/80 rounded-none p-8 relative z-10 mx-4 space-y-6">
         
         {/* Logo and Greeting Header */}
         <div className="text-center space-y-2">
@@ -123,7 +139,7 @@ const Login = () => {
           <button 
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white rounded-none font-bold shadow-md hover:shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 text-sm tracking-wider"
           >
             {isLoading ? (
               <>
@@ -134,21 +150,11 @@ const Login = () => {
               'Login to Dashboard'
             )}
           </button>
-
-          <div className="pt-4 mt-6 text-center border-t border-slate-100 dark:border-slate-800">
-            <p className="text-xs text-slate-500 font-medium">Don't have an account?</p>
-            <button 
-              type="button" 
-              onClick={() => navigate('/register')} 
-              className="mt-2.5 w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-indigo-600 rounded-xl font-bold transition-all text-xs border border-slate-200/80 hover:border-indigo-200"
-            >
-              Register your Company
-            </button>
-          </div>
         </form>
 
       </div>
     </div>
+    </>
   );
 };
 

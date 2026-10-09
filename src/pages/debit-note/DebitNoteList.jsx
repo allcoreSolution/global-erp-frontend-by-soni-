@@ -7,6 +7,7 @@ const DebitNoteList = () => {
   const navigate = useNavigate();
   const [debitNotes, setDebitNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewModalData, setViewModalData] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [log, setLog] = useState([]);
@@ -268,7 +269,7 @@ const DebitNoteList = () => {
                       </span>
                     </td>
                     <td className="p-2 text-center whitespace-nowrap space-x-1 no-print">
-                      <button onClick={() => addLog(`Previewing Voucher ${d.debitNoteNo}`)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                      <button onClick={() => setViewModalData(d)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
                         <Eye size={12} />
                       </button>
                       <button onClick={() => navigate(`/debit-note/edit/${d._id}`)} className="p-1 hover:bg-blue-50 rounded text-blue-600">
@@ -304,6 +305,111 @@ const DebitNoteList = () => {
           )}
         </div>
       </div>
+
+      {/* View Modal */}
+      {viewModalData && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:block">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col print:shadow-none print:max-w-none print:w-full print:h-auto print:overflow-visible">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50 sticky top-0 no-print">
+              <h3 className="font-bold text-slate-800">Debit Note Voucher: {viewModalData.debitNoteNo}</h3>
+              <div className="flex gap-2">
+                <button onClick={() => window.print()} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 text-sm font-semibold flex items-center gap-1.5"><Printer size={14} /> Print</button>
+                <button onClick={() => setViewModalData(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div className="flex justify-between items-start border-b pb-4">
+                <div>
+                  <h2 className="text-xl font-black text-gray-800">DEBIT NOTE</h2>
+                  <p className="text-sm text-gray-500 font-mono mt-1">{viewModalData.debitNoteNo}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm">
+                    <span className="font-semibold text-gray-600">Date:</span> {viewModalData.date}
+                  </div>
+                  <div className="text-sm mt-1">
+                    <span className="font-semibold text-gray-600">Status:</span> 
+                    <span className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${
+                        viewModalData.status === 'Approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                    }`}>{viewModalData.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-slate-50 p-4 rounded border border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Supplier Details</h4>
+                  <p className="font-bold text-gray-800">{viewModalData.supplier}</p>
+                  <p className="text-sm text-gray-600 mt-1">Branch: {viewModalData.branch || 'HQ'}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded border border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Invoice Reference</h4>
+                  <p className="font-mono text-gray-800">{viewModalData.originalInvoiceNo}</p>
+                  <p className="text-sm text-gray-600 mt-1">Type: {viewModalData.type}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Item Details</h4>
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-100 border-y text-slate-700">
+                    <tr>
+                      <th className="py-2 px-3 font-semibold">Product</th>
+                      <th className="py-2 px-3 font-semibold text-right">Quantity</th>
+                      <th className="py-2 px-3 font-semibold text-right">Rate (₹)</th>
+                      <th className="py-2 px-3 font-semibold text-right">Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y border-b">
+                    {(viewModalData.items || []).map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="py-2 px-3 text-gray-800 font-medium">{item.product}</td>
+                        <td className="py-2 px-3 text-right">{item.qty}</td>
+                        <td className="py-2 px-3 text-right">{(item.rate || 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 text-right font-semibold">{(item.amount || 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                    {(!viewModalData.items || viewModalData.items.length === 0) && (
+                      <tr><td colSpan="4" className="py-4 text-center text-gray-500 italic">No items found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-start">
+                <div className="w-1/2 pr-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Remarks</h4>
+                  <p className="text-sm text-gray-600 italic bg-amber-50 p-3 rounded border border-amber-100">{viewModalData.remarks || 'No remarks provided.'}</p>
+                </div>
+                
+                <div className="w-1/2 bg-slate-50 p-4 rounded border">
+                  <div className="flex justify-between text-sm py-1 border-b border-dashed">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-semibold">₹ {(viewModalData.summary?.subTotal || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm py-1 border-b border-dashed">
+                    <span className="text-gray-600">Discount:</span>
+                    <span className="text-red-600">- ₹ {(viewModalData.discount || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm py-1 border-b border-dashed">
+                    <span className="text-gray-600">CGST + SGST + IGST:</span>
+                    <span className="text-gray-800">+ ₹ {((viewModalData.cgst || 0) + (viewModalData.sgst || 0) + (viewModalData.igst || 0)).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm py-1 border-b border-dashed">
+                    <span className="text-gray-600">Round Off:</span>
+                    <span className="text-gray-800">₹ {(viewModalData.roundOff || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg py-2 mt-2 border-t font-black">
+                    <span className="text-gray-800">Grand Total:</span>
+                    <span className="text-indigo-700">₹ {(viewModalData.summary?.grandTotal || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

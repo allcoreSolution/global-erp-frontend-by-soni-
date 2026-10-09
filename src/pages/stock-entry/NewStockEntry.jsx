@@ -3,6 +3,7 @@ import { ArrowLeft, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DynamicSelect from '../../components/DynamicSelect';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const NewStockEntry = () => {
   const navigate = useNavigate();
@@ -145,16 +146,16 @@ const NewStockEntry = () => {
 
       if (id) {
         await api.put(`/stock-entries/${id}`, payload);
-        alert('Stock Entry Updated successfully!');
+        Swal.fire('Success', 'Stock Entry Updated successfully!', 'success');
       } else {
         await api.post('/stock-entries', payload);
-        alert('Stock Entry Posted successfully!');
+        Swal.fire('Success', 'Stock Entry Posted successfully!', 'success');
       }
       navigate('/stock-entry/list');
     } catch (error) {
       console.error('Error saving stock entry', error);
       const errMsg = error.response?.data?.message || error.response?.data || error.message;
-      alert('Failed to save stock entry. Backend error: ' + JSON.stringify(errMsg));
+      Swal.fire('Error', 'Failed to save stock entry. Backend error: ' + JSON.stringify(errMsg), 'error');
     }
   };
 
@@ -206,16 +207,12 @@ const NewStockEntry = () => {
                   <input type="date" name="stockDate" value={form.stockDate} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none transition-all" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company</label>
-                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch</label>
-                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} hideAddButton />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse</label>
-                  <DynamicSelect category="Warehouse" name="warehouseBase" value={form.warehouseBase} onChange={handleChange} />
+                  <DynamicSelect category="Warehouse" name="warehouseBase" value={form.warehouseBase} onChange={handleChange} hideAddButton dependentOn="Branch" dependentValue={form.branch} disabled={!form.branch} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Stock Type</label>
@@ -230,7 +227,7 @@ const NewStockEntry = () => {
 
             <div className="space-y-6">
                 {/* SECTION: SUMMARY */}
-                <div className="border border-slate-200 rounded-lg p-5 bg-slate-50 flex flex-col justify-center">
+                <div className="border border-slate-200 rounded-lg p-5 bg-slate-50 flex flex-col justify-center h-full">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-200">Summary</h3>
                   <div className="space-y-4">
                      <div className="flex justify-between items-center">
@@ -241,25 +238,6 @@ const NewStockEntry = () => {
                         <span className="text-sm font-bold text-slate-800">Stock Value</span>
                         <span className="text-xl font-black text-emerald-600">₹{summary.stockValue.toFixed(2)}</span>
                      </div>
-                  </div>
-                </div>
-
-                {/* SECTION: REFERENCE */}
-                <div className="border border-slate-200 rounded-lg p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Reference</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier</label>
-                      <DynamicSelect category="Supplier" name="supplier" value={form.supplier} onChange={handleChange} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">PO No.</label>
-                      <input type="text" name="poNo" value={form.poNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice</label>
-                      <input type="text" name="invoiceNo" value={form.invoiceNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none" />
-                    </div>
                   </div>
                 </div>
             </div>
@@ -278,12 +256,10 @@ const NewStockEntry = () => {
               <table className="w-full text-left min-w-[700px]">
                 <thead>
                   <tr className="bg-slate-50 text-slate-600">
-                    <th className="px-2 py-2 text-xs font-bold uppercase w-1/4">Product</th>
-                    <th className="px-2 py-2 text-xs font-bold uppercase">SKU</th>
-                    <th className="px-2 py-2 text-xs font-bold uppercase">Batch</th>
-                    <th className="px-2 py-2 text-xs font-bold uppercase">Expiry</th>
-                    <th className="px-2 py-2 text-xs font-bold uppercase w-20">Qty</th>
-                    <th className="px-2 py-2 text-xs font-bold uppercase w-24">Rate (₹)</th>
+                    <th className="px-2 py-2 text-xs font-bold uppercase w-1/2">Product</th>
+                    <th className="px-2 py-2 text-xs font-bold uppercase w-24">Qty (+/-)</th>
+                    <th className="px-2 py-2 text-xs font-bold uppercase w-32">Rate (₹)</th>
+                    <th className="px-2 py-2 text-xs font-bold uppercase w-32 text-right">Subtotal</th>
                     <th className="px-2 py-2 text-xs font-bold uppercase text-center w-10">Act</th>
                   </tr>
                 </thead>
@@ -291,22 +267,16 @@ const NewStockEntry = () => {
                   {products.map((prod) => (
                     <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-2 py-2">
-                        <DynamicSelect category="Product" name="product" value={prod.product} onChange={(e) => handleProductChange(prod.id, 'product', e.target.value)} />
+                        <DynamicSelect category="Product" name="product" value={prod.product} onChange={(e) => handleProductChange(prod.id, 'product', e.target.value)} hideAddButton />
                       </td>
                       <td className="px-2 py-2">
-                        <input type="text" value={prod.sku} onChange={(e) => handleProductChange(prod.id, 'sku', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-emerald-500 outline-none bg-white" />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input type="text" value={prod.batch} onChange={(e) => handleProductChange(prod.id, 'batch', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-emerald-500 outline-none bg-white" />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input type="month" value={prod.expiry} onChange={(e) => handleProductChange(prod.id, 'expiry', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:border-emerald-500 outline-none bg-white" />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input type="number" min="0" value={prod.qty} onChange={(e) => handleProductChange(prod.id, 'qty', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm font-bold text-emerald-700 focus:border-emerald-500 outline-none bg-white text-right" />
+                        <input type="number" value={prod.qty} onChange={(e) => handleProductChange(prod.id, 'qty', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm font-bold text-emerald-700 focus:border-emerald-500 outline-none bg-white text-right" placeholder="e.g. 5 or -5" />
                       </td>
                       <td className="px-2 py-2">
                         <input type="number" min="0" value={prod.rate} onChange={(e) => handleProductChange(prod.id, 'rate', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-emerald-500 outline-none bg-white text-right" />
+                      </td>
+                      <td className="px-2 py-2 text-right text-sm font-bold text-slate-700">
+                        ₹{((Number(prod.qty)||0) * (Number(prod.rate)||0)).toFixed(2)}
                       </td>
                       <td className="px-2 py-2 text-center">
                         <button type="button" onClick={() => removeProduct(prod.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1">
@@ -320,26 +290,7 @@ const NewStockEntry = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* SECTION: LOCATION */}
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Location</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse</label>
-                    <DynamicSelect category="Warehouse" name="locationWarehouse" value={form.locationWarehouse} onChange={handleChange} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Rack</label>
-                    <input type="text" name="rack" value={form.rack} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Bin</label>
-                    <input type="text" name="bin" value={form.bin} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-emerald-500 outline-none" />
-                  </div>
-                </div>
-              </div>
-
+          <div className="grid grid-cols-1 gap-6">
               {/* REMARKS */}
               <div className="border border-slate-200 rounded-lg p-5">
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Remarks</label>

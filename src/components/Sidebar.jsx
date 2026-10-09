@@ -313,19 +313,19 @@ const Sidebar = ({ onClose }) => {
                   ]}
                 />
                 <MenuItem
-                  icon={CreditCard}
-                  text="Payment"
-                  subItems={[
-                    { text: 'Payment List', to: '/payment/list' },
-                    { text: 'New Payment', to: '/payment/new' }
-                  ]}
-                />
-                <MenuItem
                   icon={Banknote}
                   text="Bank Receipt"
                   subItems={[
                     { text: 'Bank Receipt List', to: '/bank-receipt/list' },
                     { text: 'New Bank Receipt', to: '/bank-receipt/new' }
+                  ]}
+                />
+                <MenuItem
+                  icon={CreditCard}
+                  text="Payment"
+                  subItems={[
+                    { text: 'Payment List', to: '/payment/list' },
+                    { text: 'New Payment', to: '/payment/new' }
                   ]}
                 />
                 <MenuItem
@@ -344,14 +344,14 @@ const Sidebar = ({ onClose }) => {
                     { text: 'New Contra', to: '/contra/new' }
                   ]}
                 />
-                <MenuItem
+                {/* <MenuItem
                   icon={FileText}
                   text="Journal Entry"
                   subItems={[
                     { text: 'Journal List', to: '/journal/list' },
                     { text: 'New Journal', to: '/journal/new' }
                   ]}
-                />
+                /> */}
                 <MenuItem
                   icon={Package}
                   text="Stock Entry"
@@ -435,7 +435,7 @@ const Sidebar = ({ onClose }) => {
                   text="HR Setup"
                   subItems={[
                     { text: 'Department Master', to: '/department/list' },
-                    { text: 'Designation Master', to: '/designation/list' },
+                    // { text: 'Designation Master', to: '/designation/list' },
                     { text: 'Shift & Timings', to: '/hrms/setup/shifts' },
                     { text: 'Master Settings', to: '/hrms/setup/master-settings' }
                   ]}

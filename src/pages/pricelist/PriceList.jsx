@@ -336,17 +336,6 @@ const PriceList = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Branch</label>
-                    <select
-                      value={currentPL.branch || ''}
-                      onChange={(e) => setCurrentPL({ ...currentPL, branch: e.target.value })}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none bg-white"
-                    >
-                      <option value="">Select Branch</option>
-                      {branches.map(b => <option key={b._id} value={b._id}>{b.branchName || b.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Currency *</label>
                     <select
                       value={currentPL.currency || 'INR'}
@@ -390,53 +379,13 @@ const PriceList = () => {
                 </div>
               </div>
 
-              {/* APPLICABLE FOR */}
-              <div>
-                <h4 className="text-sm font-bold text-indigo-600 mb-3 border-b pb-1">APPLICABLE FOR</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Applicable Type *</label>
-                    <select
-                      value={currentPL.applicableType || currentPL.customerType || 'Customer Group'}
-                      onChange={(e) => setCurrentPL({ ...currentPL, applicableType: e.target.value, customerType: e.target.value })}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none bg-white"
-                    >
-                      <option value="Customer Group">Customer Group</option>
-                      <option value="Customer">Customer</option>
-                      <option value="Customer Type">Customer Type</option>
-                      <option value="Supplier">Supplier</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Applicable Party</label>
-                    {currentPL.applicableType === 'Customer' ? (
-                      <select value={currentPL.applicableParty || ''} onChange={(e) => setCurrentPL({ ...currentPL, applicableParty: e.target.value })} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white">
-                        <option value="">Select Customer</option>
-                        {customers.map(c => <option key={c._id} value={c._id}>{c.customerName || c.name || c.firstName}</option>)}
-                      </select>
-                    ) : currentPL.applicableType === 'Supplier' ? (
-                      <select value={currentPL.applicableParty || ''} onChange={(e) => setCurrentPL({ ...currentPL, applicableParty: e.target.value })} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white">
-                        <option value="">Select Supplier</option>
-                        {suppliers.map(s => <option key={s._id} value={s._id}>{s.supplierName || s.name}</option>)}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        placeholder="e.g. Retailers, Vip Customers"
-                        value={currentPL.applicableParty || ''}
-                        onChange={(e) => setCurrentPL({ ...currentPL, applicableParty: e.target.value })}
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
+
 
               {/* PRODUCT PRICING */}
               <div>
                 <div className="flex justify-between items-center mb-3 border-b pb-1">
                   <h4 className="text-sm font-bold text-indigo-600">PRODUCT PRICING</h4>
-                  <button type="button" onClick={() => setCurrentPL({ ...currentPL, productPricing: [...(currentPL.productPricing || []), { product: '', unit: '', pricingMethod: 'Fixed', baseRate: '', minQty: '', maxQty: '', discount: '', finalRate: '', effectiveFrom: '', effectiveTo: '' }] })} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition-colors">
+                  <button type="button" onClick={() => setCurrentPL({ ...currentPL, productPricing: [...(currentPL.productPricing || []), { product: '', unit: '', retailRate: '', wholesaleRate: '', effectiveFrom: '', effectiveTo: '' }] })} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition-colors">
                     <Plus size={14} /> Add Product
                   </button>
                 </div>
@@ -446,12 +395,8 @@ const PriceList = () => {
                       <tr>
                         <th className="p-2 font-semibold">Product *</th>
                         <th className="p-2 font-semibold">Unit</th>
-                        <th className="p-2 font-semibold">Pricing Method *</th>
-                        <th className="p-2 font-semibold w-20">Base Rate *</th>
-                        <th className="p-2 font-semibold w-16">Min Qty</th>
-                        <th className="p-2 font-semibold w-16">Max Qty</th>
-                        <th className="p-2 font-semibold w-20">Discount %</th>
-                        <th className="p-2 font-semibold w-24 text-indigo-600">Final Rate</th>
+                        <th className="p-2 font-semibold whitespace-nowrap">Retail Rate *</th>
+                        <th className="p-2 font-semibold whitespace-nowrap">Wholesale Rate *</th>
                         <th className="p-2 font-semibold">Effective From</th>
                         <th className="p-2 font-semibold">Effective To</th>
                         <th className="p-2 font-semibold text-center"></th>
@@ -459,15 +404,6 @@ const PriceList = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
                       {(currentPL.productPricing || []).map((item, idx) => {
-                        const baseRate = parseFloat(item.baseRate) || 0;
-                        const discount = parseFloat(item.discount) || 0;
-                        let finalRate = baseRate;
-                        if (item.pricingMethod === 'Discount %' && baseRate > 0 && discount > 0) {
-                          finalRate = baseRate - (baseRate * discount / 100);
-                        } else if (item.pricingMethod === 'Fixed') {
-                          finalRate = baseRate;
-                        }
-                        
                         return (
                           <tr key={idx}>
                             <td className="p-1">
@@ -482,17 +418,8 @@ const PriceList = () => {
                                 {units.map(u => <option key={u._id} value={u.unitName || u.name}>{u.unitName || u.name}</option>)}
                               </select>
                             </td>
-                            <td className="p-1">
-                              <select value={item.pricingMethod || 'Fixed'} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].pricingMethod = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500 bg-white">
-                                <option value="Fixed">Fixed</option>
-                                <option value="Discount %">Discount %</option> 
-                              </select>
-                            </td>
-                            <td className="p-1"><input type="number" min="0" step="0.01" value={item.baseRate || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].baseRate = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
-                            <td className="p-1"><input type="number" min="0" value={item.minQty || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].minQty = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
-                            <td className="p-1"><input type="number" min="0" value={item.maxQty || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].maxQty = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
-                            <td className="p-1"><input type="number" min="0" max="100" step="0.01" value={item.discount || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].discount = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" disabled={item.pricingMethod !== 'Discount %'} /></td>
-                            <td className="p-1"><input type="text" readOnly value={finalRate.toFixed(2)} className="w-full bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold rounded px-1.5 py-1 outline-none text-right" /></td>
+                            <td className="p-1"><input type="number" min="0" step="0.01" value={item.retailRate || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].retailRate = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" placeholder="0.00" /></td>
+                            <td className="p-1"><input type="number" min="0" step="0.01" value={item.wholesaleRate || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].wholesaleRate = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" placeholder="0.00" /></td>
                             <td className="p-1"><input type="date" value={item.effectiveFrom || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].effectiveFrom = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
                             <td className="p-1"><input type="date" value={item.effectiveTo || ''} onChange={(e) => { const newArr = [...currentPL.productPricing]; newArr[idx].effectiveTo = e.target.value; setCurrentPL({...currentPL, productPricing: newArr}); }} className="w-full border border-gray-300 rounded px-1.5 py-1 focus:outline-none focus:border-blue-500" /></td>
                             <td className="p-1 text-center">

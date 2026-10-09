@@ -5,8 +5,10 @@ import api from '../../api';
 
 const DayBook = () => {
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  const firstDayStr = new Date(today.getFullYear(), today.getMonth(), 1);
+  const firstDay = `${firstDayStr.getFullYear()}-${String(firstDayStr.getMonth() + 1).padStart(2, '0')}-01`;
+  const lastDayStr = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const lastDay = `${lastDayStr.getFullYear()}-${String(lastDayStr.getMonth() + 1).padStart(2, '0')}-${String(lastDayStr.getDate()).padStart(2, '0')}`;
 
   const [filters, setFilters] = useState({
     fromDate: firstDay,

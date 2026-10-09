@@ -7,7 +7,7 @@ const PricingRules = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentRule, setCurrentRule] = useState({
     id: '', name: '', type: 'Discount', description: '', status: 'Active',
-    company: '', branch: '', customerType: 'Wholesaler', priceList: '', category: '', brand: '', product: '',
+    company: '', branch: '', brand: '', product: '',
     condition: 'Quantity', operator: 'Greater Than / Equal', conditionValue: 100,
     discountType: 'Percentage', discountValue: 10, maxDiscount: '',
     start: '', end: '', priority: 1, stackDiscount: false
@@ -15,11 +15,8 @@ const PricingRules = () => {
   const [isEdit, setIsEdit] = useState(false);
 
   const [branches, setBranches] = useState([]);
-  const [priceLists, setPriceLists] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [products, setProducts] = useState([]);
-  const [customerTypes, setCustomerTypes] = useState([]);
 
   const fetchRules = async () => {
     try {
@@ -35,20 +32,14 @@ const PricingRules = () => {
     
     const fetchDropdowns = async () => {
       try {
-        const [brRes, plRes, catRes, brandRes, prodRes, cTypeRes] = await Promise.all([
+        const [brRes, brandRes, prodRes] = await Promise.all([
           api.get('/branches').catch(() => ({ data: { data: [] } })),
-          api.get('/price-lists').catch(() => ({ data: { data: [] } })),
-          api.get('/products/categories').catch(() => ({ data: { data: [] } })),
           api.get('/products/brands').catch(() => ({ data: { data: [] } })),
-          api.get('/products').catch(() => ({ data: { data: [] } })),
-          api.get('/customer-types').catch(() => ({ data: { data: [] } }))
+          api.get('/products').catch(() => ({ data: { data: [] } }))
         ]);
         if (brRes.data?.data) setBranches(brRes.data.data);
-        if (plRes.data?.data) setPriceLists(plRes.data.data);
-        if (catRes.data?.data) setCategories(catRes.data.data);
         if (brandRes.data?.data) setBrands(brandRes.data.data);
         if (prodRes.data?.data) setProducts(prodRes.data.data);
-        if (cTypeRes.data?.data) setCustomerTypes(cTypeRes.data.data);
       } catch (err) {
         console.error("Failed to fetch dropdowns", err);
       }
@@ -61,7 +52,7 @@ const PricingRules = () => {
     const nextId = `PR-${String(rules.length + 1).padStart(5, '0')}`;
     setCurrentRule({
       id: nextId, name: '', type: 'Discount', description: '', status: 'Active',
-      company: '', branch: '', customerType: 'Wholesaler', priceList: '', category: '', brand: '', product: '',
+      company: '', branch: '', brand: '', product: '',
       condition: 'Quantity', operator: 'Greater Than / Equal', conditionValue: 100,
       discountType: 'Percentage', discountValue: 10, maxDiscount: '',
       start: '', end: '', priority: 1, stackDiscount: false
@@ -83,8 +74,6 @@ const PricingRules = () => {
       // Deep Check: prevent Mongoose cast errors or unwanted empty strings
       if (payload.company === '') delete payload.company;
       if (payload.branch === '') delete payload.branch;
-      if (payload.priceList === '') delete payload.priceList;
-      if (payload.category === '') delete payload.category;
       if (payload.brand === '') delete payload.brand;
       if (payload.product === '') delete payload.product;
       if (payload.maxDiscount === '') delete payload.maxDiscount;
@@ -262,39 +251,6 @@ const PricingRules = () => {
                     >
                       <option value="">Select Branch</option>
                       {branches.map(b => <option key={b._id} value={b._id}>{b.branchName || b.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Customer Type</label>
-                    <select
-                      value={currentRule.customerType || ''}
-                      onChange={(e) => setCurrentRule({ ...currentRule, customerType: e.target.value })}
-                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm outline-none bg-white"
-                    >
-                      <option value="">Select Customer Type</option>
-                      {customerTypes.map(ct => <option key={ct._id} value={ct.name}>{ct.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Price List</label>
-                    <select
-                      value={currentRule.priceList || ''}
-                      onChange={(e) => setCurrentRule({ ...currentRule, priceList: e.target.value })}
-                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm outline-none bg-white"
-                    >
-                      <option value="">Select Price List</option>
-                      {priceLists.map(pl => <option key={pl._id} value={pl._id}>{pl.name || pl.id}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Category</label>
-                    <select
-                      value={currentRule.category || ''}
-                      onChange={(e) => setCurrentRule({ ...currentRule, category: e.target.value })}
-                      className="w-full border border-blue-500 rounded px-3 py-2 text-sm outline-none bg-white"
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map(c => <option key={c._id} value={c._id}>{c.categoryName || c.name}</option>)}
                     </select>
                   </div>
                   <div>

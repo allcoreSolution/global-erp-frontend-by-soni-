@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Download, FileText, Printer, Eye, Trash2, Edit, Upload, FileDown,
   ChevronLeft, ChevronRight, AlertCircle, CheckCircle, EyeOff, LayoutGrid, X
@@ -8,14 +9,17 @@ import api from '../../api';
 
 const PackingSlipList = () => {
   const [packingSlips, setPackingSlips] = useState([]);
+  const [allPackingSlips, setAllPackingSlips] = useState([]);
   const fileInputRef = useRef(null);
 
+  const navigate = useNavigate();
   // States
   const [searchTerm, setSearchTerm] = useState('');
   const [recordsPerPage, setRecordsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [viewSlip, setViewSlip] = useState(null);
 
   // Fetch Packing Slips
   const fetchPackingSlips = async () => {
@@ -25,13 +29,17 @@ const PackingSlipList = () => {
       const mappedData = data.map((item, index) => ({
         id: item._id,
         reference: item.packingNo || `PS-${index}`,
-        saleReference: item.salesOrder || '-',
-        deliveryReference: item.deliveryChallan || '-',
-        productList: item.products?.[0]?.product || '-',
-        amount: 0.00,
-        status: item.status || 'Pending'
+        saleReference: item.saleId?.invoiceNo || item.saleId?.referenceNo || '-',
+        customerName: item.saleId?.customer?.name || 'Walk-in',
+        productList: (item.items && item.items.length > 0)
+          ? item.items.map(i => i.productName || i.productId?.productName || i.product).filter(Boolean).join(', ')
+          : (item.products && item.products.length > 0)
+            ? item.products.map(p => p.productName || p.product).filter(Boolean).join(', ')
+            : '-',
+        status: item.status || 'Draft'
       }));
       setPackingSlips(mappedData);
+      setAllPackingSlips(data);
     } catch (err) {
       console.error("Failed to fetch packing slips:", err);
     }
@@ -45,98 +53,13 @@ const PackingSlipList = () => {
   const [visibleColumns, setVisibleColumns] = useState({
     reference: true,
     saleReference: true,
-    deliveryReference: true,
+    customerName: true,
     productList: true,
-    amount: true,
     status: true,
   });
 
   const [isColMenuOpen, setIsColMenuOpen] = useState(false);
 
-  // Form State for create packing slip
-  const [form, setForm] = useState({
-    packingNo: '', packingDate: '', status: 'Pending', company: '', branch: '', warehouse: '',
-    salesOrder: '', deliveryChallan: '', invoice: '', customer: '', customerType: '', salesperson: '',
-    billingAddress: '', shippingAddress: '', contact: '', mobile: '', transporter: '', vehicleNo: '',
-    products: [{ product: '', batch: '', qty: '', package: '', weight: '' }],
-    packedBy: '', verifiedBy: '', remarks: ''
-  });
-
-  // Handle create/update challan/packing slip submit
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...form,
-        packingNo: form.packingNo || `PS-${Math.floor(100000 + Math.random() * 900000)}`,
-        salesOrder: form.salesOrder || `SL-${Math.floor(100000 + Math.random() * 900000)}`,
-        deliveryChallan: form.deliveryChallan || `DL-${Math.floor(100000 + Math.random() * 900000)}`
-      };
-
-      if (editingId) {
-        await api.put(`/packing-slips/${editingId}`, payload);
-        alert('Packing slip updated successfully');
-      } else {
-        await api.post('/packing-slips', payload);
-        alert('Packing slip created successfully');
-      }
-
-      // Refresh list
-      fetchPackingSlips();
-
-      setIsAddModalOpen(false);
-      setEditingId(null);
-      // Reset Form
-      setForm({
-        packingNo: '', packingDate: '', status: 'Pending', company: '', branch: '', warehouse: '',
-        salesOrder: '', deliveryChallan: '', invoice: '', customer: '', customerType: '', salesperson: '',
-        billingAddress: '', shippingAddress: '', contact: '', mobile: '', transporter: '', vehicleNo: '',
-        products: [{ product: '', batch: '', qty: '', package: '', weight: '' }],
-        packedBy: '', verifiedBy: '', remarks: ''
-      });
-    } catch (err) {
-      console.error(err);
-      alert('Failed to save packing slip: ' + (err.response?.data?.message || err.message));
-    }
-  };
-
-  const handleEdit = async (slip) => {
-    try {
-      const res = await api.get(`/packing-slips/${slip.id}`);
-      const fullSlip = res.data?.data || res.data;
-      setForm({
-        ...fullSlip,
-        products: fullSlip.products?.length > 0 ? fullSlip.products : [{ product: '', batch: '', qty: '', package: '', weight: '' }]
-      });
-      setEditingId(slip.id);
-      setIsAddModalOpen(true);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to fetch packing slip details for edit');
-    }
-  };
-
-  const handleAddProduct = () => {
-    setForm({ ...form, products: [...form.products, { product: '', batch: '', qty: '', package: '', weight: '' }] });
-  };
-
-  const handleProductChange = (index, field, value) => {
-    const updatedProducts = [...form.products];
-    updatedProducts[index][field] = value;
-    setForm({ ...form, products: updatedProducts });
-  };
-
-  const handleRemoveProduct = (index) => {
-    if (form.products.length > 1) {
-      const updatedProducts = form.products.filter((_, i) => i !== index);
-      setForm({ ...form, products: updatedProducts });
-    }
-  };
-
-  // Helper properties for package summary
-  const totalQty = form.products.reduce((acc, curr) => acc + (Number(curr.qty) || 0), 0);
-  const totalPackages = form.products.reduce((acc, curr) => acc + (Number(curr.package) || 0), 0);
-  const totalWeight = form.products.reduce((acc, curr) => acc + (Number(curr.weight) || 0), 0);
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -153,11 +76,21 @@ const PackingSlipList = () => {
       try {
         await api.delete(`/packing-slips/${id}`);
         setPackingSlips(packingSlips.filter(p => p.id !== id));
+        setAllPackingSlips(allPackingSlips.filter(p => p._id !== id));
         Swal.fire('Deleted!', 'Deleted successfully', 'success');
       } catch (err) {
         console.error(err);
         Swal.fire('Error', 'Failed to delete packing slip: ' + (err.response?.data?.message || err.message), 'error');
       }
+    }
+  };
+
+  const handleView = (id) => {
+    const slipDetails = allPackingSlips.find(p => p._id === id);
+    if (slipDetails) {
+      setViewSlip(slipDetails);
+    } else {
+      Swal.fire('Error', 'Packing slip details not found', 'error');
     }
   };
 
@@ -178,13 +111,12 @@ const PackingSlipList = () => {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Reference", "Sale Reference", "Delivery Reference", "Product List", "Amount", "Status"];
+    const headers = ["Reference", "Sale Reference", "Customer Name", "Product List", "Status"];
     const rows = filteredSlips.map(p => [
       `"${p.reference}"`,
       `"${p.saleReference}"`,
-      `"${p.deliveryReference}"`,
+      `"${p.customerName}"`,
       `"${p.productList}"`,
-      p.amount,
       `"${p.status}"`
     ]);
     const csvContent = [headers.join(',') + '\n' + 'Sample,Sample,Sample,Sample,100,Yes', ...rows.map(r => r.join(','))].join('\n');
@@ -206,16 +138,15 @@ const PackingSlipList = () => {
     reader.onload = async (event) => {
       const text = event.target.result;
       const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      
+
       if (lines.length <= 1) {
         alert('CSV file is empty or only contains headers.');
         return;
       }
-
       const newEntries = [];
       for (let i = 1; i < lines.length; i++) {
         const columns = lines[i].split(',').map(c => c.replace(/"/g, '').trim());
-        if (columns.length < 4) continue; 
+        if (columns.length < 4) continue;
 
         const packingNo = columns[0] || `PS-IMP-${Date.now()}-${i}`;
         const salesOrder = columns[1] || '';
@@ -251,7 +182,7 @@ const PackingSlipList = () => {
         console.error("Failed to import", error);
         alert('Failed to import packing slips. Some might be duplicates or invalid.');
       }
-      
+
       e.target.value = '';
     };
 
@@ -330,20 +261,10 @@ const PackingSlipList = () => {
             <Download size={14} /> Export CSV
           </button>
           <button
-            onClick={() => {
-              setEditingId(null);
-              setForm({
-                packingNo: '', packingDate: '', status: 'Pending', company: '', branch: '', warehouse: '',
-                salesOrder: '', deliveryChallan: '', invoice: '', customer: '', customerType: '', salesperson: '',
-                billingAddress: '', shippingAddress: '', contact: '', mobile: '', transporter: '', vehicleNo: '',
-                products: [{ product: '', batch: '', qty: '', package: '', weight: '' }],
-                packedBy: '', verifiedBy: '', remarks: ''
-              });
-              setIsAddModalOpen(true);
-            }}
+            onClick={() => navigate('/sales/add-packing-slip')}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
           >
-            <Plus size={14} /> Create Challan
+            <Plus size={14} /> Add packing slip
           </button>
         </div>
       </div>
@@ -388,10 +309,9 @@ const PackingSlipList = () => {
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               {visibleColumns.reference && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Reference</th>}
-              {visibleColumns.saleReference && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Sale Reference</th>}
-              {visibleColumns.deliveryReference && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Delivery Reference</th>}
+              {visibleColumns.saleReference && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Sale Ref/Invoice</th>}
+              {visibleColumns.customerName && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Customer Name</th>}
               {visibleColumns.productList && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Product List</th>}
-              {visibleColumns.amount && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Amount</th>}
               {visibleColumns.status && <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Status</th>}
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 text-right w-24">Option</th>
             </tr>
@@ -402,9 +322,8 @@ const PackingSlipList = () => {
                 <tr key={slip.id} className="hover:bg-gray-50/70 transition-colors">
                   {visibleColumns.reference && <td className="px-6 py-4 text-sm font-semibold text-gray-900">{slip.reference}</td>}
                   {visibleColumns.saleReference && <td className="px-6 py-4 text-sm text-gray-600">{slip.saleReference}</td>}
-                  {visibleColumns.deliveryReference && <td className="px-6 py-4 text-sm text-gray-600">{slip.deliveryReference}</td>}
+                  {visibleColumns.customerName && <td className="px-6 py-4 text-sm text-gray-600">{slip.customerName}</td>}
                   {visibleColumns.productList && <td className="px-6 py-4 text-sm text-gray-800 font-medium">{slip.productList}</td>}
-                  {visibleColumns.amount && <td className="px-6 py-4 text-sm font-bold text-gray-900">${slip.amount.toFixed(2)}</td>}
                   {visibleColumns.status && (
                     <td className="px-6 py-4 text-sm">
                       <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">
@@ -416,18 +335,11 @@ const PackingSlipList = () => {
                   <td className="px-6 py-4 text-sm text-right">
                     <div className="inline-flex items-center gap-1">
                       <button
-                        onClick={() => alert(`View challan packing details: ${slip.reference}`)}
+                        onClick={() => handleView(slip.id)}
                         className="p-1.5 text-indigo-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                         title="View details"
                       >
                         <Eye size={15} />
-                      </button>
-                      <button
-                        onClick={() => handleEdit(slip)}
-                        className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                        title="Edit Record"
-                      >
-                        <Edit size={15} />
                       </button>
                       <button
                         onClick={() => handleDelete(slip.id)}
@@ -478,242 +390,95 @@ const PackingSlipList = () => {
         </div>
       </div>
 
-      {/* --- CREATE CHALLAN MODAL --- */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg border border-blue-500 shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative text-black animate-in fade-in zoom-in-95 duration-200">
 
-            <div className="sticky top-0 bg-white z-10 border-b border-blue-500 p-6 pb-4 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900">
-                CREATE PACKING SLIP
-              </h3>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-              >
+
+      {/* VIEW MODAL */}
+      {viewSlip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold">Packing Slip Details</h2>
+              <button onClick={() => setViewSlip(null)} className="text-gray-500 hover:text-gray-700">
                 <X size={20} />
               </button>
             </div>
-
-            <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
-
-              {/* TOP SECTION */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Packing No.</label>
-                  <input type="text" value={form.packingNo} onChange={e => setForm({ ...form, packingNo: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm bg-gray-50 outline-none" placeholder="Auto-generated" />
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-semibold text-gray-600 block">Packing No:</span>
+                  <span>{viewSlip.packingNo || '-'}</span>
                 </div>
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Packing Date</label>
-                  <input type="date" value={form.packingDate} onChange={e => setForm({ ...form, packingDate: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
+                <div>
+                  <span className="font-semibold text-gray-600 block">Status:</span>
+                  <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                    {viewSlip.status || 'Draft'}
+                  </span>
                 </div>
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">
-                    <option value="Draft">Draft</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Packed">Packed</option>
-                  </select>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Sale Invoice No:</span>
+                  <span>{viewSlip.saleId?.invoiceNo || '-'}</span>
                 </div>
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Company</label>
-                  <select value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">
-                    <option value="">Select Company</option>
-                    <option value="Company A">Company A</option>
-                  </select>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Customer Name:</span>
+                  <span>{viewSlip.saleId?.customer?.name || 'Walk-in'}</span>
                 </div>
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Branch</label>
-                  <select value={form.branch} onChange={e => setForm({ ...form, branch: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">
-                    <option value="">Select Branch</option>
-                    <option value="HQ">HQ</option>
-                  </select>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Transporter:</span>
+                  <span>{viewSlip.transporter || '-'}</span>
                 </div>
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Warehouse</label>
-                  <select value={form.warehouse} onChange={e => setForm({ ...form, warehouse: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">
-                    <option value="">Select Warehouse</option>
-                    <option value="Main WH">Main WH</option>
-                  </select>
+                <div>
+                  <span className="font-semibold text-gray-600 block">Vehicle No:</span>
+                  <span>{viewSlip.vehicleNo || '-'}</span>
                 </div>
               </div>
 
-              {/* REFERENCE DETAILS */}
               <div>
-                <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Reference Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Sales Order</label>
-                    <input type="text" value={form.salesOrder} onChange={e => setForm({ ...form, salesOrder: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Delivery Challan</label>
-                    <input type="text" value={form.deliveryChallan} onChange={e => setForm({ ...form, deliveryChallan: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Invoice</label>
-                    <input type="text" value={form.invoice} onChange={e => setForm({ ...form, invoice: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Customer</label>
-                    <select value={form.customer} onChange={e => setForm({ ...form, customer: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">
-                      <option value="">Select Customer</option>
-                      <option value="Cust1">Customer 1</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Customer Type</label>
-                    <input type="text" value={form.customerType} onChange={e => setForm({ ...form, customerType: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm bg-gray-50 outline-none" disabled />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Salesperson</label>
-                    <input type="text" value={form.salesperson} onChange={e => setForm({ ...form, salesperson: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                  </div>
-                </div>
-              </div>
-
-              {/* SHIPPING DETAILS */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Shipping Details</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Billing Address</label>
-                    <textarea rows="2" value={form.billingAddress} onChange={e => setForm({ ...form, billingAddress: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450"></textarea>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Shipping Address</label>
-                    <textarea rows="2" value={form.shippingAddress} onChange={e => setForm({ ...form, shippingAddress: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450"></textarea>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Contact Person</label>
-                      <input type="text" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Mobile</label>
-                      <input type="text" value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Transporter</label>
-                      <input type="text" value={form.transporter} onChange={e => setForm({ ...form, transporter: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Vehicle No.</label>
-                      <input type="text" value={form.vehicleNo} onChange={e => setForm({ ...form, vehicleNo: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* PACKAGE / PRODUCT DETAILS */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Package / Product Details</h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse border border-blue-500">
-                    <thead className="bg-gray-50 border-b border-blue-500">
+                <h3 className="font-bold border-b pb-1 mt-4 mb-2">Products Packed</h3>
+                <div className="overflow-x-auto border rounded">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="p-2 text-xs font-bold text-gray-700 border-r border-blue-500">Product</th>
-                        <th className="p-2 text-xs font-bold text-gray-700 border-r border-blue-500 w-32">Batch</th>
-                        <th className="p-2 text-xs font-bold text-gray-700 border-r border-blue-500 w-24">Qty</th>
-                        <th className="p-2 text-xs font-bold text-gray-700 border-r border-blue-500 w-24">Package</th>
-                        <th className="p-2 text-xs font-bold text-gray-700 border-r border-blue-500 w-24">Weight</th>
-                        <th className="p-2 w-10"></th>
+                        <th className="px-3 py-2 font-semibold">Product</th>
+                        <th className="px-3 py-2 font-semibold">Ordered Qty</th>
+                        <th className="px-3 py-2 font-semibold">Packed Qty</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {form.products.map((prod, index) => (
-                        <tr key={index} className="border-b border-blue-500 last:border-b-0">
-                          <td className="p-1 border-r border-blue-500">
-                            <input type="text" value={prod.product} onChange={e => handleProductChange(index, 'product', e.target.value)} className="w-full p-1.5 text-sm outline-none" placeholder="Search Product..." />
-                          </td>
-                          <td className="p-1 border-r border-blue-500">
-                            <input type="text" value={prod.batch} onChange={e => handleProductChange(index, 'batch', e.target.value)} className="w-full p-1.5 text-sm outline-none" placeholder="Batch No" />
-                          </td>
-                          <td className="p-1 border-r border-blue-500">
-                            <input type="number" value={prod.qty} onChange={e => handleProductChange(index, 'qty', e.target.value)} className="w-full p-1.5 text-sm outline-none" placeholder="0" />
-                          </td>
-                          <td className="p-1 border-r border-blue-500">
-                            <input type="number" value={prod.package} onChange={e => handleProductChange(index, 'package', e.target.value)} className="w-full p-1.5 text-sm outline-none" placeholder="0" />
-                          </td>
-                          <td className="p-1 border-r border-blue-500">
-                            <input type="number" value={prod.weight} onChange={e => handleProductChange(index, 'weight', e.target.value)} className="w-full p-1.5 text-sm outline-none" placeholder="0.00" />
-                          </td>
-                          <td className="p-1 text-center">
-                            <button type="button" onClick={() => handleRemoveProduct(index)} className="text-red-500 hover:text-red-700 p-1 rounded">
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
+                    <tbody className="divide-y">
+                      {(viewSlip.items || viewSlip.products || []).map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="px-3 py-2">{item.productName || item.productId?.productName || item.product || '-'}</td>
+                          <td className="px-3 py-2">{item.orderedQty || item.quantity || 0}</td>
+                          <td className="px-3 py-2 font-bold">{item.packQty || item.qty || 0}</td>
                         </tr>
                       ))}
+                      {(!viewSlip.items && !viewSlip.products) || (viewSlip.items?.length === 0 && viewSlip.products?.length === 0) ? (
+                        <tr>
+                          <td colSpan="3" className="px-3 py-4 text-center text-gray-500">No products found.</td>
+                        </tr>
+                      ) : null}
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-3">
-                  <button type="button" onClick={handleAddProduct} className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 px-3 py-1.5 rounded border border-indigo-100">
-                    <Plus size={14} /> Add Product
-                  </button>
-                </div>
               </div>
 
-              {/* PACKAGE SUMMARY */}
-              <div className="bg-gray-50 border border-blue-500 rounded p-4">
-                <h4 className="text-sm font-bold text-gray-800 uppercase mb-3 tracking-wide">Package Summary</h4>
-                <div className="flex flex-wrap gap-8 text-sm">
-                  <div><span className="text-gray-500 mr-2">Products:</span><span className="font-bold text-gray-800">{form.products.length}</span></div>
-                  <div><span className="text-gray-500 mr-2">Total Qty:</span><span className="font-bold text-gray-800">{totalQty}</span></div>
-                  <div><span className="text-gray-500 mr-2">Total Packages:</span><span className="font-bold text-gray-800">{totalPackages}</span></div>
-                  <div><span className="text-gray-500 mr-2">Net Weight:</span><span className="font-bold text-gray-800">{totalWeight}</span></div>
-                  <div><span className="text-gray-500 mr-2">Gross Weight:</span><span className="font-bold text-gray-800">{totalWeight}</span></div>
+              {viewSlip.remarks && (
+                <div>
+                  <span className="font-semibold text-gray-600 block">Remarks:</span>
+                  <p className="text-gray-800 bg-gray-50 p-2 rounded border mt-1 text-sm">{viewSlip.remarks}</p>
                 </div>
-              </div>
-
-              {/* VERIFICATION */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-800 uppercase border-b pb-2 mb-3 tracking-wide">Verification</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Packed By</label>
-                    <select value={form.packedBy} onChange={e => setForm({ ...form, packedBy: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">
-                      <option value="">Select Employee</option>
-                      <option value="Emp1">Employee 1</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Verified By</label>
-                    <select value={form.verifiedBy} onChange={e => setForm({ ...form, verifiedBy: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450">
-                      <option value="">Select Manager</option>
-                      <option value="Mgr1">Manager 1</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2 lg:col-span-1">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Remarks</label>
-                    <textarea rows="1" value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} className="w-full border border-blue-500 rounded p-2 text-sm outline-none focus:border-blue-450" placeholder="Optional notes..."></textarea>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-6 border-t border-blue-500 sticky bottom-0 bg-white pb-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-6 py-2 border border-blue-500 rounded text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-bold shadow-md transition-colors"
-                >
-                  Save Packing Slip
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setViewSlip(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded font-semibold hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

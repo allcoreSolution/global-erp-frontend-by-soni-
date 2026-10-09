@@ -95,7 +95,7 @@ const NewTransfer = () => {
 
   // Validations
   const isSameWarehouse = fromWarehouse && toWarehouse && fromWarehouse === toWarehouse;
-  const hasEmptyFields = !fromWarehouse || !toWarehouse || !reason || items.some(item => !item.product || !item.qty);
+  const hasEmptyFields = !fromWarehouse || !toWarehouse || items.some(item => !item.product || !item.qty);
   const isValid = !hasEmptyFields && !isSameWarehouse && totalQty > 0;
 
   const handleAddRow = () => {
@@ -218,6 +218,7 @@ const NewTransfer = () => {
                   value={fromWarehouse}
                   onChange={(e) => setFromWarehouse(e.target.value)}
                   defaultOptions={WAREHOUSES_LIST}
+                  hideAddButton
                 />
               </div>
 
@@ -229,31 +230,7 @@ const NewTransfer = () => {
                   value={toWarehouse}
                   onChange={(e) => setToWarehouse(e.target.value)}
                   defaultOptions={WAREHOUSES_LIST}
-                />
-              </div>
-            </div>
-
-            {/* Reference & Reason */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Shipping reference</label>
-                <input 
-                  type="text" 
-                  placeholder="Enter logistics tracking or invoice reference..."
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Transfer Reason *</label>
-                <DynamicSelect
-                  name="reason"
-                  category="Reason"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  defaultOptions={TRANSFER_REASONS}
+                  hideAddButton
                 />
               </div>
             </div>
@@ -290,9 +267,6 @@ const NewTransfer = () => {
                     <tr className="bg-gray-50 dark:bg-slate-855 border-b border-gray-200 dark:border-slate-850 text-gray-700 dark:text-slate-350 font-bold uppercase">
                       <th className="py-2.5 px-3">Product / Item *</th>
                       <th className="py-2.5 px-3 w-32 text-right">Quantity *</th>
-                      <th className="py-2.5 px-3 w-24">Unit</th>
-                      <th className="py-2.5 px-3 w-32">Batch No</th>
-                      <th className="py-2.5 px-3 w-40">Serial Number</th>
                       <th className="py-2.5 px-3 w-12 text-center">Action</th>
                     </tr>
                   </thead>
@@ -306,6 +280,7 @@ const NewTransfer = () => {
                             value={item.product}
                             onChange={(e) => handleRowChange(idx, 'product', e.target.value)}
                             defaultOptions={PRODUCTS_LIST.map(p => p.name)}
+                            hideAddButton
                           />
                         </td>
 
@@ -319,39 +294,6 @@ const NewTransfer = () => {
                             onChange={(e) => handleRowChange(idx, 'qty', e.target.value)}
                             required
                             className="w-full p-1 text-right bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs font-mono text-gray-700 dark:text-slate-200"
-                          />
-                        </td>
-
-                        {/* Unit */}
-                        <td className="py-2 px-3">
-                          <DynamicSelect
-                            name="unit"
-                            category="Unit"
-                            value={item.unit}
-                            onChange={(e) => handleRowChange(idx, 'unit', e.target.value)}
-                            defaultOptions={['Nos', 'Pcs', 'Kgs', 'Mtrs']}
-                          />
-                        </td>
-
-                        {/* Batch Number */}
-                        <td className="py-2 px-3">
-                          <input
-                            type="text"
-                            placeholder="Batch No..."
-                            value={item.batch}
-                            onChange={(e) => handleRowChange(idx, 'batch', e.target.value)}
-                            className="w-full p-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 font-mono"
-                          />
-                        </td>
-
-                        {/* Serial Number */}
-                        <td className="py-2 px-3">
-                          <input
-                            type="text"
-                            placeholder="Serial No..."
-                            value={item.serial}
-                            onChange={(e) => handleRowChange(idx, 'serial', e.target.value)}
-                            className="w-full p-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs text-gray-700 dark:text-slate-200 font-mono"
                           />
                         </td>
 
@@ -372,7 +314,7 @@ const NewTransfer = () => {
                     <tr className="bg-slate-50 dark:bg-slate-850 font-bold border-t border-gray-300 dark:border-slate-200 text-gray-800 dark:text-slate-250">
                       <td className="py-3 px-3 text-right uppercase tracking-wider">Total Quantity:</td>
                       <td className="py-3 px-3 text-right font-mono text-indigo-600 dark:text-blue-400">{totalQty}</td>
-                      <td colSpan="4" className="py-3 px-3"></td>
+                      <td colSpan="1" className="py-3 px-3"></td>
                     </tr>
                   </tbody>
                 </table>
@@ -404,7 +346,7 @@ const NewTransfer = () => {
                       ? 'Source and Destination warehouses cannot be the same.' 
                       : totalQty > 0 && !hasEmptyFields 
                         ? 'All fields and item configurations are valid.' 
-                        : 'Choose source/target warehouses, reason, products, and quantities.'}
+                        : 'Choose source/target warehouses, products, and quantities.'}
                   </div>
                 </div>
               </div>
@@ -415,13 +357,17 @@ const NewTransfer = () => {
             {/* Transfer Status options */}
             <div className="mb-4">
               <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Transfer Status</label>
-              <DynamicSelect
+              <select
                 name="status"
-                category="Status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                defaultOptions={['Pending', 'Sent', 'Received', 'Draft']}
-              />
+                className="w-full border border-gray-200 rounded py-2 px-3 text-xs focus:outline-none focus:border-blue-500 bg-white"
+              >
+                <option value="Pending">Pending</option>
+                <option value="Sent">Sent</option>
+                <option value="Received">Received</option>
+                <option value="Draft">Draft</option>
+              </select>
             </div>
 
             {/* Error badge for same warehouse */}

@@ -47,9 +47,7 @@ const TransferList = () => {
 
   // Filter Logic
   const filteredTransfers = transfers.filter(st => {
-    const matchesSearch = (st.transferNo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (st.reason || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (st.reference || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (st.transferNo || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFrom = fromFilter ? st.fromWarehouse === fromFilter : true;
     const matchesTo = toFilter ? st.toWarehouse === toFilter : true;
     const matchesStatus = statusFilter ? st.status === statusFilter : true;
@@ -91,7 +89,7 @@ const TransferList = () => {
 
   // Export Filtered List to CSV
   const handleExportCSV = () => {
-    const headers = ['Voucher No', 'Date', 'From Warehouse', 'To Warehouse', 'Reference', 'Reason', 'Total Qty', 'Status'];
+    const headers = ['Voucher No', 'Date', 'From Warehouse', 'To Warehouse', 'Total Qty', 'Status'];
     const csvRows = filteredTransfers.map(st => {
       const totalQty = (st.items || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
       return [
@@ -99,8 +97,6 @@ const TransferList = () => {
         `"${st.date}"`,
         `"${st.fromWarehouse}"`,
         `"${st.toWarehouse}"`,
-        `"${st.reference || ''}"`,
-        `"${(st.reason || '').replace(/"/g, '""')}"`,
         totalQty,
         `"${st.status}"`
       ].join(',');
@@ -120,8 +116,8 @@ const TransferList = () => {
 
   // Download Sample CSV
   const handleDownloadSample = () => {
-    const headers = ['Transfer No', 'Date', 'From Warehouse', 'To Warehouse', 'Reference', 'Reason', 'Total Qty', 'Status'];
-    const csvString = headers.join(',') + '\n' + '1001,2023-12-01,Sample,Sample,Sample,Sample,Sample,Yes' + '\n';
+    const headers = ['Transfer No', 'Date', 'From Warehouse', 'To Warehouse', 'Total Qty', 'Status'];
+    const csvString = headers.join(',') + '\n' + '1001,2023-12-01,Sample,Sample,Sample,Yes' + '\n';
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -328,8 +324,6 @@ const TransferList = () => {
                 <th className="py-3 px-4">From Warehouse</th>
                 <th className="py-3 px-4 text-center w-8"></th>
                 <th className="py-3 px-4">To Warehouse</th>
-                <th className="py-3 px-4">Reference</th>
-                <th className="py-3 px-4">Transfer Reason</th>
                 <th className="py-3 px-4 text-center">Total Qty</th>
                 <th className="py-3 px-4 text-center">Status</th>
                 <th className="py-3 px-4 text-center no-print">Delivery Action</th>
@@ -349,8 +343,6 @@ const TransferList = () => {
                         <MoveRight size={14} />
                       </td>
                       <td className="py-3 px-4 font-semibold">{st.toWarehouse}</td>
-                      <td className="py-3 px-4">{st.reference || <span className="text-gray-400">-</span>}</td>
-                      <td className="py-3 px-4 max-w-xs truncate" title={st.reason}>{st.reason}</td>
                       <td className="py-3 px-4 text-center font-bold">{totalQty}</td>
                       <td className="py-3 px-4 text-center">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
@@ -466,7 +458,6 @@ const TransferList = () => {
                   </div>
                   <div className="text-right">
                     <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Challan Date:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedTransfer.date}</span></div>
-                    <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Reference:</span> <span className="text-gray-700 dark:text-slate-200 font-semibold">{selectedTransfer.reference || 'N/A'}</span></div>
                     <div className="flex justify-end py-1"><span className="text-gray-500 font-medium w-24 text-right mr-2">Delivery Status:</span> <span className="font-bold text-indigo-600 uppercase">{selectedTransfer.status}</span></div>
                   </div>
                 </div>
@@ -508,12 +499,8 @@ const TransferList = () => {
                   </table>
                 </div>
 
-                {/* Reason and Remarks */}
-                <div className="grid grid-cols-2 gap-4 mt-6 text-xs text-gray-700 dark:text-slate-350">
-                  <div>
-                    <div className="font-bold">Reason for Transfer:</div>
-                    <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200 italic">{selectedTransfer.reason}</p>
-                  </div>
+                {/* Remarks */}
+                <div className="grid grid-cols-1 mt-6 text-xs text-gray-700 dark:text-slate-350">
                   <div>
                     <div className="font-bold">Shipping / Vehicle Remarks:</div>
                     <p className="mt-1 bg-gray-50 dark:bg-slate-850 p-2 rounded border dark:border-slate-200">{selectedTransfer.remarks}</p>

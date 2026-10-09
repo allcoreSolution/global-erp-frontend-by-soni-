@@ -72,15 +72,7 @@ const StockEntryList = () => {
     }
   };
 
-  const handleApprove = async (id, newStatus) => {
-    try {
-      await api.put(`/stock-entries/${id}`, { status: newStatus });
-      setStockEntries(stockEntries.map(se => se._id === id ? { ...se, status: newStatus } : se));
-    } catch (err) {
-      console.error('Failed to change status', err);
-      alert('Failed to change status');
-    }
-  };
+  // Status and Approve logic removed as per user request
 
   // Export Filtered List to CSV
   const handleExportCSV = () => {
@@ -202,18 +194,7 @@ const StockEntryList = () => {
             <option value="East Side Storage">East Side Storage</option>
           </select>
 
-          {/* Status */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="Approved">Approved</option>
-            <option value="Pending">Pending</option>
-            <option value="Draft">Draft</option>
-          </select>
-
+          {/* Status Filter Removed */}
           {/* Start Date */}
           <input
             type="date"
@@ -238,7 +219,6 @@ const StockEntryList = () => {
                 <th className="py-3 px-4">Adjustment Reason</th>
                 <th className="py-3 px-4 text-center">Total Qty</th>
                 <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center no-print">Approvals</th>
                 <th className="py-3 px-4 text-right no-print">Actions</th>
               </tr>
             </thead>
@@ -264,35 +244,9 @@ const StockEntryList = () => {
                     <td className="py-3 px-4 max-w-xs truncate" title={se.remarks}>{se.remarks}</td>
                     <td className="py-3 px-4 text-center font-bold">{se.summary?.totalQty || 0}</td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
-                        ${se.status === 'Approved' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
-                          se.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400' : 
-                          'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'}`}
-                      >
-                        {se.status || 'Pending'}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                        POSTED
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-center no-print">
-                      <div className="flex items-center justify-center gap-1">
-                        {se.status !== 'Approved' && (
-                          <button
-                            onClick={() => handleApprove(se._id, 'Approved')}
-                            title="Approve Voucher"
-                            className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 rounded transition-colors"
-                          >
-                            <Check size={14} />
-                          </button>
-                        )}
-                        {se.status === 'Approved' && (
-                          <button
-                            onClick={() => handleApprove(se._id, 'Pending')}
-                            title="Revert to Pending"
-                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
-                      </div>
                     </td>
                     <td className="py-3 px-4 text-right no-print">
                       <div className="flex items-center justify-end gap-2">

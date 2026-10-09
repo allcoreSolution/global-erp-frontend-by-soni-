@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, UploadCloud } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const NewPayment = () => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const NewPayment = () => {
   const warehouses = allWarehouses.filter(w => !branch || w.branchName === branch).map(w => w.name);
   // We assume suppliers aren't strictly filtered by warehouse in all schemas, but we can filter if they have warehouseName. If not, just show all.
   const suppliers = allSuppliers; 
-  const invoices = allPurchases.filter(p => p.supplier === form.supplierParty && p.paymentStatus !== 'Paid');
+  const invoices = allPurchases.filter(p => (p.supplier?._id || p.supplier) === form.supplierParty && p.paymentStatus !== 'Paid');
 
   // Totals State
   const [totals, setTotals] = useState({
@@ -64,9 +65,9 @@ const NewPayment = () => {
         })));
         setAllSuppliers((suppRes.data?.data || []).map(s => ({
           id: s._id,
-          name: s.supplierName || s.name,
+          name: s.companyName || s.supplierName || s.name || 'Unknown Supplier',
           phone: s.mobile || s.phone || '',
-          balance: s.openingBalance || 0
+          balance: s.balance || s.openingBalance || 0
         })));
         setAllPurchases((purchRes.data?.data || []).map(p => ({
           id: p._id,
@@ -74,12 +75,13 @@ const NewPayment = () => {
           supplier: p.supplier,
           paymentStatus: p.paymentStatus,
           grandTotal: p.grandTotal || 0,
-          paidAmount: p.paidAmount || 0,
-          dueAmount: (p.grandTotal || 0) - (p.paidAmount || 0)
+          paidAmount: p.amountPaid || 0,
+          dueAmount: (p.grandTotal || 0) - (p.amountPaid || 0)
         })));
         
         const pmData = pmRes.data?.data || [];
-        setPaymentModesList(pmData.map(p => p.name || p.modeName || p));
+        const defaultModes = ['Cash', 'Bank Transfer', 'UPI', 'Cheque', 'Credit Card'];
+        setPaymentModesList(pmData.length > 0 ? pmData.map(p => p.name || p.modeName || p) : defaultModes);
         
         const accData = accRes.data?.data || [];
         setDepositAccountsList(accData.map(a => a.accountName || a.name || a));
@@ -91,12 +93,50 @@ const NewPayment = () => {
     fetchCatalogs();
   }, []);
 
+  useEffect(() => {
+    if (id) {
+      const fetchPaymentData = async () => {
+        try {
+          const res = await api.get(`/payments/${id}`);
+          if (res.data.success) {
+            const p = res.data.data;
+            setForm({
+              paymentNo: p.paymentNo || '',
+              paymentDate: p.paymentDate ? p.paymentDate.substring(0, 10) : '',
+              supplierParty: p.supplierParty || '',
+              paymentAmount: p.paymentAmount || 0,
+              paymentMethod: p.paymentMethod || '',
+              paidFromAccount: p.paidFromAccount || '',
+              transactionRef: p.transactionRef || '',
+              remarks: p.remarks || ''
+            });
+            // Also need to set branch/warehouse logic if we had it, but we can leave them blank since they aren't stored
+          }
+        } catch (error) {
+          console.error('Error fetching payment details:', error);
+        }
+      };
+      fetchPaymentData();
+    }
+  }, [id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => {
       const updated = { ...prev, [name]: value };
       if (name === 'paymentAmount') {
-        calculateTotals(Number(value) || 0, invoiceAdjustments);
+        const amt = Number(value) || 0;
+        let remaining = amt;
+        const newAdjustments = invoiceAdjustments.map(inv => {
+          if (remaining > 0) {
+            const adjust = Math.min(remaining, inv.dueAmount);
+            remaining -= adjust;
+            return { ...inv, adjustAmount: adjust };
+          }
+          return { ...inv, adjustAmount: 0 };
+        });
+        setInvoiceAdjustments(newAdjustments);
+        calculateTotals(amt, newAdjustments);
       }
       return updated;
     });
@@ -107,7 +147,7 @@ const NewPayment = () => {
     setForm(prev => ({ ...prev, supplierParty: suppId }));
     
     // Automatically prepare pending invoices for this supplier
-    const pending = allPurchases.filter(p => p.supplier === suppId && p.paymentStatus !== 'Paid');
+    const pending = allPurchases.filter(p => (p.supplier?._id || p.supplier) === suppId && p.paymentStatus !== 'Paid');
     const preparedAdjustments = pending.map(inv => ({
       id: inv.id,
       referenceNo: inv.referenceNo,
@@ -149,15 +189,15 @@ const NewPayment = () => {
       
       if (id) {
         await api.put(`/payments/${id}`, payload);
-        alert('Payment Updated successfully!');
+        Swal.fire({ title: 'Success!', text: 'Payment Updated successfully!', icon: 'success', confirmButtonColor: '#4f46e5' });
       } else {
         await api.post('/payments', payload);
-        alert('Payment Posted successfully!');
+        Swal.fire({ title: 'Success!', text: 'Payment Posted successfully!', icon: 'success', confirmButtonColor: '#4f46e5' });
       }
       navigate('/payment/list');
     } catch (error) {
       console.error('Error saving payment', error);
-      alert('Failed to save payment. Please check the inputs.');
+      Swal.fire({ title: 'Error!', text: 'Failed to save payment. Please check the inputs.', icon: 'error', confirmButtonColor: '#4f46e5' });
     }
   };
 
@@ -236,10 +276,9 @@ const NewPayment = () => {
                     value={form.supplierParty} 
                     onChange={handleSupplierSelect}
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white"
-                    disabled={!warehouse}
                     required
                   >
-                    <option value="">{warehouse ? "-- Select Supplier --" : "Select warehouse first"}</option>
+                    <option value="">-- Select Supplier --</option>
                     {suppliers.map(s => (
                       <option key={s.id} value={s.id}>
                         {s.name} {s.phone ? `(${s.phone})` : ''}

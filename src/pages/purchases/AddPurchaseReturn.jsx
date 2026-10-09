@@ -63,6 +63,7 @@ const AddPurchaseReturn = () => {
   const [purchases, setPurchases] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [products, setProducts] = useState([]);
+  const [documentFile, setDocumentFile] = useState(null);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
@@ -142,10 +143,41 @@ const AddPurchaseReturn = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const finalValue = type === 'checkbox' ? checked : value;
+    
     setForm(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: finalValue
     }));
+
+    // Auto-fill logic for Purchase Invoice
+    if (name === 'purchaseInvoice') {
+      const selectedPurchase = purchases.find(p => p._id === finalValue);
+      if (selectedPurchase) {
+        setForm(prev => ({
+          ...prev,
+          purchaseDate: selectedPurchase.purchaseDate ? selectedPurchase.purchaseDate.split('T')[0] : '',
+          supplier: typeof selectedPurchase.supplier === 'object' ? selectedPurchase.supplier?._id : selectedPurchase.supplier || ''
+        }));
+        
+        const purchaseItems = selectedPurchase.orderItems || selectedPurchase.items || [];
+        if (purchaseItems.length > 0) {
+          const newItems = purchaseItems.map((item, idx) => ({
+            id: idx + 1,
+            product: item.product?._id || item.product || item.productId || '',
+            batch: item.batch || '',
+            purchasedQty: item.quantity || item.qty || 1,
+            returnQty: item.quantity || item.qty || 1,
+            rate: item.netUnitPrice || item.rate || item.price || 0,
+            taxPercent: item.taxPercent || item.tax || 0,
+            amount: (item.quantity || item.qty || 1) * (item.netUnitPrice || item.rate || item.price || 0)
+          }));
+          setItems(newItems);
+        } else {
+          setItems([{ id: 1, product: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 0, amount: 0 }]);
+        }
+      }
+    }
   };
 
   const handleItemChange = (id, field, value) => {
@@ -220,6 +252,21 @@ const AddPurchaseReturn = () => {
     if (!payload.branch) delete payload.branch;
 
     try {
+      let documentUrl = '';
+      if (documentFile) {
+        const formData = new FormData();
+        formData.append('file', documentFile);
+        const uploadRes = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (uploadRes.data.success) {
+          documentUrl = uploadRes.data.url;
+        }
+      }
+      
+      if (documentUrl) {
+        payload.documentUrl = documentUrl;
+      }
       if (id) {
         await api.put(`/purchase-returns/${id}`, payload);
         await Swal.fire({ title: 'Success!', text: 'Purchase Return Updated successfully!', icon: 'success', confirmButtonColor: '#4f46e5' });
@@ -282,13 +329,6 @@ const AddPurchaseReturn = () => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Return Date *</label>
                   <input type="date" name="returnDate" value={form.returnDate} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Return Type *</label>
-                  <select name="returnType" value={form.returnType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Partial</option>
-                    <option>Full</option>
-                  </select>
-                </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
@@ -306,10 +346,6 @@ const AddPurchaseReturn = () => {
                       .map(w => <option key={w._id} value={w._id}>{w.warehouseName || w.name}</option>)}
                   </select>
                 </div>
-                <div className="col-span-2 lg:col-span-3">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} hideAddButton />
-                </div>
               </div>
             </div>
 
@@ -325,10 +361,6 @@ const AddPurchaseReturn = () => {
                   </select>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Order</label>
-                  <DynamicSelect category="Purchase Order" name="purchaseOrder" value={form.purchaseOrder} onChange={handleChange} hideAddButton />
-                </div>
-                <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Date</label>
                   <input type="text" value={form.purchaseDate} readOnly placeholder="Auto" className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none" />
                 </div>
@@ -338,14 +370,6 @@ const AddPurchaseReturn = () => {
                     <option value="">Select Supplier</option>
                     {suppliers.map(s => <option key={s._id} value={s._id}>{s.companyName || s.supplierName || s.name}</option>)}
                   </select>
-                </div>
-                <div className="col-span-2 lg:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier Invoice No.</label>
-                  <input type="text" name="supplierInvoiceNo" value={form.supplierInvoiceNo} onChange={handleChange} placeholder="Invoice No." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
-                </div>
-                <div className="col-span-2 lg:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">GRN No.</label>
-                  <DynamicSelect category="GRN" name="grnNo" value={form.grnNo} onChange={handleChange} hideAddButton />
                 </div>
               </div>
             </div>
@@ -423,106 +447,32 @@ const AddPurchaseReturn = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             {/* LEFT COLUMN */}
+             {/* LEFT COLUMN: NOTES ONLY */}
              <div className="space-y-6">
-                
-                {/* SECTION: RETURN / WAREHOUSE DETAILS */}
                 <div className="border border-slate-200 rounded-lg p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Return / Warehouse Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Additional Notes</h3>
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Return Warehouse</label>
-                      <select name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select Return Warehouse</option>
-                        {warehouses.map(w => <option key={w._id} value={w._id}>{w.warehouseName || w.name}</option>)}
-                      </select>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks / Reason for Return</label>
+                      <textarea name="remarks" value={form.remarks} onChange={handleChange} rows="3" placeholder="Maal kyu wapas ja raha hai? (Optional)" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none resize-none"></textarea>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier</label>
-                      <input type="text" readOnly placeholder="Auto" className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none cursor-not-allowed" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Dispatch Date</label>
-                      <input type="date" name="dispatchDate" value={form.dispatchDate} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Vehicle No.</label>
-                      <input type="text" name="vehicleNo" value={form.vehicleNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">LR / Tracking No.</label>
-                      <input type="text" name="lrNo" value={form.lrNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                    </div>
-                    <div className="col-span-2 flex items-center gap-2 mt-2">
-                      <input type="checkbox" name="stockAdjustment" checked={form.stockAdjustment} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded" />
-                      <label className="text-sm font-medium text-slate-700">Update Stock Adjustment</label>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Attach Document</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <label className="flex-1 cursor-pointer bg-slate-50 border border-dashed border-slate-300 rounded px-3 py-2 flex items-center justify-center gap-2 hover:bg-slate-100 transition-colors">
+                          <UploadCloud size={16} className="text-slate-400" />
+                          <span className="text-sm text-slate-500">{documentFile ? documentFile.name : 'Click to upload return document'}</span>
+                          <input type="file" className="hidden" onChange={e => setDocumentFile(e.target.files[0])} />
+                        </label>
+                        {documentFile && (
+                          <button type="button" onClick={() => setDocumentFile(null)} className="p-2 text-red-500 hover:bg-red-50 rounded">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* SECTION: DEBIT NOTE / SETTLEMENT */}
-                <div className="border border-slate-200 rounded-lg p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Debit Note / Settlement</h3>
-                  <div className="grid grid-cols-2 gap-4 items-end">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Debit Note No.</label>
-                      <input type="text" name="debitNoteNo" value={form.debitNoteNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Settlement Type</label>
-                      <DynamicSelect category="Settlement Type" name="settlementType" value={form.settlementType} onChange={handleChange} hideAddButton />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Amount</label>
-                      <input type="text" readOnly value={`₹ ${totals.returnTotal.toFixed(2)}`} className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 outline-none cursor-not-allowed" />
-                    </div>
-                    
-                    <div className="col-span-2 flex flex-col gap-2 mt-2">
-                       <div className="flex items-center gap-2">
-                         <input type="checkbox" name="adjustAgainstInvoice" checked={form.adjustAgainstInvoice} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded" />
-                         <label className="text-sm font-medium text-slate-700">Adjust Against Future Invoices</label>
-                       </div>
-                       <div className="flex items-center gap-2">
-                         <input type="checkbox" name="supplierRefund" checked={form.supplierRefund} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded" />
-                         <label className="text-sm font-medium text-slate-700">Awaiting Supplier Refund</label>
-                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SECTION: APPROVAL & NOTES */}
-                <div className="border border-slate-200 rounded-lg p-5">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Approval & Notes</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Requested By</label>
-                      <select name="requestedBy" value={form.requestedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select Employee</option>
-                        {employees.map(e => <option key={e._id} value={e._id}>{e.employeeName || e.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                      <select name="approvedBy" value={form.approvedBy} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                        <option value="">Select Employee</option>
-                        {employees.map(e => <option key={e._id} value={e._id}>{e.employeeName || e.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
-                      <textarea name="remarks" value={form.remarks} onChange={handleChange} rows="2" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none resize-none"></textarea>
-                    </div>
-                    <div className="col-span-2 mt-2">
-                       <label className="block text-xs font-semibold text-slate-700 mb-1">Attachment</label>
-                       <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">
-                          <UploadCloud size={18} /> 
-                          <span className="truncate">{form.documentFile ? form.documentFile.name : 'Upload Document'}</span>
-                          <input type="file" className="hidden" onChange={(e) => setForm(prev => ({ ...prev, documentFile: e.target.files[0] }))} />
-                       </label>
-                    </div>
-                  </div>
-                </div>
-
              </div>
              
              {/* RIGHT COLUMN: SUMMARY */}

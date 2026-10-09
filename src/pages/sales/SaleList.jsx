@@ -29,8 +29,8 @@ const SaleList = () => {
         reference: s.referenceNo || s.invoiceNo,
         date: s.saleDate || new Date(s.createdAt).toLocaleDateString(),
         createdBy: s.biller || 'Admin',
-        customer: s.customer,
-        warehouse: s.warehouse,
+        customer: s.customer?.name || s.customer?.customerName || s.customer || 'Unknown',
+        warehouse: s.warehouse?.name || s.warehouse || 'Unknown',
         status: s.saleStatus || 'Completed',
         paymentStatus: s.paymentStatus || 'Pending',
         paymentMethod: s.paymentMode || 'Cash',
@@ -332,8 +332,8 @@ const SaleList = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-700 font-medium">{item.date}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">{item.reference}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{item.createdBy}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800 font-semibold">{item.customer}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{item.warehouse}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 font-semibold">{item.customer}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.warehouse}</td>
 
                   {/* Sale Status */}
                   <td className="px-4 py-3 whitespace-nowrap text-xs">
@@ -351,9 +351,9 @@ const SaleList = () => {
                     </span>
                   </td>
 
-                  <td className="px-4 py-3 text-xs text-gray-600 font-semibold">{item.paymentMethod}</td>
-                  <td className="px-4 py-3 text-xs font-mono text-gray-600">{item.currencyRate}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600 text-center font-medium">{item.deliveryStatus}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 font-semibold">{item.paymentMethod}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-mono text-gray-600">{item.currencyRate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 text-center font-medium">{item.deliveryStatus}</td>
 
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">INR {item.grandTotal.toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">INR {item.returnedAmount.toFixed(2)}</td>
@@ -375,10 +375,10 @@ const SaleList = () => {
             {/* Calculations total sum row */}
             <tr className="bg-gray-50/90 font-bold border-t border-blue-500 text-gray-900">
               <td colSpan="11" className="px-4 py-3 text-sm text-gray-800">Total</td>
-              <td className="px-4 py-3 text-sm font-extrabold">INR {totalGrandAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-red-700 font-semibold">INR {totalReturnedAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-emerald-700 font-extrabold">INR {totalPaidAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-amber-700 font-extrabold">INR {totalDueAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm font-extrabold">INR {totalGrandAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-red-700 font-semibold">INR {totalReturnedAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-extrabold">INR {totalPaidAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-extrabold">INR {totalDueAmount.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>

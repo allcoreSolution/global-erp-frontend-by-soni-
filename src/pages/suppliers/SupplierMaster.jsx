@@ -109,6 +109,67 @@ const SupplierMaster = () => {
     setIsFormOpen(false);
   };
 
+  const handleOpenView = (sup) => {
+    const htmlContent = `
+      <div style="text-align: left; font-family: 'Inter', sans-serif;">
+        <!-- Header Section -->
+        <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); padding: 16px; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="margin: 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">${sup.companyName || 'N/A'}</h3>
+            <p style="margin: 4px 0 0; color: #3b82f6; font-size: 12px; font-weight: 600; font-family: monospace;">ID: ${sup.supplierCode || sup.id || sup._id}</p>
+          </div>
+          <div style="text-align: right;">
+            <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: ${sup.status ? '#dcfce7' : '#fee2e2'}; color: ${sup.status ? '#166534' : '#991b1b'};">
+              ${sup.status ? 'ACTIVE' : 'INACTIVE'}
+            </span>
+          </div>
+        </div>
+
+        <!-- Grid Details -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Contact Person</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.contactPerson || '-'}</div>
+          </div>
+          
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Phone</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.phone || '-'}</div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Email</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.email || '-'}</div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">GSTIN</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.gstin || '-'}</div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Category / Type</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.category || '-'} (${sup.type || '-'})</div>
+          </div>
+
+          <!-- Highlighted Balance -->
+          <div style="background: #fff1f2; padding: 12px; border-radius: 8px; border: 1px solid #fecdd3;">
+            <div style="color: #9f1239; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Outstanding Balance</div>
+            <div style="color: #e11d48; font-size: 16px; font-weight: 800;">₹ ${(sup.balance || 0).toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    Swal.fire({
+      html: htmlContent,
+      showCloseButton: true,
+      showConfirmButton: false,
+      width: '600px',
+      padding: '24px'
+    });
+  };
+
   // Download CSV Sample
   const handleDownloadSample = () => {
     const headers = ['Supplier ID', 'Company Name', 'Type', 'Category', 'Branch', 'Warehouse', 'Contact Person', 'Phone', 'Email', 'GST Status', 'GSTIN', 'PAN', 'Currency', 'Status'];
@@ -320,8 +381,9 @@ const SupplierMaster = () => {
                 </td>
                 <td className="p-3 text-center">
                   <div className="flex justify-center gap-2">
-                    <button onClick={() => handleOpenEdit({ ...sup, id: displayId })} className="text-amber-600"><Edit size={14} /></button>
-                    <button onClick={() => handleDelete(sup._id)} className="text-red-600"><Trash2 size={14} /></button>
+                    <button onClick={() => handleOpenView(sup)} className="text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors" title="View Details"><Eye size={14} /></button>
+                    <button onClick={() => handleOpenEdit({ ...sup, id: displayId })} className="text-amber-600 hover:bg-amber-50 p-1 rounded transition-colors" title="Edit"><Edit size={14} /></button>
+                    <button onClick={() => handleDelete(sup._id)} className="text-red-600 hover:bg-red-50 p-1 rounded transition-colors" title="Delete"><Trash2 size={14} /></button>
                   </div>
                 </td>
               </tr>

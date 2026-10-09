@@ -12,22 +12,13 @@ const AddCourier = () => {
     courierCode: 'CR-00001',
     courierName: '',
     courierType: 'Domestic',
-    company: 'Select',
-    branch: 'Select',
     status: 'Active',
-    description: '',
     contactPerson: '',
     mobileNumber: '',
-    altMobile: '',
     email: '',
-    website: '',
-    customerCare: '',
     addressLine1: '',
-    addressLine2: '',
-    country: 'Select',
     state: 'Select',
     city: 'Select',
-    district: 'Select',
     pincode: '',
     serviceType: 'Standard',
     deliveryMode: 'Road',
@@ -36,26 +27,12 @@ const AddCourier = () => {
     codAvailable: true,
     trackingAvailable: true,
     reversePickup: true,
-    internationalShipping: false,
-    serviceStates: 'Select',
-    serviceCities: 'Select',
-    servicePincodes: '',
-    baseCharge: '',
-    perKgCharge: '',
-    additionalKg: '',
-    codCharge: '',
-    fuelSurcharge: '',
-    returnCharge: '',
-    tax: 'Select',
-    currency: 'INR',
+    defaultVehicleNo: '',
+    defaultDriverName: '',
+    defaultDriverMobile: '',
+    volumetricDivisor: '5000',
     trackingURL: '',
-    trackingPrefix: '',
-    apiAvailable: true,
-    apiProvider: 'Select',
-    autoTrackingUpdate: true,
-    defaultCourier: true,
-    priority: '',
-    remarks: ''
+    defaultCourier: true
   });
 
   useEffect(() => {
@@ -69,22 +46,13 @@ const AddCourier = () => {
               courierCode: c.courierCode || '',
               courierName: c.name || '',
               courierType: c.type || 'Domestic',
-              company: c.company || 'Select',
-              branch: c.branch || 'Select',
               status: c.status || 'Active',
-              description: c.description || '',
               contactPerson: c.contactPerson || '',
               mobileNumber: c.phone || '',
-              altMobile: c.alternateMobile || '',
               email: c.email || '',
-              website: c.website || '',
-              customerCare: c.customerCare || '',
               addressLine1: c.addressLine1 || '',
-              addressLine2: c.addressLine2 || '',
-              country: c.country || 'Select',
               state: c.state || 'Select',
               city: c.city || 'Select',
-              district: c.district || 'Select',
               pincode: c.pincode || '',
               serviceType: c.serviceType || 'Standard',
               deliveryMode: c.deliveryMode || 'Road',
@@ -93,26 +61,12 @@ const AddCourier = () => {
               codAvailable: c.codAvailable ?? true,
               trackingAvailable: c.trackingAvailable ?? true,
               reversePickup: c.reversePickup ?? true,
-              internationalShipping: c.internationalShipping ?? false,
-              serviceStates: c.serviceAreaStates?.[0] || 'Select',
-              serviceCities: c.serviceAreaCities?.[0] || 'Select',
-              servicePincodes: c.serviceAreaPincodes?.[0] || '',
-              baseCharge: c.baseCharge || '',
-              perKgCharge: c.perKgCharge || '',
-              additionalKg: c.additionalKgCharge || '',
-              codCharge: c.codCharge || '',
-              fuelSurcharge: c.fuelSurcharge || '',
-              returnCharge: c.returnCharge || '',
-              tax: c.tax || 'Select',
-              currency: c.currency || 'INR',
+              defaultVehicleNo: c.defaultVehicleNo || '',
+              defaultDriverName: c.defaultDriverName || '',
+              defaultDriverMobile: c.defaultDriverMobile || '',
+              volumetricDivisor: c.volumetricDivisor?.toString() || '5000',
               trackingURL: c.trackingUrl || '',
-              trackingPrefix: c.trackingPrefix || '',
-              apiAvailable: c.apiAvailable ?? true,
-              apiProvider: c.apiProvider || 'Select',
-              autoTrackingUpdate: c.autoTrackingUpdate ?? true,
-              defaultCourier: c.isDefaultCourier ?? true,
-              priority: c.priority || '',
-              remarks: c.remarks || ''
+              defaultCourier: c.isDefaultCourier ?? true
             });
           }
         } catch (error) {
@@ -140,22 +94,13 @@ const AddCourier = () => {
         courierCode: form.courierCode,
         name: form.courierName,
         type: form.courierType,
-        company: form.company,
-        branch: form.branch,
         status: form.status,
-        description: form.description,
         contactPerson: form.contactPerson,
         phone: form.mobileNumber,
-        alternateMobile: form.altMobile,
         email: form.email,
-        website: form.website,
-        customerCare: form.customerCare,
         addressLine1: form.addressLine1,
-        addressLine2: form.addressLine2,
-        country: form.country,
         state: form.state,
         city: form.city,
-        district: form.district,
         pincode: form.pincode,
         serviceType: form.serviceType,
         deliveryMode: form.deliveryMode,
@@ -164,26 +109,12 @@ const AddCourier = () => {
         codAvailable: form.codAvailable,
         trackingAvailable: form.trackingAvailable,
         reversePickup: form.reversePickup,
-        internationalShipping: form.internationalShipping,
-        serviceAreaStates: [form.serviceStates],
-        serviceAreaCities: [form.serviceCities],
-        serviceAreaPincodes: [form.servicePincodes],
-        baseCharge: Number(form.baseCharge) || 0,
-        perKgCharge: Number(form.perKgCharge) || 0,
-        additionalKgCharge: Number(form.additionalKg) || 0,
-        codCharge: Number(form.codCharge) || 0,
-        fuelSurcharge: Number(form.fuelSurcharge) || 0,
-        returnCharge: Number(form.returnCharge) || 0,
-        tax: form.tax,
-        currency: form.currency,
+        defaultVehicleNo: form.defaultVehicleNo,
+        defaultDriverName: form.defaultDriverName,
+        defaultDriverMobile: form.defaultDriverMobile,
+        volumetricDivisor: Number(form.volumetricDivisor) || 5000,
         trackingUrl: form.trackingURL,
-        trackingPrefix: form.trackingPrefix,
-        apiAvailable: form.apiAvailable,
-        apiProvider: form.apiProvider,
-        autoTrackingUpdate: form.autoTrackingUpdate,
-        isDefaultCourier: form.defaultCourier,
-        priority: Number(form.priority) || 0,
-        remarks: form.remarks
+        isDefaultCourier: form.defaultCourier
       };
 
       if (id) {
@@ -239,26 +170,11 @@ const AddCourier = () => {
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Courier Type *</label>
-                  <DynamicSelect category="CourierType" name="courierType" value={form.courierType} onChange={handleChange} />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Allcore Solutions</option>
-                  </select>
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Branch</label>
-                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
+                  <DynamicSelect category="CourierType" name="courierType" value={form.courierType} onChange={handleChange} defaultOptions={['Domestic', 'International', 'Local']} hideAddButton={false} />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
-                  <textarea name="description" value={form.description} onChange={handleChange} rows="2" placeholder="Brief description..." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none resize-none"></textarea>
+                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} defaultOptions={['Active', 'Inactive']} hideAddButton={true} />
                 </div>
               </div>
             </div>
@@ -276,20 +192,8 @@ const AddCourier = () => {
                   <input type="text" name="mobileNumber" value={form.mobileNumber} onChange={handleChange} required placeholder="Phone" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Alternate Mobile</label>
-                  <input type="text" name="altMobile" value={form.altMobile} onChange={handleChange} placeholder="Secondary Phone" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
                   <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email address" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Website</label>
-                  <input type="url" name="website" value={form.website} onChange={handleChange} placeholder="www.example.com" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Care</label>
-                  <input type="text" name="customerCare" value={form.customerCare} onChange={handleChange} placeholder="Support number/email" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                 </div>
               </div>
             </div>
@@ -298,30 +202,18 @@ const AddCourier = () => {
           {/* SECTION: ADDRESS */}
           <div className="border border-slate-200 rounded-lg p-5">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Address</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="md:col-span-5">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-4">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Address Line 1 *</label>
-                <input type="text" name="addressLine1" value={form.addressLine1} onChange={handleChange} required placeholder="Street address" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
+                <input type="text" name="addressLine1" value={form.addressLine1} onChange={handleChange} required placeholder="Street address, Suite, etc." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
               </div>
-              <div className="md:col-span-5">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Address Line 2</label>
-                <input type="text" name="addressLine2" value={form.addressLine2} onChange={handleChange} placeholder="Apartment, suite, etc." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Country</label>
-                <DynamicSelect category="Country" name="country" value={form.country} onChange={handleChange} />
-              </div>
-              <div>
+              <div className="col-span-1 md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">State</label>
-                <DynamicSelect category="State" name="state" value={form.state} onChange={handleChange} />
+                <DynamicSelect category="State" name="state" value={form.state} onChange={handleChange} hideAddButton={false} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
-                <DynamicSelect category="City" name="city" value={form.city} onChange={handleChange} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">District</label>
-                <DynamicSelect category="District" name="district" value={form.district} onChange={handleChange} />
+                <DynamicSelect category="City" name="city" value={form.city} onChange={handleChange} hideAddButton={false} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
@@ -338,11 +230,11 @@ const AddCourier = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Service Type *</label>
-                    <DynamicSelect category="ServiceType" name="serviceType" value={form.serviceType} onChange={handleChange} />
+                    <DynamicSelect category="ServiceType" name="serviceType" value={form.serviceType} onChange={handleChange} defaultOptions={['Standard', 'Express']} hideAddButton={false} />
                   </div>
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Mode</label>
-                    <DynamicSelect category="DeliveryMode" name="deliveryMode" value={form.deliveryMode} onChange={handleChange} />
+                    <DynamicSelect category="DeliveryMode" name="deliveryMode" value={form.deliveryMode} onChange={handleChange} defaultOptions={['Road', 'Air', 'Sea']} hideAddButton={false} />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Days</label>
@@ -365,151 +257,52 @@ const AddCourier = () => {
                       <input type="checkbox" name="reversePickup" checked={form.reversePickup} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
                       Reverse Pickup
                     </label>
-                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
-                      <input type="checkbox" name="internationalShipping" checked={form.internationalShipping} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
-                      International Shipping
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Service Area</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">States</label>
-                    <DynamicSelect category="State" name="serviceStates" value={form.serviceStates} onChange={handleChange} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Cities</label>
-                    <DynamicSelect category="City" name="serviceCities" value={form.serviceCities} onChange={handleChange} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Pincodes</label>
-                    <input type="text" name="servicePincodes" value={form.servicePincodes} onChange={handleChange} placeholder="+ Add Pincodes" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* SECTION: SHIPPING CHARGES */}
+            {/* SECTION: DEFAULT FLEET & FORMULAS */}
             <div className="border border-slate-200 rounded-lg p-5">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Shipping Charges</h3>
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Default Fleet & Formulas</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Base Charge</label>
-                  <input type="number" name="baseCharge" value={form.baseCharge} onChange={handleChange} placeholder="e.g. 50" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Default Vehicle No.</label>
+                  <input type="text" name="defaultVehicleNo" value={form.defaultVehicleNo} onChange={handleChange} placeholder="e.g. UP32AB1234" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Per KG Charge</label>
-                  <input type="number" name="perKgCharge" value={form.perKgCharge} onChange={handleChange} placeholder="e.g. 10" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Volumetric Divisor</label>
+                  <select name="volumetricDivisor" value={form.volumetricDivisor} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
+                    <option value="5000">5000 (Standard)</option>
+                    <option value="4000">4000 (Express/Air)</option>
+                  </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Additional KG</label>
-                  <input type="number" name="additionalKg" value={form.additionalKg} onChange={handleChange} placeholder="e.g. 10" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Driver Name</label>
+                  <input type="text" name="defaultDriverName" value={form.defaultDriverName} onChange={handleChange} placeholder="Name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">COD Charge</label>
-                  <input type="number" name="codCharge" value={form.codCharge} onChange={handleChange} placeholder="e.g. 50" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Fuel Surcharge</label>
-                  <input type="number" name="fuelSurcharge" value={form.fuelSurcharge} onChange={handleChange} placeholder="e.g. 5" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Return Charge</label>
-                  <input type="number" name="returnCharge" value={form.returnCharge} onChange={handleChange} placeholder="e.g. 40" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tax</label>
-                  <DynamicSelect category="TaxConfiguration" name="tax" value={form.tax} onChange={handleChange} />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
-                  <DynamicSelect category="Currency" name="currency" value={form.currency} onChange={handleChange} />
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Driver Mobile</label>
+                  <input type="text" name="defaultDriverMobile" value={form.defaultDriverMobile} onChange={handleChange} placeholder="Phone" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                 </div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* SECTION: TRACKING & INTEGRATION */}
+            {/* SECTION: TRACKING & ADDITIONAL OPTIONS */}
             <div className="border border-slate-200 rounded-lg p-5">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Tracking & Integration</h3>
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Tracking & Options</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Tracking URL</label>
                   <input type="url" name="trackingURL" value={form.trackingURL} onChange={handleChange} placeholder="https://..." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                 </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tracking Prefix</label>
-                  <input type="text" name="trackingPrefix" value={form.trackingPrefix} onChange={handleChange} placeholder="e.g. AWB" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-2 md:col-span-1 mt-2 md:mt-6">
+                <div className="col-span-2 mt-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
-                    <input type="checkbox" name="apiAvailable" checked={form.apiAvailable} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
-                    API Available
+                    <input type="checkbox" name="defaultCourier" checked={form.defaultCourier} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
+                    Set as Default Courier
                   </label>
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">API Provider</label>
-                  <DynamicSelect category="APIProvider" name="apiProvider" value={form.apiProvider} onChange={handleChange} />
-                </div>
-                <div className="col-span-2 md:col-span-1 mt-2 md:mt-6">
-                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
-                    <input type="checkbox" name="autoTrackingUpdate" checked={form.autoTrackingUpdate} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
-                    Auto Tracking Update
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION: DOCUMENTS & ADDITIONAL INFO */}
-            <div className="flex flex-col gap-6">
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Documents</h3>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between p-2 border border-slate-200 rounded hover:bg-slate-50 transition-colors">
-                    <span className="text-sm font-semibold text-slate-700">Agreement</span>
-                    <label className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded cursor-pointer">
-                      Upload
-                      <input type="file" className="hidden" />
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between p-2 border border-slate-200 rounded hover:bg-slate-50 transition-colors">
-                    <span className="text-sm font-semibold text-slate-700">GST Certificate</span>
-                    <label className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded cursor-pointer">
-                      Upload
-                      <input type="file" className="hidden" />
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between p-2 border border-slate-200 rounded hover:bg-slate-50 transition-colors">
-                    <span className="text-sm font-semibold text-slate-700">Rate Contract</span>
-                    <label className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded cursor-pointer">
-                      Upload
-                      <input type="file" className="hidden" />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Additional Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 md:col-span-1 mt-2">
-                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
-                      <input type="checkbox" name="defaultCourier" checked={form.defaultCourier} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
-                      Default Courier
-                    </label>
-                  </div>
-                  <div className="col-span-2 md:col-span-1">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Priority</label>
-                    <input type="number" name="priority" value={form.priority} onChange={handleChange} placeholder="e.g. 1" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
-                    <textarea name="remarks" value={form.remarks} onChange={handleChange} rows="2" placeholder="Any internal remarks..." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none resize-none"></textarea>
-                  </div>
                 </div>
               </div>
             </div>

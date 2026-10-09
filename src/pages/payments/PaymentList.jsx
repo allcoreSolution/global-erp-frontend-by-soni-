@@ -7,27 +7,40 @@ import api from '../../api';
 const PaymentList = () => {
   const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
+  const [suppliers, setSuppliers] = useState({});
   const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef(null);
 
-  const fetchPayments = async () => {
+  const fetchPaymentsAndCatalogs = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/payments');
-      if (data.success) {
-        setPayments(data.data);
+      const [payRes, suppRes] = await Promise.all([
+        api.get('/payments'),
+        api.get('/suppliers').catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      if (payRes.data.success) {
+        setPayments(payRes.data.data);
       }
+      
+      const suppData = suppRes.data?.data || [];
+      const suppMap = {};
+      suppData.forEach(s => {
+        suppMap[s._id] = s.companyName || s.supplierName || 'Unknown Supplier';
+      });
+      setSuppliers(suppMap);
+      
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPayments();
+    fetchPaymentsAndCatalogs();
   }, []);
 
   const handleDelete = async (id) => {
@@ -53,11 +66,12 @@ const PaymentList = () => {
     }
   };
 
-  const filtered = payments.filter(p =>
-    (p.supplierParty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.paymentNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = payments.filter(p => {
+    const suppName = suppliers[p.supplierParty] || p.supplierParty || '';
+    return suppName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           (p.paymentNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+           (p.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   // Real CSV Export
   const handleExportCSV = () => {
@@ -179,7 +193,7 @@ const PaymentList = () => {
                 filtered.map(p => (
                   <tr key={p._id} className="hover:bg-slate-50">
                     <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{p.paymentNo}</td>
-                    <td className="p-2 font-medium text-gray-900">{p.supplierParty || '-'}</td>
+                    <td className="p-2 font-medium text-gray-900">{suppliers[p.supplierParty] || p.supplierParty || '-'}</td>
                     <td className="p-2 text-gray-650">{p.invoiceNo || '-'}</td>
                     <td className="p-2 text-right font-bold text-rose-600">₹ {(p.paymentAmount || 0).toLocaleString()}</td>
                     <td className="p-2 text-gray-500 whitespace-nowrap">{p.paymentDate}</td>

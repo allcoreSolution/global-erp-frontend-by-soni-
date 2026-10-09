@@ -14,23 +14,7 @@ const NewCreditNote = () => {
     // Basic Information
     creditNoteNo: 'CN-00001',
     date: new Date().toISOString().split('T')[0],
-    company: '',
     branch: '',
-    type: 'Sales Return',
-    status: 'Draft',
-    
-    // Customer Details
-    customer: '',
-    customerCode: '',
-    customerType: '',
-    mobile: '',
-
-    // Original Sales Details
-    originalInvoiceNo: '',
-    originalInvoiceDate: '',
-    orderNo: '',
-    challan: '',
-    
     // Summary Inputs
     discount: 0,
     cgst: 0,
@@ -44,12 +28,6 @@ const NewCreditNote = () => {
     adjustAmount: '',
     refundAmount: '',
     remainingCredit: '',
-    
-    // Accounting
-    customerLedger: '',
-    salesReturnLedger: '',
-    taxAccount: '',
-    costCenter: '',
     
     // Remarks
     remarks: ''
@@ -79,18 +57,10 @@ const NewCreditNote = () => {
             setForm({
               creditNoteNo: data.creditNoteNo || '',
               date: data.date || '',
-              company: data.company || '',
               branch: data.branch || '',
               type: data.type || 'Sales Return',
-              status: data.status || 'Draft',
               customer: data.customer || '',
-              customerCode: data.customerCode || '',
-              customerType: data.customerType || '',
-              mobile: data.mobile || '',
               originalInvoiceNo: data.originalInvoiceNo || '',
-              originalInvoiceDate: data.originalInvoiceDate || '',
-              orderNo: data.orderNo || '',
-              challan: data.challan || '',
               discount: data.discount || 0,
               cgst: data.cgst || 0,
               sgst: data.sgst || 0,
@@ -101,10 +71,6 @@ const NewCreditNote = () => {
               adjustAmount: data.adjustAmount || 0,
               refundAmount: data.refundAmount || 0,
               remainingCredit: data.remainingCredit || 0,
-              customerLedger: data.customerLedger || '',
-              salesReturnLedger: data.salesReturnLedger || '',
-              taxAccount: data.taxAccount || '',
-              costCenter: data.costCenter || '',
               remarks: data.remarks || ''
             });
             if (data.items && data.items.length > 0) {
@@ -131,6 +97,58 @@ const NewCreditNote = () => {
       }));
     }
   }, [id, isEditMode, navigate]);
+
+  // Auto-populate items from selected Invoice
+  useEffect(() => {
+    const fetchInvoiceItems = async () => {
+      if (!form.originalInvoiceNo || !form.customer) return;
+      try {
+        const res = await api.get(`/sales?customer=${encodeURIComponent(form.customer)}`);
+        const sales = res.data?.data || [];
+        const selectedSale = sales.find(s => s.invoiceNo === form.originalInvoiceNo);
+        
+        if (selectedSale && selectedSale.orderItems && selectedSale.orderItems.length > 0) {
+          const newItems = selectedSale.orderItems.map((item, idx) => {
+            const q = item.quantity || 0;
+            const r = item.netUnitPrice || 0;
+            return {
+              id: idx + 1,
+              product: item.name || item.product,
+              batch: item.batch || '',
+              qty: q,
+              rate: r,
+              taxPercent: item.taxPercent || 0,
+              amount: q * r
+            };
+          });
+          setItems(newItems);
+          
+          // Re-calculate summary
+          const subT = newItems.reduce((sum, it) => sum + it.amount, 0);
+          let cCgst = 0, cSgst = 0;
+          newItems.forEach(it => {
+            const taxAmt = (it.amount * it.taxPercent) / 100;
+            cCgst += taxAmt / 2;
+            cSgst += taxAmt / 2;
+          });
+          const d = Number(form.discount) || 0;
+          const i = Number(form.igst) || 0;
+          const rnd = Number(form.roundOff) || 0;
+          const grandT = subT - d + cCgst + cSgst + i + rnd;
+
+          setSummary({ subTotal: subT, grandTotal: grandT });
+          setForm(prev => ({ ...prev, cgst: cCgst, sgst: cSgst }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch invoice details", err);
+      }
+    };
+
+    if (!isEditMode && form.originalInvoiceNo) {
+      fetchInvoiceItems();
+    }
+  }, [form.originalInvoiceNo]); // Intentionally omitting other deps to only run on invoice change
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -178,10 +196,28 @@ const NewCreditNote = () => {
   const calculateSummary = (currentItems, currentForm) => {
     const subT = currentItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     
-    const d = Number(currentForm.discount) || 0;
-    const c = Number(currentForm.cgst) || 0;
-    const s = Number(currentForm.sgst) || 0;
+    // Calculate Tax from items automatically
+    let calculatedCgst = 0;
+    let calculatedSgst = 0;
+    
+    currentItems.forEach(item => {
+      const amt = Number(item.amount) || 0;
+      const taxP = Number(item.taxPercent) || 0;
+      const totalTax = (amt * taxP) / 100;
+      calculatedCgst += totalTax / 2;
+      calculatedSgst += totalTax / 2;
+    });
+
+    const c = calculatedCgst;
+    const s = calculatedSgst;
     const i = Number(currentForm.igst) || 0;
+    
+    // Update form with calculated taxes so they reflect in the summary
+    if (currentForm.cgst !== c || currentForm.sgst !== s) {
+       setForm(prev => ({...prev, cgst: c, sgst: s}));
+    }
+
+    const d = Number(currentForm.discount) || 0;
     const r = Number(currentForm.roundOff) || 0;
     
     const grandT = subT - d + c + s + i + r;
@@ -271,9 +307,7 @@ const NewCreditNote = () => {
            <button type="button" className="px-4 py-2 bg-indigo-100 border border-indigo-200 text-indigo-700 rounded text-sm font-semibold hover:bg-indigo-200 transition-colors shadow-sm">
              Save Draft
            </button>
-           <button type="button" className="px-4 py-2 bg-blue-100 border border-blue-200 text-blue-700 rounded text-sm font-semibold hover:bg-blue-200 transition-colors shadow-sm">
-             Approve
-           </button>
+
            <button onClick={handleSave} type="button" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold shadow-md transition-colors">
              <CheckCircle size={16} /> Post
            </button>
@@ -310,46 +344,23 @@ const NewCreditNote = () => {
                   <input type="date" name="date" value={form.date} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none transition-all" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <DynamicSelect 
-                    name="company" 
-                    category="Company" 
-                    value={form.company} 
-                    onChange={handleChange} 
-                    defaultOptions={['Main Corp']} 
-                    className="w-full text-sm"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <DynamicSelect 
+                  <DynamicSelect hideAddButton
                     name="branch" 
                     category="Branch" 
                     value={form.branch} 
                     onChange={handleChange} 
-                    defaultOptions={['HQ']} 
                     className="w-full text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Type *</label>
-                  <DynamicSelect 
+                  <DynamicSelect hideAddButton 
                     name="type" 
                     category="Credit Note Type" 
                     value={form.type} 
                     onChange={handleChange} 
                     defaultOptions={['Sales Return', 'Price Difference', 'Discount Given']} 
-                    className="w-full text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <DynamicSelect 
-                    name="status" 
-                    category="Status" 
-                    value={form.status} 
-                    onChange={handleChange} 
-                    defaultOptions={['Draft', 'Approved']} 
                     className="w-full text-sm"
                   />
                 </div>
@@ -359,29 +370,17 @@ const NewCreditNote = () => {
             {/* SECTION: CUSTOMER DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Customer Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 gap-4">
+                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer *</label>
-                  <DynamicSelect 
+                  <DynamicSelect hideAddButton 
                     name="customer" 
                     category="Customer" 
                     value={form.customer} 
+                    dependentValue={form.branch}
                     onChange={handleChange} 
-                    defaultOptions={['ABC Retailers']} 
                     className="w-full text-sm"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Code</label>
-                  <input type="text" name="customerCode" value={form.customerCode} onChange={handleChange} placeholder="CUST-001" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                  <input type="text" name="customerType" value={form.customerType} onChange={handleChange} placeholder="Wholesale" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mobile</label>
-                  <input type="text" name="mobile" value={form.mobile} onChange={handleChange} placeholder="Phone No" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                 </div>
               </div>
             </div>
@@ -389,29 +388,17 @@ const NewCreditNote = () => {
             {/* SECTION: ORIGINAL SALES DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Original Sales Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 gap-4">
+                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No. *</label>
-                  <DynamicSelect 
+                  <DynamicSelect hideAddButton 
                     name="originalInvoiceNo" 
                     category="Invoice" 
-                    value={form.originalInvoiceNo} 
+                    value={form.originalInvoiceNo}
+                    dependentValue={form.customer}
                     onChange={handleChange} 
-                    defaultOptions={['SINV-2023-112']} 
                     className="w-full text-sm"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Date</label>
-                  <input type="date" name="originalInvoiceDate" value={form.originalInvoiceDate} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Order No.</label>
-                  <input type="text" name="orderNo" value={form.orderNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Challan</label>
-                  <input type="text" name="challan" value={form.challan} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                 </div>
               </div>
             </div>
@@ -443,12 +430,11 @@ const NewCreditNote = () => {
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-2 py-2">
-                        <DynamicSelect 
+                        <DynamicSelect hideAddButton 
                           name="product" 
                           category="Product" 
                           value={item.product} 
                           onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} 
-                          defaultOptions={['Item X', 'Item Y']} 
                           className="w-full text-sm"
                         />
                       </td>
@@ -497,7 +483,7 @@ const NewCreditNote = () => {
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                    <div className="col-span-2 md:col-span-4">
                      <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                     <DynamicSelect 
+                     <DynamicSelect hideAddButton 
                        name="adjustmentType" 
                        category="Adjustment Type" 
                        value={form.adjustmentType} 
@@ -525,57 +511,7 @@ const NewCreditNote = () => {
                  </div>
                </div>
 
-               {/* SECTION: ACCOUNTING */}
-               <div className="border border-slate-200 rounded-lg p-5">
-                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Accounting</h3>
-                 <div className="grid grid-cols-2 gap-4">
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Ledger</label>
-                     <DynamicSelect 
-                       name="customerLedger" 
-                       category="Customer Ledger" 
-                       value={form.customerLedger} 
-                       onChange={handleChange} 
-                       defaultOptions={['Debtors - ABC Retailers']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Sales Return Ledger</label>
-                     <DynamicSelect 
-                       name="salesReturnLedger" 
-                       category="Return Ledger" 
-                       value={form.salesReturnLedger} 
-                       onChange={handleChange} 
-                       defaultOptions={['Sales Returns A/C']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Account</label>
-                     <DynamicSelect 
-                       name="taxAccount" 
-                       category="Tax Account" 
-                       value={form.taxAccount} 
-                       onChange={handleChange} 
-                       defaultOptions={['Output GST A/C']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Center</label>
-                     <DynamicSelect 
-                       name="costCenter" 
-                       category="Cost Center" 
-                       value={form.costCenter} 
-                       onChange={handleChange} 
-                       defaultOptions={['Main Branch Sales']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                 </div>
-               </div>
-               
+
                {/* SECTION: REMARKS & ATTACHMENT */}
                <div className="border border-slate-200 rounded-lg p-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -633,17 +569,17 @@ const NewCreditNote = () => {
 
                   <div className="flex justify-between items-center text-sm">
                      <span className="font-semibold text-slate-600">CGST (+)</span>
-                     <input type="number" name="cgst" value={form.cgst} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-blue-500 outline-none bg-white" />
+                     <span className="font-bold text-slate-800">₹{(Number(form.cgst) || 0).toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-sm">
                      <span className="font-semibold text-slate-600">SGST (+)</span>
-                     <input type="number" name="sgst" value={form.sgst} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-blue-500 outline-none bg-white" />
+                     <span className="font-bold text-slate-800">₹{(Number(form.sgst) || 0).toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-sm">
                      <span className="font-semibold text-slate-600">IGST (+)</span>
-                     <input type="number" name="igst" value={form.igst} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-blue-500 outline-none bg-white" />
+                     <span className="font-bold text-slate-800">₹{(Number(form.igst) || 0).toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-sm">

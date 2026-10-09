@@ -29,7 +29,7 @@ const TopSellingItems = () => {
     fetchData();
   }, []);
 
-  const formatCurrency = (value) => `₹ ${value.toLocaleString('en-IN')}`;
+  const formatCurrency = (value) => `₹ ${(value || 0).toLocaleString('en-IN')}`;
 
   const getRankStyle = (rank) => {
     switch (rank) {
