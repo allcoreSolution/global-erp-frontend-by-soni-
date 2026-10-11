@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const NewReceipt = () => {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const NewReceipt = () => {
 
   // Derived filtered options
   const warehouses = allWarehouses.filter(w => !branch || w.branchName === branch).map(w => w.name);
-  const customers = allCustomers.filter(c => !warehouse || c.warehouseName === warehouse);
+  const customers = allCustomers;
   const invoices = allSales.filter(s => s.customer === customer && s.paymentStatus !== 'Paid');
 
   useEffect(() => {
@@ -71,16 +72,20 @@ const NewReceipt = () => {
         const sData = salesRes.data?.data || [];
         setAllSales(sData.map(s => ({
           id: s._id,
-          referenceNo: s.referenceNo,
-          customer: s.customer,
+          referenceNo: s.invoiceNo || s.referenceNo, // Use invoiceNo
+          customer: s.customer?.name || s.customer || '', // Extract customer name
           paymentStatus: s.paymentStatus,
           grandTotal: s.grandTotal || 0,
-          paid: s.paidAmount || 0,
-          due: (s.grandTotal || 0) - (s.paidAmount || 0)
+          paid: s.amountPaid || 0,
+          due: (s.grandTotal || 0) - (s.amountPaid || 0)
         })));
 
         const pmData = pmRes.data?.data || [];
-        setPaymentModesList(pmData.map(p => p.name || p.modeName || p));
+        if (pmData.length > 0) {
+          setPaymentModesList(pmData.map(p => p.name || p.modeName || p));
+        } else {
+          setPaymentModesList(['Cash', 'Bank Transfer', 'UPI', 'Cheque']);
+        }
 
         const accData = accRes.data?.data || [];
         setDepositAccountsList(accData.map(a => a.accountName || a.name || a));
@@ -91,6 +96,37 @@ const NewReceipt = () => {
     };
     fetchCatalogs();
   }, []);
+
+  useEffect(() => {
+    const fetchReceipt = async () => {
+      if (id) {
+        try {
+          const res = await api.get(`/receipts/${id}`);
+          const data = res.data?.data || res.data;
+          if (data) {
+            setForm({
+              receiptNo: data.receiptNo || '',
+              receiptDate: data.receiptDate ? new Date(data.receiptDate).toISOString().split('T')[0] : '',
+              customer: data.customerParty?.name || data.customerParty || '',
+              contactNumber: data.contactNumber || '',
+              email: data.email || '',
+              address: data.address || '',
+              paymentMode: data.paymentMethod || 'UPI',
+              receivedAmount: data.paymentAmount || '',
+              againstInvoice: data.referenceInvoice || '',
+              referenceNo: data.transactionRef || '',
+              depositAccount: data.account || '',
+              remarks: data.remarks || ''
+            });
+            setCustomer(data.customerParty?.name || data.customerParty || '');
+          }
+        } catch (error) {
+          console.error("Error fetching receipt for edit", error);
+        }
+      }
+    };
+    fetchReceipt();
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,15 +157,15 @@ const NewReceipt = () => {
 
       if (id) {
         await api.put(`/receipts/${id}`, payload);
-        alert('Receipt Updated successfully!');
+        Swal.fire('Success', 'Receipt Updated successfully!', 'success');
       } else {
         await api.post('/receipts', payload);
-        alert('Receipt Saved successfully!');
+        Swal.fire('Success', 'Receipt Saved successfully!', 'success');
       }
       navigate('/receipt/list');
     } catch (error) {
       console.error('Error saving receipt', error);
-      alert('Receipt Saved Locally (Backend might need update for this simplified payload).');
+      Swal.fire('Warning', 'Receipt Saved Locally (Backend might need update for this simplified payload).', 'warning');
       navigate('/receipt/list');
     }
   };

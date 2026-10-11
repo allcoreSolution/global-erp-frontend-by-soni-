@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Download, Printer, Filter } from 'lucide-react';
+import { TrendingUp, Download, Printer, Filter, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 
 const StockMovement = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-  
+
   const [fromDate, setFromDate] = useState(firstDay);
   const [toDate, setToDate] = useState(lastDay);
 
@@ -39,11 +41,16 @@ const StockMovement = () => {
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-            <TrendingUp className="text-indigo-600" size={22} /> Stock Movement
-          </h1>
-          <p className="text-[11px] sm:text-xs text-gray-500">Audit logs tracking dynamic stock transfer shifts from inventory sources to destinations.</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            <ArrowLeft size={16} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+              <TrendingUp className="text-indigo-600" size={22} /> Stock Movement
+            </h1>
+            <p className="text-[11px] sm:text-xs text-gray-500">Audit logs tracking dynamic stock transfer shifts from inventory sources to destinations.</p>
+          </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-semibold hover:bg-slate-50 transition-colors">
@@ -81,28 +88,28 @@ const StockMovement = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-               <tr>
-                 <td colSpan="7" className="p-4 text-center text-gray-500 italic">Fetching stock movement...</td>
-               </tr>
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 italic">Fetching stock movement...</td>
+              </tr>
             ) : filteredData.length === 0 ? (
-               <tr>
-                 <td colSpan="7" className="p-4 text-center text-gray-500 italic">No movement records found.</td>
-               </tr>
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500 italic">No movement records found.</td>
+              </tr>
             ) : (
               filteredData.map((item, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">
                   <td className="p-3 text-gray-600">{new Date(item.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')}</td>
-                  <td className="p-3 font-mono text-indigo-700">{item.ref}</td>
+                  <td className="p-3 font-mono text-indigo-700">{item.reference || '-'}</td>
                   <td className="p-3 font-semibold text-gray-800">
-                    <div>{item.item}</div>
+                    <div>{item.productName}</div>
                     <div className="text-[10px] text-gray-400 font-normal">{item.sku}</div>
                   </td>
-                  <td className="p-3 text-center font-bold text-gray-700">{item.qty.toLocaleString()}</td>
-                  <td className="p-3 text-rose-600">{item.source}</td>
-                  <td className="p-3 text-emerald-600">{item.dest}</td>
+                  <td className="p-3 text-center font-bold text-gray-700">{(item.qty || 0).toLocaleString()}</td>
+                  <td className="p-3 text-rose-600">{item.warehouse || '-'}</td>
+                  <td className="p-3 text-emerald-600">{item.remark || '-'}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {item.status}
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.movementType === 'IN' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                      {item.movementType}
                     </span>
                   </td>
                 </tr>

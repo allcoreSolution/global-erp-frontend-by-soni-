@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const NewBankReceipt = () => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const NewBankReceipt = () => {
 
   // Derived filtered options
   const warehouses = allWarehouses.filter(w => !branch || w.branchName === branch).map(w => w.name);
-  const customers = allCustomers.filter(c => !warehouse || c.warehouseName === warehouse);
+  const customers = allCustomers;
   const invoices = allSales.filter(s => s.customer === form.customerParty && s.paymentStatus !== 'Paid');
 
   // Totals State
@@ -72,16 +73,20 @@ const NewBankReceipt = () => {
         })));
         setAllSales((salesRes.data?.data || []).map(s => ({
           id: s._id,
-          referenceNo: s.referenceNo,
-          customer: s.customer,
+          referenceNo: s.invoiceNo || s.referenceNo,
+          customer: s.customer?.name || s.customer || '',
           paymentStatus: s.paymentStatus,
           grandTotal: s.grandTotal || 0,
-          paidAmount: s.paidAmount || 0,
-          dueAmount: (s.grandTotal || 0) - (s.paidAmount || 0)
+          paidAmount: s.amountPaid || 0,
+          dueAmount: (s.grandTotal || 0) - (s.amountPaid || 0)
         })));
         
         const pmData = pmRes.data?.data || [];
-        setPaymentModesList(pmData.map(p => p.name || p.modeName || p));
+        if (pmData.length > 0) {
+          setPaymentModesList(pmData.map(p => p.name || p.modeName || p));
+        } else {
+          setPaymentModesList(['Bank Transfer', 'NEFT/RTGS', 'Cheque', 'IMPS']);
+        }
         
         const accData = accRes.data?.data || [];
         setDepositAccountsList(accData.map(a => a.accountName || a.name || a));
@@ -93,12 +98,56 @@ const NewBankReceipt = () => {
     fetchCatalogs();
   }, []);
 
+  useEffect(() => {
+    const fetchBankReceipt = async () => {
+      if (id) {
+        try {
+          const res = await api.get(`/bank-receipts/${id}`);
+          const data = res.data?.data || res.data;
+          if (data) {
+            setForm({
+              receiptNo: data.receiptNo || '',
+              receiptDate: data.receiptDate ? new Date(data.receiptDate).toISOString().split('T')[0] : '',
+              customerParty: data.customerParty || '',
+              amount: data.amount || 0,
+              method: data.method || '',
+              bankAccount: data.bankAccount || '',
+              utrNo: data.utrNo || '',
+              transactionDate: data.transactionDate ? new Date(data.transactionDate).toISOString().split('T')[0] : '',
+              chequeNo: data.chequeNo || '',
+              remarks: data.remarks || ''
+            });
+            setBranch(data.branch || '');
+            setWarehouse(data.warehouse || '');
+            
+            // Note: invoiceAdjustments should ideally be populated if the backend returns them,
+            // but we'll leave it as is if it's not structured yet.
+          }
+        } catch (error) {
+          console.error("Error fetching bank receipt for edit", error);
+        }
+      }
+    };
+    fetchBankReceipt();
+  }, [id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => {
       const updated = { ...prev, [name]: value };
       if (name === 'amount') {
-        calculateTotals(Number(value) || 0, invoiceAdjustments);
+        const amt = Number(value) || 0;
+        let remaining = amt;
+        const newAdjustments = invoiceAdjustments.map(inv => {
+          if (remaining > 0) {
+            const adjust = Math.min(remaining, inv.dueAmount);
+            remaining -= adjust;
+            return { ...inv, adjustAmount: adjust };
+          }
+          return { ...inv, adjustAmount: 0 };
+        });
+        setInvoiceAdjustments(newAdjustments);
+        calculateTotals(amt, newAdjustments);
       }
       return updated;
     });
@@ -151,15 +200,15 @@ const NewBankReceipt = () => {
       
       if (id) {
         await api.put(`/bank-receipts/${id}`, payload);
-        alert('Bank Receipt Updated successfully!');
+        Swal.fire('Success', 'Bank Receipt Updated successfully!', 'success');
       } else {
         await api.post('/bank-receipts', payload);
-        alert('Bank Receipt Posted successfully!');
+        Swal.fire('Success', 'Bank Receipt Posted successfully!', 'success');
       }
       navigate('/bank-receipt/list');
     } catch (error) {
       console.error('Error saving bank receipt', error);
-      alert('Failed to save bank receipt. Please check the inputs.');
+      Swal.fire('Error', 'Failed to save bank receipt. Please check the inputs.', 'error');
     }
   };
 
@@ -226,7 +275,7 @@ const NewBankReceipt = () => {
                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Customer Details</h3>
                  {form.customerParty && (
                     <span className="text-sm font-bold text-red-600">
-                      Outstanding: ₹{customers.find(c => c.name === form.customerParty || c.id === form.customerParty)?.balance || 0}
+                      Outstanding: ₹{customers.find(c => c.name === form.customerParty)?.balance || 0}
                     </span>
                  )}
               </div>
@@ -238,12 +287,11 @@ const NewBankReceipt = () => {
                     value={form.customerParty} 
                     onChange={handleCustomerSelect}
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-teal-500 outline-none bg-white"
-                    disabled={!warehouse}
                     required
                   >
-                    <option value="">{warehouse ? "-- Select Customer --" : "Select warehouse first"}</option>
+                    <option value="">-- Select Customer --</option>
                     {customers.map(c => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={c.name}>
                         {c.name} {c.phone ? `(${c.phone})` : ''}
                       </option>
                     ))}

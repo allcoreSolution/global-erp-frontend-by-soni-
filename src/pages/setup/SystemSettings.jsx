@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Settings,
@@ -12,11 +12,36 @@ import {
   ArrowRight,
   Database,
   Building,
-  CreditCard
+  CreditCard,
+  Clock,
+  Sparkles,
+  X
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const SystemSettings = () => {
   const navigate = useNavigate();
+  const [comingSoonModal, setComingSoonModal] = useState({ open: false, title: '', desc: '' });
+
+  const showComingSoon = (title, desc) => {
+    Swal.fire({
+      title: `<span style="font-size: 20px; font-weight: 800; color: #1e293b;">🚀 Coming Soon!</span>`,
+      html: `
+        <div style="font-size: 13px; color: #64748b; line-height: 1.6; margin-top: 8px;">
+          <strong style="color: #4f46e5; font-size: 14px;">${title}</strong> module is currently under development.
+          <br />
+          Yeh feature agle system update me live kiya jayega.
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Theek Hai, Got it',
+      confirmButtonColor: '#4f46e5',
+      customClass: {
+        popup: 'rounded-2xl shadow-xl border border-slate-100',
+        confirmButton: 'rounded-xl text-xs font-bold px-6 py-2.5'
+      }
+    });
+  };
 
   const settingsOptions = [
     {
@@ -33,7 +58,7 @@ const SystemSettings = () => {
       icon: Building,
       color: 'text-blue-600 bg-blue-50 border-blue-100',
       actionText: 'Edit Company Profile',
-      to: '/setup/company-profile'
+      to: '/company/profile'
     },
     {
       title: 'User & Roles Management',
@@ -49,7 +74,7 @@ const SystemSettings = () => {
       icon: Calculator,
       color: 'text-purple-600 bg-purple-50 border-purple-100',
       actionText: 'Configure Finance',
-      to: '/setup/tax-finance'
+      isComingSoon: true
     },
     {
       title: 'Inventory & Stock Rules',
@@ -57,7 +82,7 @@ const SystemSettings = () => {
       icon: Package,
       color: 'text-amber-600 bg-amber-50 border-amber-100',
       actionText: 'Configure Inventory',
-      to: '/setup/inventory-settings'
+      to: '/stock-transfer/new'
     },
     {
       title: 'Notification & Alerts',
@@ -73,7 +98,7 @@ const SystemSettings = () => {
       icon: Mail,
       color: 'text-sky-600 bg-sky-50 border-sky-100',
       actionText: 'Setup Messaging',
-      to: '/setup/email-sms-settings'
+      isComingSoon: true
     },
     {
       title: 'Payment Gateways',
@@ -81,7 +106,7 @@ const SystemSettings = () => {
       icon: CreditCard,
       color: 'text-teal-600 bg-teal-50 border-teal-100',
       actionText: 'Configure Payments',
-      to: '/setup/payment-gateways'
+      isComingSoon: true
     },
     {
       title: 'Backup & Security',
@@ -90,16 +115,16 @@ const SystemSettings = () => {
       color: 'text-rose-600 bg-rose-50 border-rose-100',
       actionText: 'Manage Security',
       to: '/setup/backup-restore'
-    },
-    {
-      title: 'Database & API',
-      desc: 'Manage developer API keys, webhooks, and database cleanup routines.',
-      icon: Database,
-      color: 'text-slate-600 bg-slate-50 border-slate-200',
-      actionText: 'Developer Options',
-      to: '/setup/database-api'
     }
   ];
+
+  const handleCardClick = (opt) => {
+    if (opt.isComingSoon) {
+      showComingSoon(opt.title, opt.desc);
+    } else if (opt.to) {
+      navigate(opt.to);
+    }
+  };
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6">
@@ -120,9 +145,15 @@ const SystemSettings = () => {
           return (
             <div
               key={idx}
-              onClick={() => navigate(opt.to)}
-              className="border border-slate-200/60 rounded-xl p-5 bg-white hover:bg-slate-50/50 hover:border-slate-300 hover:shadow-md cursor-pointer transition-all duration-200 flex flex-col justify-between group"
+              onClick={() => handleCardClick(opt)}
+              className="border border-slate-200/60 rounded-xl p-5 bg-white hover:bg-slate-50/50 hover:border-slate-300 hover:shadow-md cursor-pointer transition-all duration-200 flex flex-col justify-between group relative"
             >
+              {opt.isComingSoon && (
+                <span className="absolute top-4 right-4 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 shadow-xs">
+                  <Clock size={10} /> Coming Soon
+                </span>
+              )}
+
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className={`p-2.5 rounded-xl border ${opt.color}`}>

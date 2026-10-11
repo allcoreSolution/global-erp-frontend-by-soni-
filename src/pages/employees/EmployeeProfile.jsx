@@ -3,75 +3,113 @@ import { ArrowLeft, CheckCircle, UploadCloud, UserPlus, Image as ImageIcon, Tras
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
 import DynamicSelect from '../../components/DynamicSelect';
+import Swal from 'sweetalert2';
 
 const EmployeeProfile = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
   // Form State
-  const [form, setForm] = useState({
-    // Personal Information
-    employeeId: `EMP-${Date.now()}`,
-    employeeName: '',
-    dob: '',
-    gender: '',
-    maritalStatus: '',
-    mobile: '',
-    email: '',
-    
-    // Employment Details
-    company: '',
-    branch: '',
-    department: '',
-    designation: '',
-    employeeType: 'Permanent',
-    joiningDate: '',
-    status: 'Active',
-    reportingManager: '',
-    shift: '',
+  const [form, setForm] = useState(() => {
+    let defaultCompany = '';
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        defaultCompany = u.company?.name || (typeof u.company === 'string' ? u.company : '');
+      }
+    } catch {
+      defaultCompany = '';
+    }
+    if (!defaultCompany) {
+      defaultCompany = localStorage.getItem('companyName') || localStorage.getItem('erp_company') || '';
+    }
 
-    // Address
-    currentAddress: '',
-    currentState: '',
-    currentCity: '',
-    currentPincode: '',
-    sameAsCurrent: false,
-    permanentAddress: '',
-    
-    // Identity & Compliance
-    pan: '',
-    uan: '',
-    pfNo: '',
-    esicNo: '',
-    
-    // Bank & Salary
-    bank: '',
-    accountNo: '',
-    ifsc: '',
-    salaryType: 'Monthly',
-    basicSalary: 0,
-    hra: 0,
-    allowance: 0,
-    grossSalary: 0,
-    netSalary: 0, // In real world, Net Salary = Gross - Deductions (PF, ESIC, TDS), keeping it as input or simple calculation
-    
-    // Emergency Contact
-    emergencyName: '',
-    emergencyRelationship: '',
-    emergencyMobile: '',
+    return {
+      // Personal Information
+      employeeId: `EMP-${Date.now()}`,
+      employeeName: '',
+      dob: '',
+      gender: '',
+      maritalStatus: '',
+      mobile: '',
+      email: '',
+      
+      // Employment Details
+      company: defaultCompany,
+      branch: '',
+      department: '',
+      role: '',
+      employeeType: 'Permanent',
+      joiningDate: '',
+      status: 'Active',
+      reportingManager: '',
+      shift: '',
 
-    // ERP Login
-    createLogin: 'No',
-    username: '',
-    role: '',
-    loginStatus: 'Active',
-    
-    // Profile Photo
-    profilePhotoFile: null,
+      // Address
+      currentAddress: '',
+      currentState: '',
+      currentCity: '',
+      currentPincode: '',
+      sameAsCurrent: false,
+      permanentAddress: '',
+      
+      // Identity & Compliance
+      pan: '',
+      uan: '',
+      pfNo: '',
+      esicNo: '',
+      
+      // Bank & Salary
+      bank: '',
+      accountNo: '',
+      ifsc: '',
+      salaryType: 'Monthly',
+      basicSalary: 0,
+      hra: 0,
+      allowance: 0,
+      grossSalary: 0,
+      netSalary: 0,
+      
+      // Emergency Contact (optional)
+      emergencyName: '',
+      emergencyRelationship: '',
+      emergencyMobile: '',
 
-    // Remarks
-    remarks: ''
+      // ERP Login
+      createLogin: 'Yes',
+      username: '',
+      password: '',
+      role: '',
+      loginStatus: 'Active',
+      
+      // Profile Photo
+      profilePhotoFile: null,
+
+      // Remarks
+      remarks: ''
+    };
   });
+
+  // Fetch company profile from API if company name is still empty
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const { data } = await api.get('/companies/profile');
+        if (data && data.name) {
+          setForm(prev => ({
+            ...prev,
+            company: prev.company || data.name
+          }));
+        }
+      } catch (err) {
+        // Fallback silently if not available
+      }
+    };
+    if (!form.company) {
+      fetchCompanyInfo();
+    }
+  }, []);
 
   // Fetch employee if id exists
   useEffect(() => {
@@ -80,7 +118,10 @@ const EmployeeProfile = () => {
         try {
           const { data } = await api.get(`/employees/${id}`);
           if (data.success) {
-            setForm(data.data);
+            setForm(prev => ({
+              ...prev,
+              ...data.data
+            }));
           }
         } catch (error) {
           console.error("Error fetching employee data", error);
@@ -90,20 +131,6 @@ const EmployeeProfile = () => {
     }
   }, [id]);
 
-  // Calculate Gross Salary whenever salary components change
-  useEffect(() => {
-    const basic = Number(form.basicSalary) || 0;
-    const hraAmount = Number(form.hra) || 0;
-    const allow = Number(form.allowance) || 0;
-    const gross = basic + hraAmount + allow;
-    
-    setForm(prev => ({
-      ...prev,
-      grossSalary: gross,
-      // For demonstration, defaulting net to gross unless user manually edits
-      netSalary: prev.netSalary === prev.grossSalary || prev.netSalary === 0 ? gross : prev.netSalary
-    }));
-  }, [form.basicSalary, form.hra, form.allowance]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -126,7 +153,20 @@ const EmployeeProfile = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!form.employeeName.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Validation Error',
+        text: 'Please enter Employee Name!',
+        confirmButtonColor: '#4f46e5'
+      });
+      return;
+    }
+
     try {
+      // Build FormData for multipart upload including local profile photo
+      const formData = new FormData();
+      
       const payload = {
         ...form,
         basicSalary: Number(form.basicSalary) || 0,
@@ -136,22 +176,55 @@ const EmployeeProfile = () => {
         netSalary: Number(form.netSalary) || 0
       };
 
-      // Remove File object before sending as JSON payload
+      // Exclude files from text loop
       delete payload.profilePhotoFile;
       delete payload.documentFiles;
-      
-      if (id) {
-        await api.put(`/employees/${id}`, payload);
-        alert('Employee Profile Updated successfully!');
-      } else {
-        await api.post('/employees', payload);
-        alert('Employee Profile Created successfully!');
+
+      // Append all text/number fields to FormData
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value);
+        }
+      });
+
+      // Append profile photo if selected
+      if (form.profilePhotoFile) {
+        formData.append('profilePhoto', form.profilePhotoFile);
       }
-      navigate('/employees/records');
+
+      if (id) {
+        await api.put(`/employees/${id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        await Swal.fire({
+          icon: 'success',
+          title: 'Updated!',
+          text: 'Employee profile updated successfully!',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } else {
+        await api.post('/employees', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        await Swal.fire({
+          icon: 'success',
+          title: 'Created!',
+          text: 'Employee profile created successfully with photo!',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      }
+      navigate('/employees/list');
     } catch (error) {
       console.error('Error saving employee', error);
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
-      alert('Failed to save employee. Error: ' + errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Save',
+        text: errorMessage,
+        confirmButtonColor: '#e11d48'
+      });
     }
   };
 
@@ -169,9 +242,6 @@ const EmployeeProfile = () => {
         <div className="flex gap-2">
            <button type="button" onClick={() => navigate('/employees/list')} className="px-4 py-2 border border-slate-300 bg-white rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
              Cancel
-           </button>
-           <button type="button" className="px-4 py-2 bg-indigo-100 border border-indigo-200 text-indigo-700 rounded text-sm font-semibold hover:bg-indigo-200 transition-colors shadow-sm">
-             Save Draft
            </button>
            <button onClick={handleSave} type="button" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold shadow-md transition-colors">
              <CheckCircle size={16} /> Save Employee
@@ -207,17 +277,37 @@ const EmployeeProfile = () => {
                    {/* Photo Upload Area */}
                    <div className="flex flex-col gap-2">
                      <label className="w-32 h-32 flex-shrink-0 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-violet-400 hover:text-violet-500 transition-colors cursor-pointer relative overflow-hidden group">
-                        <ImageIcon size={32} className="mb-2" />
-                        <span className="text-xs font-medium px-2 text-center truncate w-full">
-                          {form.profilePhotoFile ? form.profilePhotoFile.name : 'Upload Photo'}
-                        </span>
-                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setForm(prev => ({...prev, profilePhotoFile: e.target.files[0]}))} />
+                        {form.profilePhotoFile ? (
+                          <img 
+                            src={URL.createObjectURL(form.profilePhotoFile)} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : form.profilePhoto ? (
+                          <img 
+                            src={form.profilePhoto.startsWith('http') ? form.profilePhoto : `http://localhost:5000${form.profilePhoto}`} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <>
+                            <ImageIcon size={32} className="mb-2" />
+                            <span className="text-xs font-medium px-2 text-center truncate w-full">
+                              Upload Photo
+                            </span>
+                          </>
+                        )}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setForm(prev => ({...prev, profilePhotoFile: e.target.files[0]}));
+                          }
+                        }} />
                         <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs font-bold">
                            Click to Change
                         </div>
                      </label>
-                     {form.profilePhotoFile && (
-                       <button type="button" onClick={() => setForm(prev => ({...prev, profilePhotoFile: null}))} className="w-32 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-xs font-semibold flex items-center justify-center gap-1">
+                     {(form.profilePhotoFile || form.profilePhoto) && (
+                       <button type="button" onClick={() => setForm(prev => ({...prev, profilePhotoFile: null, profilePhoto: ''}))} className="w-32 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-xs font-semibold flex items-center justify-center gap-1">
                          <Trash2 size={12} /> Remove
                        </button>
                      )}
@@ -272,8 +362,15 @@ const EmployeeProfile = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Employment Details</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                    <input type="text" name="company" value={form.company} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" placeholder="Enter Company" />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Company</label>
+                    <input 
+                      type="text" 
+                      name="company" 
+                      value={form.company || 'Loading...'} 
+                      readOnly 
+                      title="Company is automatically assigned based on your active organization"
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-slate-100 font-semibold text-slate-700 cursor-not-allowed outline-none select-none" 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
@@ -282,7 +379,8 @@ const EmployeeProfile = () => {
                       name="branch"
                       value={form.branch}
                       onChange={handleChange}
-                      defaultOptions={['HQ']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
@@ -293,18 +391,20 @@ const EmployeeProfile = () => {
                       name="department"
                       value={form.department}
                       onChange={handleChange}
-                      defaultOptions={['IT', 'Sales', 'HR']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Designation *</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Role *</label>
                     <DynamicSelect
-                      category="Designation"
-                      name="designation"
-                      value={form.designation}
+                      category="Role"
+                      name="role"
+                      value={form.role}
                       onChange={handleChange}
-                      defaultOptions={['Manager', 'Developer']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
@@ -330,11 +430,13 @@ const EmployeeProfile = () => {
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Reporting Manager</label>
                     <DynamicSelect
-                      category="Manager"
+                      category="Employee"
+                      label="Reporting Manager"
                       name="reportingManager"
                       value={form.reportingManager}
                       onChange={handleChange}
-                      defaultOptions={['John Doe']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
@@ -345,10 +447,36 @@ const EmployeeProfile = () => {
                       name="shift"
                       value={form.shift}
                       onChange={handleChange}
-                      defaultOptions={['General', 'Night']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Allow ERP Login Access?</label>
+                    <select 
+                      name="createLogin" 
+                      value={form.createLogin} 
+                      onChange={handleChange} 
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white font-medium"
+                    >
+                      <option value="Yes">Yes (Can Login to ERP)</option>
+                      <option value="No">No (HR Record Only)</option>
+                    </select>
+                  </div>
+                  {form.createLogin === 'Yes' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Login Password (Default: Mobile No. or Emp@123)</label>
+                      <input 
+                        type="text" 
+                        name="password" 
+                        value={form.password} 
+                        onChange={handleChange} 
+                        placeholder={form.mobile || 'Emp@123'} 
+                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white placeholder-slate-400 font-medium"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -390,137 +518,39 @@ const EmployeeProfile = () => {
             {/* RIGHT COLUMN: Identity, Bank, Emergency, etc. */}
             <div className="space-y-6">
               
-              {/* SECTION: IDENTITY & COMPLIANCE */}
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Identity & Compliance</h3>
+              {/* SECTION: IDENTITY & BANK DETAILS */}
+              <div className="border border-slate-200 rounded-lg p-5 bg-white">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Identity & Bank Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">PAN</label>
-                    <input type="text" name="pan" value={form.pan} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none uppercase" />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">PAN Number</label>
+                    <input type="text" name="pan" value={form.pan} onChange={handleChange} placeholder="e.g. ABCDE1234F" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none uppercase" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">UAN</label>
-                    <input type="text" name="uan" value={form.uan} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">PF No.</label>
-                    <input type="text" name="pfNo" value={form.pfNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">ESIC No.</label>
-                    <input type="text" name="esicNo" value={form.esicNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION: BANK & SALARY */}
-              <div className="border border-slate-200 rounded-lg p-5 bg-slate-50">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-200">Bank & Salary</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Bank</label>
-                    <input type="text" name="bank" value={form.bank} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Name</label>
+                    <input type="text" name="bank" value={form.bank} onChange={handleChange} placeholder="e.g. HDFC Bank" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Account No.</label>
-                    <input type="text" name="accountNo" value={form.accountNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
+                    <input type="text" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account Number" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">IFSC</label>
-                    <input type="text" name="ifsc" value={form.ifsc} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Salary Type</label>
-                    <select name="salaryType" value={form.salaryType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option>Monthly</option>
-                      <option>Daily Wage</option>
-                      <option>Hourly</option>
-                    </select>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">IFSC Code</label>
+                    <input type="text" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder="e.g. HDFC0001234" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white uppercase" />
                   </div>
                 </div>
-                
-                <div className="space-y-3 pt-2 border-t border-slate-200">
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-semibold text-slate-600">Basic Salary</span>
-                      <input type="number" name="basicSalary" value={form.basicSalary} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none bg-white" />
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-semibold text-slate-600">HRA</span>
-                      <input type="number" name="hra" value={form.hra} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none bg-white" />
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-semibold text-slate-600">Allowance</span>
-                      <input type="number" name="allowance" value={form.allowance} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none bg-white" />
-                   </div>
-                   
-                   <div className="pt-3 flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-800">Gross Salary</span>
-                      <span className="text-lg font-bold text-violet-700">₹{form.grossSalary.toLocaleString()}</span>
-                   </div>
-                   
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-bold text-slate-800">Net Salary</span>
-                      <input type="number" name="netSalary" value={form.netSalary} onChange={handleChange} className="w-32 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none font-bold text-green-700 bg-white" />
-                   </div>
-                </div>
-              </div>
 
-              {/* SECTION: EMERGENCY CONTACT */}
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Emergency Contact</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Name</label>
-                    <input type="text" name="emergencyName" value={form.emergencyName} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
+                <div className="mt-4 p-3 bg-indigo-50/60 border border-indigo-100 rounded-lg flex items-center justify-between text-xs text-indigo-900">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Relationship</label>
-                    <input type="text" name="emergencyRelationship" value={form.emergencyRelationship} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Mobile</label>
-                    <input type="text" name="emergencyMobile" value={form.emergencyMobile} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
+                    <span className="font-bold text-indigo-800">💡 Salary & PF/ESI Management:</span>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      कर्मचारी की सैलरी और PF/ESI कटौतियाँ सीधे <strong>HRMS &gt; Payroll &gt; Salary Structure</strong> से मैनेज की जाती हैं।
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION: ERP LOGIN */}
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">ERP Login</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Create Login</label>
-                    <select name="createLogin" value={form.createLogin} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option>No</option>
-                      <option>Yes</option>
-                    </select>
-                  </div>
-                  {form.createLogin === 'Yes' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
-                        <input type="text" name="username" value={form.username} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Role</label>
-                        <select name="role" value={form.role} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                          <option value="">Select</option>
-                          <option>Admin</option>
-                          <option>Manager</option>
-                          <option>Staff</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                        <select name="loginStatus" value={form.loginStatus} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                          <option>Active</option>
-                          <option>Inactive</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+
 
               {/* SECTION: DOCUMENTS & REMARKS */}
               <div className="border border-slate-200 rounded-lg p-5">

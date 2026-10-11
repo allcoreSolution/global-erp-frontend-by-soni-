@@ -39,8 +39,8 @@ const NewJournal = () => {
 
   // Journal Entry Rows
   const [entries, setEntries] = useState([
-    { id: 1, account: '', description: '', debit: '', credit: '' },
-    { id: 2, account: '', description: '', debit: '', credit: '' }
+    { id: 1, account: '', costCenter: '', description: '', debit: '', credit: '' },
+    { id: 2, account: '', costCenter: '', description: '', debit: '', credit: '' }
   ]);
 
   // Totals State
@@ -118,7 +118,7 @@ const NewJournal = () => {
 
   const addEntry = () => {
     const newId = entries.length > 0 ? Math.max(...entries.map(e => e.id)) + 1 : 1;
-    setEntries([...entries, { id: newId, account: '', description: '', debit: '', credit: '' }]);
+    setEntries([...entries, { id: newId, account: '', costCenter: '', description: '', debit: '', credit: '' }]);
   };
 
   const removeEntry = (id) => {
@@ -137,6 +137,16 @@ const NewJournal = () => {
       credit: totalCredit
     });
   };
+
+  // Auto-Narration Effect
+  useEffect(() => {
+    if (form.invoiceNo && form.customerSupplier) {
+      setForm(prev => ({
+        ...prev,
+        narration: `Amount paid against Invoice #${form.invoiceNo} for ${form.customerSupplier}`
+      }));
+    }
+  }, [form.invoiceNo, form.customerSupplier]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -205,9 +215,9 @@ const NewJournal = () => {
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden max-w-5xl mx-auto">
         
         {/* Main Title Header */}
-        <div className="bg-gradient-to-r from-gray-700 to-slate-800 px-6 py-4 border-b border-slate-700">
-          <h2 className="text-xl font-bold text-white uppercase tracking-wide">CREATE JOURNAL ENTRY</h2>
-          <p className="text-sm text-slate-300 font-medium">Record manual journal vouchers</p>
+        <div className="bg-transparent px-6 py-4 border-b border-slate-200">
+          <h2 className="text-xl font-bold text-slate-800 uppercase tracking-wide">CREATE JOURNAL ENTRY</h2>
+          <p className="text-sm text-slate-500 font-medium">Record manual journal vouchers</p>
         </div>
 
         <form onSubmit={handleSave} className="p-6 space-y-8">
@@ -228,27 +238,10 @@ const NewJournal = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Financial Year</label>
-                  <select name="financialYear" value={form.financialYear} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>2023-24</option>
-                    <option>2024-25</option>
-                  </select>
+                  <DynamicSelect category="Financial Year" name="financialYear" value={form.financialYear} onChange={handleChange} defaultOptions={['2023-24', '2024-25']} hideAddButton />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Draft</option>
-                    <option>Posted</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <DynamicSelect category="Company" name="company" value={form.company} onChange={handleChange} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
-                </div>
-                <div className="col-span-2">
+
+                <div className="col-span-2 md:col-span-4">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Reference No.</label>
                   <input type="text" name="referenceNo" value={form.referenceNo} onChange={handleChange} placeholder="e.g. For adjustment of XYZ" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                 </div>
@@ -268,8 +261,9 @@ const NewJournal = () => {
                 <table className="w-full text-left min-w-[600px]">
                   <thead>
                     <tr className="bg-slate-50 text-slate-600">
-                      <th className="px-3 py-2 text-xs font-bold uppercase w-1/3">Account</th>
-                      <th className="px-3 py-2 text-xs font-bold uppercase w-1/3">Description</th>
+                      <th className="px-3 py-2 text-xs font-bold uppercase w-1/4">Account</th>
+                      <th className="px-3 py-2 text-xs font-bold uppercase w-1/5">Cost Center</th>
+                      <th className="px-3 py-2 text-xs font-bold uppercase w-1/4">Description</th>
                       <th className="px-3 py-2 text-xs font-bold uppercase">Debit (₹)</th>
                       <th className="px-3 py-2 text-xs font-bold uppercase">Credit (₹)</th>
                       <th className="px-3 py-2 text-xs font-bold uppercase text-center w-12">Action</th>
@@ -279,7 +273,10 @@ const NewJournal = () => {
                     {entries.map((entry) => (
                       <tr key={entry.id}>
                         <td className="px-3 py-2">
-                          <DynamicSelect category="Account" name="account" value={entry.account} onChange={(e) => handleEntryChange(entry.id, 'account', e.target.value)} />
+                          <DynamicSelect category="Account" name="account" value={entry.account} onChange={(e) => handleEntryChange(entry.id, 'account', e.target.value)} hideAddButton />
+                        </td>
+                        <td className="px-3 py-2">
+                          <DynamicSelect category="Cost Center" name="costCenter" value={entry.costCenter} onChange={(e) => handleEntryChange(entry.id, 'costCenter', e.target.value)} hideAddButton />
                         </td>
                         <td className="px-3 py-2">
                           <input type="text" placeholder="Line description..." value={entry.description} onChange={(e) => handleEntryChange(entry.id, 'description', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white" />
@@ -330,23 +327,32 @@ const NewJournal = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Reference Type</label>
-                        <select name="referenceType" value={form.referenceType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                          <option value="">Select Type</option>
-                          <option>Invoice</option>
-                          <option>Vendor</option>
-                        </select>
+                        <DynamicSelect category="Reference Type" name="referenceType" value={form.referenceType} onChange={handleChange} defaultOptions={['Invoice', 'Vendor']} hideAddButton />
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Reference No.</label>
-                        <input type="text" name="refReferenceNo" value={form.refReferenceNo} onChange={handleChange} placeholder="Ref No" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                      </div>
+
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Customer/Supplier</label>
-                        <DynamicSelect category="Supplier" name="customerSupplier" value={form.customerSupplier} onChange={handleChange} />
+                        <DynamicSelect 
+                          category={form.referenceType === 'Invoice' ? 'Customer' : 'Supplier'} 
+                          name="customerSupplier" 
+                          value={form.customerSupplier} 
+                          onChange={handleChange} 
+                          hideAddButton 
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No.</label>
-                        <input type="text" name="invoiceNo" value={form.invoiceNo} onChange={handleChange} placeholder="INV001" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
+                        <select name="invoiceNo" value={form.invoiceNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
+                          <option value="">Select Invoice</option>
+                          {form.customerSupplier ? (
+                            <>
+                              <option value="INV-001">INV-001 (Unpaid - ₹5,000)</option>
+                              <option value="INV-002">INV-002 (Unpaid - ₹12,000)</option>
+                            </>
+                          ) : (
+                            <option value="" disabled>Select Customer/Supplier first</option>
+                          )}
+                        </select>
                       </div>
                     </div>
                  </div>
@@ -357,16 +363,13 @@ const NewJournal = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Config</label>
-                        <DynamicSelect category="Tax Config" name="taxConfig" value={form.taxConfig} onChange={handleChange} />
+                        <DynamicSelect category="Tax Config" name="taxConfig" value={form.taxConfig} onChange={handleChange} hideAddButton />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">TDS Amount</label>
                         <input type="number" name="tdsAmount" value={form.tdsAmount} onChange={handleChange} placeholder="₹" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
                       </div>
-                      <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Adjustment Account</label>
-                        <DynamicSelect category="Account" name="adjustmentAccount" value={form.adjustmentAccount} onChange={handleChange} />
-                      </div>
+
                     </div>
                  </div>
                </div>
@@ -381,16 +384,13 @@ const NewJournal = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Prepared By</label>
-                      <DynamicSelect category="Employee" name="preparedBy" value={form.preparedBy} onChange={handleChange} />
+                      <DynamicSelect category="Employee" name="preparedBy" value={form.preparedBy} onChange={handleChange} hideAddButton />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                      <DynamicSelect category="Employee" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
+                      <DynamicSelect category="Employee" name="approvedBy" value={form.approvedBy} onChange={handleChange} hideAddButton />
                     </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
-                      <textarea name="remarks" value={form.remarks} onChange={handleChange} rows="2" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none resize-none"></textarea>
-                    </div>
+
                     <div className="col-span-2 mt-2">
                        <label className="block text-xs font-semibold text-slate-700 mb-1">Attachment</label>
                        <label className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-colors text-sm font-medium text-slate-500 cursor-pointer">

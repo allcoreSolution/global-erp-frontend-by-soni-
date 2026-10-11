@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Search, Trash2, Upload, HelpCircle, Info
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import api from '../../api';
 
 const AddSale = () => {
@@ -18,11 +19,7 @@ const AddSale = () => {
   const [branchesList, setBranchesList] = useState([]); // [{_id, name}]
   const [allWarehouses, setAllWarehouses] = useState([]); // [{_id, name, branch: {_id, name}}]
   const [billersList, setBillersList] = useState([]);
-  const [currenciesList, setCurrenciesList] = useState([]);
   const [taxSlabsList, setTaxSlabsList] = useState([]);
-  const [discountTypesList, setDiscountTypesList] = useState([]);
-  const [saleStatusesList, setSaleStatusesList] = useState([]);
-  const [paymentStatusesList, setPaymentStatusesList] = useState([]);
 
 
 
@@ -30,38 +27,56 @@ const AddSale = () => {
   useEffect(() => {
     const fetchCatalogs = async () => {
       try {
-        const [prodRes, custRes, whRes, bilRes, curRes, taxRes, discRes, saleStatRes, payStatRes, branchRes] = await Promise.all([
-          api.get('/products'),
+        const [prodRes, custRes, whRes, bilRes, taxRes, branchRes, plRes] = await Promise.all([
+          api.get('/products').catch(() => ({ data: { data: [] } })),
           api.get('/customers').catch(() => ({ data: { data: [] } })),
           api.get('/catalogs/warehouses').catch(() => ({ data: { data: [] } })),
           api.get('/employees').catch(() => ({ data: { data: [] } })),
-          api.get('/catalogs/currencies').catch(() => ({ data: { data: [] } })),
           api.get('/tax-slabs').catch(() => ({ data: { data: [] } })),
-          api.get('/discount-types').catch(() => ({ data: { data: [] } })),
-          api.get('/sale-statuses').catch(() => ({ data: { data: [] } })),
-          api.get('/payment-statuses').catch(() => ({ data: { data: [] } })),
-          api.get('/branches').catch(() => ({ data: { data: [] } }))
+          api.get('/branches').catch(() => ({ data: { data: [] } })),
+          api.get('/price-lists').catch(() => ({ data: { data: [] } }))
         ]);
         const pData = prodRes.data?.data || prodRes.data || [];
-        setProductsCatalog(pData.map(p => ({
-          id: p._id,
-          name: p.productName || p.name,
-          code: p.productCode || p.sku || p.code,
-          price: p.productPrice || p.salePrice || p.price || 0,
-          tax: p.productTax || p.taxRate || 0,
-          stock: p.currentStock || 0,
-          warehouseStocks: p.warehouseStocks || []
-        })));
+        const plData = plRes.data?.data || plRes.data || [];
+
+        setProductsCatalog(pData.map(p => {
+          let appliedPrice = 0;
+          let appliedWholesalePrice = 0;
+          
+          for (let pl of plData) {
+             if (pl.status === true) {
+                 const plItem = (pl.productPricing || []).find(item => item.product === p._id || item.product === p.productName);
+                 if (plItem) {
+                     appliedPrice = Number(plItem.retailRate) || 0;
+                     appliedWholesalePrice = Number(plItem.wholesaleRate) || 0;
+                     break; 
+                 }
+             }
+          }
+
+          return {
+            id: p._id,
+            name: p.productName || p.name,
+            code: p.productCode || p.sku || p.code,
+            price: appliedPrice,
+            wholesalePrice: appliedWholesalePrice,
+            tax: p.productTax || p.taxRate || 0,
+            stock: p.currentStock || 0,
+            warehouseStocks: p.warehouseStocks || []
+          };
+        }));
 
         const cData = custRes.data?.data || custRes.data || [];
         if (cData.length > 0) {
-          setAllCustomers([{ name: 'Walk-in Customer' }, ...cData.map(c => ({
+          setAllCustomers([{ name: 'Walk-in Customer', type: 'Retailer' }, ...cData.map(c => ({
+            _id: c._id,
             name: c.name || c.customerName || 'Unknown',
             phone: c.phone || 'N/A',
             email: c.email || 'N/A',
             address: c.billingAddress?.city || c.billingAddress?.street || 'N/A',
             balance: c.openingBalance || 0,
-            warehouseName: c.warehouseAddress || c.warehouseName || ''
+            warehouseName: c.warehouseAddress || c.warehouseName || '',
+            type: c.type || c.customerType || c.customerGroup || 'Retailer'
           }))]);
         }
 
@@ -77,7 +92,7 @@ const AddSale = () => {
           branchId: w.branch?._id || w.branch || null,
           branchName: w.branch?.name || ''
         })));
-        
+
         const bData = bilRes.data?.data || [];
         if (bData.length > 0) {
           setAllBillers(bData.map(b => ({
@@ -88,25 +103,12 @@ const AddSale = () => {
           setAllBillers([]);
         }
 
-        const curData = curRes.data?.data || [];
-        setCurrenciesList(curData.map(c => c.code));
-        if (!currency && curData.length > 0) setCurrency(curData[0].code);
 
         const taxData = taxRes.data?.data || taxRes.data || [];
-        setTaxSlabsList(taxData.map(t => t.name));
-        if (!orderTax && taxData.length > 0) setOrderTax(taxData[0].name);
+        setTaxSlabsList(taxData.map(t => `${t.rate || 0}%`));
+        if (!orderTax && taxData.length > 0) setOrderTax(`${taxData[0].rate || 0}%`);
 
-        const discData = discRes.data?.data || discRes.data || [];
-        setDiscountTypesList(discData.map(d => d.name));
-        if (!discountType && discData.length > 0) setDiscountType(discData[0].name);
 
-        const saleStatData = saleStatRes.data?.data || saleStatRes.data || [];
-        setSaleStatusesList(saleStatData.map(s => s.name));
-        if (!saleStatus && saleStatData.length > 0) setSaleStatus(saleStatData[0].name);
-
-        const payStatData = payStatRes.data?.data || payStatRes.data || [];
-        setPaymentStatusesList(payStatData.map(p => p.name));
-        if (!paymentStatus && payStatData.length > 0) setPaymentStatus(payStatData[0].name);
 
       } catch (err) {
         console.error('Failed to load catalogs', err);
@@ -118,7 +120,7 @@ const AddSale = () => {
 
 
   // Form States
-  const [saleDate, setSaleDate] = useState('2026-08-13');
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
   const [referenceNo, setReferenceNo] = useState('');
   const [branch, setBranch] = useState('');         // stores _id
   const [warehouse, setWarehouse] = useState('');    // stores _id
@@ -169,29 +171,36 @@ const AddSale = () => {
     const whStockData = prod.warehouseStocks?.find(w => w.warehouse === warehouse);
     const availableStock = whStockData ? whStockData.stock : prod.stock;
 
+    const whName = allWarehouses.find(w => w._id === warehouse)?.name || warehouse;
+
     if (availableStock <= 0) {
-      alert(`Out of stock in ${warehouse}! Available: 0`);
+      Swal.fire('Warning', `Out of stock in ${whName}! Available: 0`, 'warning');
       return;
     }
 
     const exists = orderItems.find(item => item.code === prod.code);
     if (exists) {
       if (exists.quantity + 1 > availableStock) {
-        alert(`Cannot add more! Only ${availableStock} in stock at ${warehouse}.`);
+        Swal.fire('Warning', `Cannot add more! Only ${availableStock} in stock at ${whName}.`, 'warning');
         return;
       }
       setOrderItems(orderItems.map(item =>
         item.code === prod.code ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
+      // Find customer type to determine applied price
+      const selectedCust = allCustomers.find(c => (c._id || c.name) === customer) || { type: 'Retailer' };
+      const isWholesaler = selectedCust.type === 'Wholesaler';
+      const appliedPrice = isWholesaler && prod.wholesalePrice > 0 ? prod.wholesalePrice : prod.price;
+
       setOrderItems([...orderItems, {
         name: prod.name,
         code: prod.code,
         productId: prod.id,
         quantity: 1,
-        netUnitPrice: prod.price,
+        netUnitPrice: appliedPrice,
         discount: 0,
-        taxPercent: prod.tax
+        taxPercent: parseInt(prod.tax) || 0
       }]);
     }
     setProductSearch('');
@@ -200,13 +209,14 @@ const AddSale = () => {
 
   // Table element modifiers
   const handleQtyChange = (code, val) => {
-    const num = Math.max(1, Number(val));
+    const num = Math.max(1, Number(val) || 1);
     const prod = productsCatalog.find(p => p.code === code);
     const whStockData = prod?.warehouseStocks?.find(w => w.warehouse === warehouse);
     const availableStock = whStockData ? whStockData.stock : (prod?.stock || 0);
+    const whName = allWarehouses.find(w => w._id === warehouse)?.name || warehouse;
 
     if (num > availableStock) {
-      alert(`Cannot exceed available stock (${availableStock}) in ${warehouse}.`);
+      Swal.fire('Warning', `Cannot exceed available stock (${availableStock}) in ${whName}.`, 'warning');
       return;
     }
 
@@ -216,21 +226,21 @@ const AddSale = () => {
   };
 
   const handlePriceChange = (code, val) => {
-    const price = Math.max(0, Number(val));
+    const price = Math.max(0, Number(val) || 0);
     setOrderItems(orderItems.map(item =>
       item.code === code ? { ...item, netUnitPrice: price } : item
     ));
   };
 
   const handleDiscountChange = (code, val) => {
-    const disc = Math.max(0, Number(val));
+    const disc = Math.max(0, Number(val) || 0);
     setOrderItems(orderItems.map(item =>
       item.code === code ? { ...item, discount: disc } : item
     ));
   };
 
   const handleTaxChange = (code, val) => {
-    const tx = Math.max(0, Number(val));
+    const tx = Math.max(0, Number(val) || 0);
     setOrderItems(orderItems.map(item =>
       item.code === code ? { ...item, taxPercent: tx } : item
     ));
@@ -241,9 +251,14 @@ const AddSale = () => {
   };
 
   const getSubtotal = (item) => {
-    const rawPrice = item.netUnitPrice - item.discount;
-    const taxAmt = rawPrice * (item.taxPercent / 100);
-    return (rawPrice + taxAmt) * item.quantity;
+    const netPrice = Number(item.netUnitPrice) || 0;
+    const discount = Number(item.discount) || 0;
+    const taxPercent = Number(item.taxPercent) || 0;
+    const qty = Number(item.quantity) || 0;
+    
+    const rawPrice = netPrice - discount;
+    const taxAmt = rawPrice * (taxPercent / 100);
+    return (rawPrice + taxAmt) * qty;
   };
 
   // Live total evaluations
@@ -251,16 +266,16 @@ const AddSale = () => {
   const totalItemsCount = orderItems.length;
 
   const rawSubTotal = orderItems.reduce((sum, item) => {
-    return sum + (item.netUnitPrice * item.quantity);
+    return sum + ((Number(item.netUnitPrice) || 0) * (Number(item.quantity) || 0));
   }, 0);
 
   const calculatedItemsSubtotal = orderItems.reduce((sum, item) => sum + getSubtotal(item), 0);
 
   // Global Order Tax
-  let taxPercent = 0;
-  if (orderTax === '5%') taxPercent = 5;
-  else if (orderTax === '10%') taxPercent = 10;
-  else if (orderTax === '18%') taxPercent = 18;
+  let taxPercent = parseInt(orderTax) || 0;
+
+
+
   const calculatedGlobalTax = calculatedItemsSubtotal * (taxPercent / 100);
 
   // Global Discount
@@ -277,23 +292,32 @@ const AddSale = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!customer) {
-      alert("Customer field is required.");
+      Swal.fire('Error', 'Customer field is required.', 'error');
       return;
     }
     if (!warehouse) {
-      alert("Warehouse field is required.");
+      Swal.fire('Error', 'Warehouse field is required.', 'error');
       return;
     }
-    if (!biller) {
-      alert("Biller field is required.");
-      return;
-    }
+
     if (orderItems.length === 0) {
-      alert("Please add at least one product to the sale.");
+      Swal.fire('Error', 'Please add at least one product to the sale.', 'error');
       return;
     }
 
     try {
+      let documentUrl = '';
+      if (documentFile) {
+        const formData = new FormData();
+        formData.append('file', documentFile);
+        const uploadRes = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (uploadRes.data.success) {
+          documentUrl = uploadRes.data.url;
+        }
+      }
+
       // ✅ Send _id values (ObjectId) for proper backend linking
       const payload = {
         saleDate,
@@ -325,14 +349,15 @@ const AddSale = () => {
         saleStatus,
         paymentStatus,
         saleNote,
-        staffNote
+        staffNote,
+        documentUrl
       };
       const res = await api.post('/sales', payload);
-      alert(`Sale Created Successfully!\nInvoice: ${res.data?.data?.invoiceNo || ''}`);
+      Swal.fire('Success', `Sale Created Successfully!\nInvoice: ${res.data?.data?.invoiceNo || ''}`, 'success');
       navigate('/sales/sale-list');
     } catch (err) {
       console.error(err);
-      alert(`Error creating sale: ${err.response?.data?.message || err.message}`);
+      Swal.fire('Error', `Error creating sale: ${err.response?.data?.message || err.message}`, 'error');
     }
   };
 
@@ -376,30 +401,6 @@ const AddSale = () => {
             />
           </div>
 
-          {/* Customer */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Customer *</label>
-            <select
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
-              className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450 disabled:opacity-50"
-              required
-              disabled={!warehouse}
-            >
-              <option value="">{warehouse ? "Select customer..." : "Select warehouse first"}</option>
-              {/* ✅ value = _id for proper ObjectId linking */}
-              {customers.map((c, i) => <option key={i} value={c._id || c.name}>{c.name}</option>)}
-            </select>
-            {customer && customers.find(c => c.name === customer) && customers.find(c => c.name === customer).name !== 'Walk-in Customer' && (
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-900 grid grid-cols-2 gap-2 shadow-sm">
-                <div><span className="font-semibold">Phone:</span> {customers.find(c => c.name === customer)?.phone}</div>
-                <div><span className="font-semibold">Email:</span> {customers.find(c => c.name === customer)?.email}</div>
-                <div><span className="font-semibold">City/Address:</span> {customers.find(c => c.name === customer)?.address}</div>
-                <div><span className="font-semibold">Balance:</span> ₹{customers.find(c => c.name === customer)?.balance}</div>
-              </div>
-            )}
-          </div>
-
           {/* Branch */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Branch *</label>
@@ -429,6 +430,7 @@ const AddSale = () => {
                 setWarehouse(e.target.value); // stores _id
                 setCustomer('');
                 setBiller('');
+                setOrderItems([]);
               }}
               className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
               required
@@ -440,22 +442,34 @@ const AddSale = () => {
           </div>
 
           {/* Biller */}
+
+
+
+          {/* Customer */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Biller *</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Customer *</label>
             <select
-              value={biller}
-              onChange={(e) => setBiller(e.target.value)}
+              value={customer}
+              onChange={(e) => setCustomer(e.target.value)}
               className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450 disabled:opacity-50"
               required
               disabled={!warehouse}
             >
-              <option value="">{warehouse ? "Select biller..." : "Select warehouse first"}</option>
-              {billers.map((b, i) => <option key={i} value={b.name}>{b.name}</option>)}
+              <option value="">{warehouse ? "Select customer..." : "Select warehouse first"}</option>
+              {/* ✅ value = _id for proper ObjectId linking */}
+              {customers.map((c, i) => <option key={i} value={c._id || c.name}>{c.name}</option>)}
             </select>
+            {customer && customers.find(c => (c._id || c.name) === customer) && customers.find(c => (c._id || c.name) === customer).name !== 'Walk-in Customer' && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-900 grid grid-cols-2 gap-2 shadow-sm">
+                <div><span className="font-semibold">Phone:</span> {customers.find(c => (c._id || c.name) === customer)?.phone}</div>
+                <div><span className="font-semibold">Email:</span> {customers.find(c => (c._id || c.name) === customer)?.email}</div>
+                <div><span className="font-semibold">City/Address:</span> {customers.find(c => (c._id || c.name) === customer)?.address}</div>
+                <div><span className="font-semibold">Balance:</span> ₹{customers.find(c => (c._id || c.name) === customer)?.balance}</div>
+              </div>
+            )}
           </div>
 
 
-          {/* Currency */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Currency *</label>
             <select
@@ -464,7 +478,10 @@ const AddSale = () => {
               className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
               required
             >
-              {currenciesList.map((c, i) => <option key={i} value={c}>{c}</option>)}
+              <option value="INR">INR (Indian Rupee)</option>
+              <option value="USD">USD (US Dollar)</option>
+              <option value="EUR">EUR (Euro)</option>
+              <option value="GBP">GBP (British Pound)</option>
             </select>
           </div>
 
@@ -499,8 +516,9 @@ const AddSale = () => {
                 if (!productSearch.trim()) setSearchResults(productsCatalog);
               }}
               onBlur={() => setTimeout(() => setSearchResults([]), 200)}
-              placeholder="Scan/Search product by name/code/IMEI..."
-              className="w-full border border-blue-500 rounded pl-9 pr-3 py-2.5 text-sm bg-white text-black outline-none focus:border-blue-450 placeholder:text-gray-400"
+              placeholder={customer ? "Scan/Search product by name/code/IMEI..." : "Please select customer first..."}
+              disabled={!customer}
+              className="w-full border border-blue-500 rounded pl-9 pr-3 py-2.5 text-sm bg-white text-black outline-none focus:border-blue-450 placeholder:text-gray-400 disabled:opacity-60 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -583,12 +601,17 @@ const AddSale = () => {
                       </td>
                       {/* Tax */}
                       <td className="px-4 py-3">
-                        <input
-                          type="number"
+                        <select
+
                           value={item.taxPercent}
                           onChange={(e) => handleTaxChange(item.code, e.target.value)}
                           className="w-full border border-blue-500 rounded px-1.5 py-1 text-sm bg-white text-black text-center font-medium"
-                        />
+                        >
+                          <option value="0">0%</option>
+                          {taxSlabsList.map((t, i) => (
+                            <option key={i} value={parseInt(t) || 0}>{t}</option>
+                          ))}
+                        </select>
                       </td>
                       {/* Subtotal */}
                       <td className="px-4 py-3 text-sm font-bold text-gray-900">
@@ -656,8 +679,8 @@ const AddSale = () => {
               onChange={(e) => setDiscountType(e.target.value)}
               className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
             >
-              <option value="">Select discount type...</option>
-              {discountTypesList.map((d, i) => <option key={i} value={d}>{d}</option>)}
+              <option value="Flat">Flat (Fixed Amount)</option>
+              <option value="Percentage">Percentage (%)</option>
             </select>
           </div>
 
@@ -716,8 +739,9 @@ const AddSale = () => {
               className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
               required
             >
-              <option value="">Select status...</option>
-              {saleStatusesList.map((s, i) => <option key={i} value={s}>{s}</option>)}
+              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option>
+              <option value="Draft">Draft</option>
             </select>
           </div>
 
@@ -730,8 +754,9 @@ const AddSale = () => {
               className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white text-black outline-none focus:border-blue-450"
               required
             >
-              <option value="">Select payment status...</option>
-              {paymentStatusesList.map((p, i) => <option key={i} value={p}>{p}</option>)}
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+              <option value="Partial">Partial</option>
             </select>
           </div>
         </div>

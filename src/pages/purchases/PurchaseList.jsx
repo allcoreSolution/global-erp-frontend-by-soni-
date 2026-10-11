@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const PurchaseList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
 
   const [purchases, setPurchases] = useState([]);
@@ -194,12 +196,14 @@ const PurchaseList = () => {
           >
             <Download size={14} /> Export
           </button>
-          <button 
-            onClick={() => navigate('/purchases/add-purchase')}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
-          >
-            <Plus size={14} /> Add Purchase
-          </button>
+          {can(['create_purchases', 'manage_purchases']) && (
+            <button 
+              onClick={() => navigate('/purchases/add-purchase')}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+            >
+              <Plus size={14} /> Add Purchase
+            </button>
+          )}
         </div>
       </div>
 
@@ -343,8 +347,8 @@ const PurchaseList = () => {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${grandTotal.toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">$0.00</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">$0.00</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">${grandTotal.toFixed(2)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">₹{(p.amountPaid || 0).toFixed(2)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">₹{(grandTotal - (p.amountPaid || 0)).toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{p.paymentTerm}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{p.dueDate}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
@@ -365,20 +369,24 @@ const PurchaseList = () => {
                       >
                         <Eye size={15} />
                       </button>
-                      <button
-                        onClick={() => navigate(`/purchases/edit-purchase/${p._id}`)}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit Purchase Invoice"
-                      >
-                        <Edit size={15} />
-                      </button>
-                      <button
-                        onClick={() => handleDeletePurchase(p._id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Invoice"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {can(['edit_purchases', 'manage_purchases']) && (
+                        <button
+                          onClick={() => navigate(`/purchases/edit-purchase/${p._id}`)}
+                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          title="Edit Purchase Invoice"
+                        >
+                          <Edit size={15} />
+                        </button>
+                      )}
+                      {can(['delete_purchases', 'manage_purchases']) && (
+                        <button
+                          onClick={() => handleDeletePurchase(p._id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Invoice"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

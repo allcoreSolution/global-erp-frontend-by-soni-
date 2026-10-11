@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Download, Printer, Filter, Search, ArrowUpDown } from 'lucide-react';
+import { Package, Download, Printer, Filter, Search, ArrowUpDown, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 
 const ProductWiseStock = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -28,8 +30,8 @@ const ProductWiseStock = () => {
   };
 
   const filteredData = data.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
-                          item.sku.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.sku.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
     const matchesWarehouse = warehouseFilter ? item.warehouse === warehouseFilter : true;
     return matchesSearch && matchesCategory && matchesWarehouse;
@@ -44,7 +46,7 @@ const ProductWiseStock = () => {
   const warehouses = [...new Set(data.map(item => item.warehouse))];
 
   const getStatusStyle = (status) => {
-    switch(status) {
+    switch (status) {
       case 'In Stock': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'Low Stock': return 'bg-amber-100 text-amber-700 border-amber-200';
       case 'Critical': return 'bg-rose-100 text-rose-700 border-rose-200';
@@ -56,16 +58,21 @@ const ProductWiseStock = () => {
     <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm min-h-screen space-y-6 font-sans">
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <div className="p-2 bg-indigo-50 rounded-lg">
-              <Package className="text-indigo-600" size={24} />
-            </div>
-            Product-wise Stock Report
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 pl-12">
-            Detailed view of inventory holding mapped item-by-item across all warehouses and locations.
-          </p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            <ArrowLeft size={16} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <div className="p-2 bg-indigo-50 rounded-lg">
+                <Package className="text-indigo-600" size={24} />
+              </div>
+              Product-wise Stock Report
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 pl-12">
+              Detailed view of inventory holding mapped item-by-item across all warehouses and locations.
+            </p>
+          </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm">
@@ -82,19 +89,19 @@ const ProductWiseStock = () => {
         <div className="flex items-center gap-2 text-indigo-800 font-semibold w-full sm:w-auto mb-2 sm:mb-0">
           <Filter size={18} /> Filters:
         </div>
-        
+
         <div className="flex-1 min-w-[200px] relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search by Product Name or SKU..." 
+          <input
+            type="text"
+            placeholder="Search by Product Name or SKU..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm"
           />
         </div>
 
-        <select 
+        <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm bg-white min-w-[150px] text-slate-700"
@@ -105,7 +112,7 @@ const ProductWiseStock = () => {
           ))}
         </select>
 
-        <select 
+        <select
           value={warehouseFilter}
           onChange={(e) => setWarehouseFilter(e.target.value)}
           className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm bg-white min-w-[150px] text-slate-700"
@@ -115,7 +122,7 @@ const ProductWiseStock = () => {
             <option key={idx} value={wh}>{wh}</option>
           ))}
         </select>
-        
+
         <button onClick={fetchData} className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
           Refresh
         </button>
@@ -189,18 +196,11 @@ const ProductWiseStock = () => {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-sm text-slate-600">
-          <div>Showing 1 to 5 of 1,248 entries</div>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 border border-slate-300 rounded hover:bg-slate-200 disabled:opacity-50" disabled>Prev</button>
-            <button className="px-3 py-1 border border-indigo-600 bg-indigo-600 text-white rounded">1</button>
-            <button className="px-3 py-1 border border-slate-300 rounded hover:bg-slate-100 text-slate-700">2</button>
-            <button className="px-3 py-1 border border-slate-300 rounded hover:bg-slate-100 text-slate-700">3</button>
-            <span className="px-2 py-1">...</span>
-            <button className="px-3 py-1 border border-slate-300 rounded hover:bg-slate-200">Next</button>
-          </div>
+          <div>Showing {filteredData.length} of {data.length} entries</div>
+          <div className="text-xs text-slate-400">Use search/filter to narrow results</div>
         </div>
       </div>
     </div>

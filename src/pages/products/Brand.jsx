@@ -5,8 +5,10 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 import Swal from 'sweetalert2';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const Brand = () => {
+  const { can } = usePermissions();
   const [brands, setBrands] = useState([]);
 
   const fetchBrands = async () => {
@@ -271,18 +273,26 @@ const Brand = () => {
         {/* Global Toolbar buttons */}
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
-          <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
-            <Download size={14} /> CSV
-          </button>
-          <button onClick={handleOpenAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
-            <Plus size={14} /> Add New Brand
-          </button>
+          {can('create_products') && (
+            <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <Upload size={14} /> Import
+            </button>
+          )}
+          {can('create_products') && (
+            <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <FileDown size={14} /> Sample
+            </button>
+          )}
+          {can('view_products') && (
+            <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
+              <Download size={14} /> CSV
+            </button>
+          )}
+          {can('create_products') && (
+            <button onClick={handleOpenAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
+              <Plus size={14} /> Add New Brand
+            </button>
+          )}
         </div>
       </div>
 
@@ -362,16 +372,18 @@ const Brand = () => {
                     <div className="inline-flex items-center gap-1.5">
 
                       {/* Toggle Status Button inside Action column */}
-                      <button
-                        onClick={() => handleToggleStatus(brand._id)}
-                        className={`p-1.5 rounded transition-colors ${brand.status
-                          ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
-                          : 'text-red-600 hover:text-red-800 hover:bg-red-50'
-                          }`}
-                        title={brand.status ? 'Deactivate Brand' : 'Activate Brand'}
-                      >
-                        {brand.status ? <Check size={16} /> : <XCircle size={16} />}
-                      </button>
+                      {can('edit_products') && (
+                        <button
+                          onClick={() => handleToggleStatus(brand._id)}
+                          className={`p-1.5 rounded transition-colors ${brand.status
+                            ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                            : 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                            }`}
+                          title={brand.status ? 'Deactivate Brand' : 'Activate Brand'}
+                        >
+                          {brand.status ? <Check size={16} /> : <XCircle size={16} />}
+                        </button>
+                      )}
 
                       {/* View Action */}
                       <button
@@ -383,22 +395,26 @@ const Brand = () => {
                       </button>
 
                       {/* Edit Action */}
-                      <button
-                        onClick={() => handleOpenEditModal(brand)}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit Brand"
-                      >
-                        <Edit size={16} />
-                      </button>
+                      {can('edit_products') && (
+                        <button
+                          onClick={() => handleOpenEditModal(brand)}
+                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          title="Edit Brand"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
 
                       {/* Delete Action */}
-                      <button
-                        onClick={() => handleDeleteBrand(brand._id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Brand"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {can('delete_products') && (
+                        <button
+                          onClick={() => handleDeleteBrand(brand._id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Brand"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

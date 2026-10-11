@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const NewContra = () => {
   const navigate = useNavigate();
@@ -75,15 +76,15 @@ const NewContra = () => {
       
       if (id) {
         await api.put(`/contras/${id}`, payload);
-        alert('Contra Entry Updated successfully!');
+        Swal.fire('Success', 'Contra Entry Updated successfully!', 'success');
       } else {
         await api.post('/contras', payload);
-        alert('Contra Entry Posted successfully!');
+        Swal.fire('Success', 'Contra Entry Posted successfully!', 'success');
       }
       navigate('/contra/list');
     } catch (error) {
       console.error('Error saving contra entry', error);
-      alert('Failed to save contra entry. Please check the inputs.');
+      Swal.fire('Error', 'Failed to save contra entry. Please check the inputs.', 'error');
     }
   };
 

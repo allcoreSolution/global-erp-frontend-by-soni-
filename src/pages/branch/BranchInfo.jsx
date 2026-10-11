@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Search, X, MapPin, Phone, Mail, Upload, FileDown, Download } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const BranchInfo = () => {
+  const { can } = usePermissions();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
@@ -238,21 +240,27 @@ const BranchInfo = () => {
         </div>
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_branches', 'manage_settings']) && (
+            <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <Upload size={14} /> Import
+            </button>
+          )}
+          {can(['create_branches', 'manage_settings']) && (
+            <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
             <Download size={14} /> CSV
           </button>
-          <button
-            onClick={handleOpenAdd}
-            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow text-xs font-semibold transition-colors"
-          >
-            <Plus size={14} /> Add Branch
-          </button>
+          {can(['create_branches', 'manage_settings']) && (
+            <button
+              onClick={handleOpenAdd}
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow text-xs font-semibold transition-colors"
+            >
+              <Plus size={14} /> Add Branch
+            </button>
+          )}
         </div>
       </div>
 
@@ -298,12 +306,16 @@ const BranchInfo = () => {
                 <td className="p-2.5 sm:p-3 font-mono text-gray-700">{b.gstin || '-'}</td>
                 <td className="p-2.5 sm:p-3 text-center">
                   <div className="flex items-center justify-center gap-1.5">
-                    <button onClick={() => handleOpenEdit(b)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
-                      <Edit size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(b.id, b._id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 size={14} />
-                    </button>
+                    {can(['edit_branches', 'manage_settings']) && (
+                      <button onClick={() => handleOpenEdit(b)} className="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Edit">
+                        <Edit size={14} />
+                      </button>
+                    )}
+                    {can(['delete_branches', 'manage_settings']) && (
+                      <button onClick={() => handleDelete(b.id, b._id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

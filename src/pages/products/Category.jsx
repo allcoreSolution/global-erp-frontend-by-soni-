@@ -5,8 +5,10 @@ import {
   ChevronLeft, ChevronRight, AlertCircle, X 
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const Category = () => {
+  const { can } = usePermissions();
   // Mock Category Data
   // Real Category Data
   const [categories, setCategories] = useState([]);
@@ -283,18 +285,26 @@ const Category = () => {
         {/* Global Toolbar buttons */}
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
-          <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
-            <Download size={14} /> CSV
-          </button>
-          <button onClick={handleOpenAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
-            <Plus size={14} /> Add Category
-          </button>
+          {can('create_products') && (
+            <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <Upload size={14} /> Import
+            </button>
+          )}
+          {can('create_products') && (
+            <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <FileDown size={14} /> Sample
+            </button>
+          )}
+          {can('view_products') && (
+            <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
+              <Download size={14} /> CSV
+            </button>
+          )}
+          {can('create_products') && (
+            <button onClick={handleOpenAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
+              <Plus size={14} /> Add Category
+            </button>
+          )}
         </div>
       </div>
 
@@ -369,22 +379,26 @@ const Category = () => {
                       </button>
 
                       {/* Edit Action */}
-                      <button
-                        onClick={() => handleOpenEditModal(category)}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit Category"
-                      >
-                        <Edit size={16} />
-                      </button>
+                      {can('edit_products') && (
+                        <button
+                          onClick={() => handleOpenEditModal(category)}
+                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          title="Edit Category"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
 
                       {/* Delete Action */}
-                      <button
-                        onClick={() => handleDeleteCategory(category._id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Category"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {can('delete_products') && (
+                        <button
+                          onClick={() => handleDeleteCategory(category._id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Category"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

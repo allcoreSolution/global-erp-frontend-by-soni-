@@ -3,31 +3,46 @@ import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit, Plus, Fil
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const PaymentList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
+  const [suppliers, setSuppliers] = useState({});
   const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef(null);
 
-  const fetchPayments = async () => {
+  const fetchPaymentsAndCatalogs = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/payments');
-      if (data.success) {
-        setPayments(data.data);
+      const [payRes, suppRes] = await Promise.all([
+        api.get('/payments'),
+        api.get('/suppliers').catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      if (payRes.data.success) {
+        setPayments(payRes.data.data);
       }
+      
+      const suppData = suppRes.data?.data || [];
+      const suppMap = {};
+      suppData.forEach(s => {
+        suppMap[s._id] = s.companyName || s.supplierName || 'Unknown Supplier';
+      });
+      setSuppliers(suppMap);
+      
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPayments();
+    fetchPaymentsAndCatalogs();
   }, []);
 
   const handleDelete = async (id) => {
@@ -53,11 +68,12 @@ const PaymentList = () => {
     }
   };
 
-  const filtered = payments.filter(p =>
-    (p.supplierParty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.paymentNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = payments.filter(p => {
+    const suppName = suppliers[p.supplierParty] || p.supplierParty || '';
+    return suppName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           (p.paymentNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+           (p.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   // Real CSV Export
   const handleExportCSV = () => {
@@ -109,30 +125,36 @@ const PaymentList = () => {
           <p className="text-[12px] text-gray-500 mt-1">Manage supplier payments and clearing registers.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={() => fileInputRef.current.click()}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <Upload size={14} /> Import CSV
-          </button>
-          <button 
-            onClick={handleDownloadSample}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_payments', 'create_purchases']) && (
+            <button 
+              onClick={() => fileInputRef.current.click()}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <Upload size={14} /> Import CSV
+            </button>
+          )}
+          {can(['create_payments', 'create_purchases']) && (
+            <button 
+              onClick={handleDownloadSample}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button 
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
-          <button 
-            onClick={() => navigate('/payment/new')} 
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
-          >
-            <Plus size={14} /> New Payment
-          </button>
+          {can(['create_payments', 'create_purchases']) && (
+            <button 
+              onClick={() => navigate('/payment/new')} 
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
+            >
+              <Plus size={14} /> New Payment
+            </button>
+          )}
         </div>
       </div>
 
@@ -179,7 +201,7 @@ const PaymentList = () => {
                 filtered.map(p => (
                   <tr key={p._id} className="hover:bg-slate-50">
                     <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{p.paymentNo}</td>
-                    <td className="p-2 font-medium text-gray-900">{p.supplierParty || '-'}</td>
+                    <td className="p-2 font-medium text-gray-900">{suppliers[p.supplierParty] || p.supplierParty || '-'}</td>
                     <td className="p-2 text-gray-650">{p.invoiceNo || '-'}</td>
                     <td className="p-2 text-right font-bold text-rose-600">₹ {(p.paymentAmount || 0).toLocaleString()}</td>
                     <td className="p-2 text-gray-500 whitespace-nowrap">{p.paymentDate}</td>
@@ -191,12 +213,16 @@ const PaymentList = () => {
                       </span>
                     </td>
                     <td className="p-2 text-center no-print flex justify-center items-center gap-2">
-                      <button onClick={() => navigate(`/payment/edit/${p._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600">
-                        <Edit size={13} />
-                      </button>
-                      <button onClick={() => handleDelete(p._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
-                        <Trash2 size={13} />
-                      </button>
+                      {can(['edit_payments', 'edit_purchases']) && (
+                        <button onClick={() => navigate(`/payment/edit/${p._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600" title="Edit">
+                          <Edit size={13} />
+                        </button>
+                      )}
+                      {can(['delete_payments', 'delete_purchases']) && (
+                        <button onClick={() => handleDelete(p._id)} className="p-1 hover:bg-red-50 rounded text-red-600" title="Delete">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

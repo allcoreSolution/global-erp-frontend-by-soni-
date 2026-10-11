@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Building, Mail, Phone, Globe, MapPin, Edit, CheckCircle } from 'lucide-react';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const CompanyProfile = () => {
+  const { can } = usePermissions();
   const [activeCo, setActiveCo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', code: '', address: '', phone: '', email: '', website: '' });
@@ -70,7 +72,7 @@ const CompanyProfile = () => {
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay"></div>
           
-          {!isEditing && (
+          {!isEditing && can(['edit_company', 'manage_settings']) && (
             <button
               onClick={handleEditClick}
               className="absolute top-6 right-6 z-10 bg-white border border-slate-200 text-indigo-600 px-4 py-2 rounded-full text-xs font-bold tracking-wide flex items-center gap-2 transition-all shadow hover:bg-slate-50"

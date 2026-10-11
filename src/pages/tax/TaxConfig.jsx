@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X, Upload, Download, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const TaxConfig = () => {
+  const { can } = usePermissions();
   const [taxes, setTaxes] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -190,30 +192,36 @@ const TaxConfig = () => {
             className="hidden" 
             onChange={handleImportCSV} 
           />
-          <label 
-            htmlFor="import-csv"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <Upload size={13} /> Import
-          </label>
-          <button 
-            onClick={handleDownloadSample}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors"
-          >
-            <FileText size={13} /> Sample
-          </button>
+          {can(['create_tax_slabs', 'manage_settings']) && (
+            <label 
+              htmlFor="import-csv"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <Upload size={13} /> Import
+            </label>
+          )}
+          {can(['create_tax_slabs', 'manage_settings']) && (
+            <button 
+              onClick={handleDownloadSample}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors"
+            >
+              <FileText size={13} /> Sample
+            </button>
+          )}
           <button 
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors"
           >
             <Download size={13} /> Export
           </button>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={14} /> Add Tax Slab
-          </button>
+          {can(['create_tax_slabs', 'manage_settings']) && (
+            <button
+              onClick={handleOpenAdd}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-colors"
+            >
+              <Plus size={14} /> Add Tax Slab
+            </button>
+          )}
         </div>
       </div>
 
@@ -253,12 +261,16 @@ const TaxConfig = () => {
                 <td className="p-2.5 sm:p-3 text-gray-600">{tax.inclusive ? 'Inclusive' : 'Exclusive'}</td>
                 <td className="p-2.5 sm:p-3 text-center">
                   <div className="flex items-center justify-center gap-1.5">
-                    <button onClick={() => handleOpenEdit(tax)} className="p-1 text-amber-600 hover:bg-amber-50 rounded">
-                      <Edit size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(tax.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 size={14} />
-                    </button>
+                    {can(['edit_tax_slabs', 'manage_settings']) && (
+                      <button onClick={() => handleOpenEdit(tax)} className="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Edit Tax">
+                        <Edit size={14} />
+                      </button>
+                    )}
+                    {can(['delete_tax_slabs', 'manage_settings']) && (
+                      <button onClick={() => handleDelete(tax.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete Tax">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

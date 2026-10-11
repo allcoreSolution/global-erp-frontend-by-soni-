@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, FileText, CheckCircle, Edit, Globe, Navigation, Receipt, LayoutList } from 'lucide-react';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const BusinessSettings = () => {
+  const { can } = usePermissions();
   const [settings, setSettings] = useState({
     financialYear: '',
     currency: '',
@@ -81,7 +83,7 @@ const BusinessSettings = () => {
             </div>
           </div>
 
-          {!isEditing && (
+          {!isEditing && can(['edit_company', 'manage_settings']) && (
             <button
               onClick={handleEdit}
               className="absolute top-1/2 -translate-y-1/2 right-5 sm:right-8 bg-white border border-slate-200 text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold tracking-wide flex items-center gap-2 transition-all shadow-sm hover:bg-slate-50 hover:border-indigo-200"

@@ -2,14 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Package,
-  Layers,
   Award,
-  Hash,
-  Barcode,
   CalendarDays,
   ArrowRight,
-  TrendingUp,
-  LineChart
 } from 'lucide-react';
 
 const ProductReports = () => {
@@ -25,14 +20,6 @@ const ProductReports = () => {
       to: '/reports/stock/product-wise-stock'
     },
     {
-      title: 'Category-wise Stock',
-      desc: 'Stock grouping reports sorted by custom categories like Electronics, Wires, Switches, etc.',
-      icon: Layers,
-      color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-      actionText: 'Filter by Category',
-      to: '/coming-soon'
-    },
-    {
       title: 'Brand-wise Stock',
       desc: 'Reconciled statements displaying current inventories categorized by manufacturing brands.',
       icon: Award,
@@ -41,28 +28,12 @@ const ProductReports = () => {
       to: '/coming-soon'
     },
     {
-      title: 'Batch-wise Stock',
-      desc: 'Verify batch numbers, manufacturing runs, and serial stock holdings for production audits.',
-      icon: Hash,
-      color: 'text-cyan-600 bg-cyan-50 border-cyan-100',
-      actionText: 'Audit Batch Stock',
-      to: '/coming-soon'
-    },
-    {
-      title: 'Serial Number-wise Stock',
-      desc: 'Track high-value unique serialized assets and locate serial numbers in warehouses.',
-      icon: Barcode,
-      color: 'text-amber-600 bg-amber-50 border-amber-100',
-      actionText: 'Locate Serial Numbers',
-      to: '/coming-soon'
-    },
-    {
       title: 'Expiry Report',
       desc: 'Critical alert registers highlighting stock batches approaching or past their expiry date.',
       icon: CalendarDays,
       color: 'text-rose-600 bg-rose-50 border-rose-100',
       actionText: 'Review Expiry Alerts',
-      to: '/coming-soon',
+      to: '/reports/stock/expired-stock',
       badge: 'Alerts Active'
     }
   ];

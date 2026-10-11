@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const SaleReturn = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -117,30 +119,36 @@ const SaleReturn = () => {
         {/* Global Toolbar buttons */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button 
-            onClick={() => fileInputRef.current.click()}
-            className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
-          >
-            <Upload size={14} /> Import CSV
-          </button>
-          <button 
-            onClick={handleDownloadSample}
-            className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
-          >
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_sales', 'create_credit_notes', 'manage_sales']) && (
+            <>
+              <button 
+                onClick={() => fileInputRef.current.click()}
+                className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
+              >
+                <Upload size={14} /> Import CSV
+              </button>
+              <button 
+                onClick={handleDownloadSample}
+                className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
+              >
+                <FileDown size={14} /> Sample
+              </button>
+            </>
+          )}
           <button 
             onClick={handleExportCSV}
             className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
-          <button 
-            onClick={() => navigate('/sales/add-sale-return')}
-            className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
-          >
-            <Plus size={14} /> Add Sale Return
-          </button>
+          {can(['create_sales', 'create_credit_notes', 'manage_sales']) && (
+            <button 
+              onClick={() => navigate('/sales/add-sale-return')}
+              className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+            >
+              <Plus size={14} /> Add Sale Return
+            </button>
+          )}
         </div>
       </div>
 
@@ -220,20 +228,24 @@ const SaleReturn = () => {
                       >
                         <Eye size={15} />
                       </button>
-                      <button
-                        onClick={() => navigate(`/sales/edit-sale-return/${r._id}`)}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit details"
-                      >
-                        <Edit size={15} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(r._id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Return"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {can(['edit_sales', 'edit_credit_notes', 'manage_sales']) && (
+                        <button
+                          onClick={() => navigate(`/sales/edit-sale-return/${r._id}`)}
+                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          title="Edit details"
+                        >
+                          <Edit size={15} />
+                        </button>
+                      )}
+                      {can(['delete_sales', 'delete_credit_notes', 'manage_sales']) && (
+                        <button
+                          onClick={() => handleDelete(r._id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Return"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Search, RefreshCw, Download, Printer, FileDown, Upload } from 'lucide-react';
 import DynamicSelect from '../../components/DynamicSelect';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const DayBook = () => {
+  const { can } = usePermissions();
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  const firstDayStr = new Date(today.getFullYear(), today.getMonth(), 1);
+  const firstDay = `${firstDayStr.getFullYear()}-${String(firstDayStr.getMonth() + 1).padStart(2, '0')}-01`;
+  const lastDayStr = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const lastDay = `${lastDayStr.getFullYear()}-${String(lastDayStr.getMonth() + 1).padStart(2, '0')}-${String(lastDayStr.getDate()).padStart(2, '0')}`;
 
   const [filters, setFilters] = useState({
     fromDate: firstDay,
@@ -356,13 +360,17 @@ const DayBook = () => {
         <div className="bg-slate-50 border-t border-slate-200 p-6 flex flex-col md:flex-row justify-between items-center gap-6">
            
            <div className="flex flex-wrap gap-3 w-full md:w-auto">
-             <label className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded font-semibold text-sm transition-colors shadow-sm cursor-pointer">
-               <Upload size={16} className="text-indigo-600" /> Import CSV
-               <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
-             </label>
-             <button onClick={handleDownloadSample} className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded font-semibold text-sm transition-colors shadow-sm">
-               <FileDown size={16} className="text-blue-600" /> Sample File
-             </button>
+             {can(['create_vouchers', 'create_accounts']) && (
+               <>
+                 <label className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded font-semibold text-sm transition-colors shadow-sm cursor-pointer">
+                   <Upload size={16} className="text-indigo-600" /> Import CSV
+                   <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+                 </label>
+                 <button onClick={handleDownloadSample} className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded font-semibold text-sm transition-colors shadow-sm">
+                   <FileDown size={16} className="text-blue-600" /> Sample File
+                 </button>
+               </>
+             )}
              <button onClick={handleExportCSV} className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded font-semibold text-sm transition-colors shadow-sm">
                <Download size={16} className="text-emerald-600" /> Export CSV
              </button>

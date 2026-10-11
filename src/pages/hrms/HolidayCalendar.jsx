@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, Edit, X, Sun, Star, Info } from 'lucide-react';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const HolidayCalendar = () => {
+  const { can } = usePermissions();
   const [holidays, setHolidays] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,7 +14,8 @@ const HolidayCalendar = () => {
   
   const [newHoliday, setNewHoliday] = useState({
     name: '',
-    date: '',
+    startDate: '',
+    endDate: '',
     type: 'National Holiday',
     desc: ''
   });
@@ -21,23 +24,39 @@ const HolidayCalendar = () => {
     fetchHolidays();
   }, []);
 
+  const calculateDays = (start, end) => {
+    if (!start) return 1;
+    const s = new Date(start);
+    const e = end ? new Date(end) : s;
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 1;
+    const diff = Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+    return diff > 0 ? diff : 1;
+  };
+
   const fetchHolidays = async () => {
     setIsLoading(true);
     try {
       const res = await api.get('/holidays');
       if (res.data?.success) {
         // Map backend fields to frontend fields
-        const fetched = res.data.data.map(h => ({
-          id: h._id,
-          name: h.eventName,
-          date: h.holidayDate,
-          day: getDayName(h.holidayDate),
-          type: h.classificationType,
-          desc: h.description
-        }));
+        const fetched = res.data.data.map(h => {
+          const s = h.startDate || h.holidayDate;
+          const e = h.endDate || s;
+          const duration = h.durationDays || calculateDays(s, e);
+          return {
+            id: h._id,
+            name: h.eventName,
+            startDate: s,
+            endDate: e,
+            durationDays: duration,
+            day: getDayRangeText(s, e),
+            type: h.classificationType || 'National Holiday',
+            desc: h.description
+          };
+        });
         
-        // Sort by date
-        fetched.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Sort by startDate
+        fetched.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
         setHolidays(fetched);
       }
     } catch (error) {
@@ -55,9 +74,27 @@ const HolidayCalendar = () => {
     return isNaN(d.getTime()) ? '' : days[d.getDay()];
   };
 
+  const getDayRangeText = (startStr, endStr) => {
+    if (!startStr) return '';
+    const startDay = getDayName(startStr);
+    if (!endStr || startStr === endStr) return startDay;
+    const endDay = getDayName(endStr);
+    return `${startDay} - ${endDay}`;
+  };
+
+  const formatDateDisplay = (startStr, endStr) => {
+    if (!startStr) return '-';
+    const sDate = new Date(startStr);
+    const startFormatted = sDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (!endStr || startStr === endStr) return startFormatted;
+    const eDate = new Date(endStr);
+    const endFormatted = eDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${startFormatted} → ${endFormatted}`;
+  };
+
   const handleOpenAddModal = () => {
     setEditingHolidayId(null);
-    setNewHoliday({ name: '', date: '', type: 'National Holiday', desc: '' });
+    setNewHoliday({ name: '', startDate: '', endDate: '', type: 'National Holiday', desc: '' });
     setShowAddModal(true);
   };
 
@@ -65,7 +102,8 @@ const HolidayCalendar = () => {
     setEditingHolidayId(holiday.id);
     setNewHoliday({
       name: holiday.name,
-      date: holiday.date,
+      startDate: holiday.startDate,
+      endDate: holiday.endDate || holiday.startDate,
       type: holiday.type,
       desc: holiday.desc
     });
@@ -74,8 +112,16 @@ const HolidayCalendar = () => {
 
   const handleAddOrEditHoliday = async (e) => {
     e.preventDefault();
-    if (!newHoliday.name || !newHoliday.date) {
-      alert("Please fill in Name and Date!");
+    if (!newHoliday.name || !newHoliday.startDate) {
+      alert("Please fill in Name and Start Date!");
+      return;
+    }
+
+    const start = newHoliday.startDate;
+    const end = newHoliday.endDate || start;
+
+    if (new Date(end) < new Date(start)) {
+      alert("Ending date cannot be before starting date!");
       return;
     }
     
@@ -83,7 +129,10 @@ const HolidayCalendar = () => {
     try {
       const payload = {
         eventName: newHoliday.name,
-        holidayDate: newHoliday.date,
+        startDate: start,
+        endDate: end,
+        holidayDate: start,
+        durationDays: calculateDays(start, end),
         classificationType: newHoliday.type,
         description: newHoliday.desc
       };
@@ -93,17 +142,21 @@ const HolidayCalendar = () => {
         const res = await api.put(`/holidays/${editingHolidayId}`, payload);
         if (res.data?.success) {
           const h = res.data.data;
+          const s = h.startDate || h.holidayDate;
+          const ed = h.endDate || s;
           const updatedHoliday = {
             id: h._id,
             name: h.eventName,
-            date: h.holidayDate,
-            day: getDayName(h.holidayDate),
+            startDate: s,
+            endDate: ed,
+            durationDays: h.durationDays || calculateDays(s, ed),
+            day: getDayRangeText(s, ed),
             type: h.classificationType,
             desc: h.description
           };
           
           const updatedHolidays = holidays.map(item => item.id === editingHolidayId ? updatedHoliday : item);
-          updatedHolidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+          updatedHolidays.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
           setHolidays(updatedHolidays);
         }
       } else {
@@ -111,23 +164,27 @@ const HolidayCalendar = () => {
         const res = await api.post('/holidays', payload);
         if (res.data?.success) {
           const h = res.data.data;
+          const s = h.startDate || h.holidayDate;
+          const ed = h.endDate || s;
           const addedHoliday = {
             id: h._id,
             name: h.eventName,
-            date: h.holidayDate,
-            day: getDayName(h.holidayDate),
+            startDate: s,
+            endDate: ed,
+            durationDays: h.durationDays || calculateDays(s, ed),
+            day: getDayRangeText(s, ed),
             type: h.classificationType,
             desc: h.description
           };
   
-          const updatedHolidays = [...holidays, addedHoliday].sort((a, b) => new Date(a.date) - new Date(b.date));
+          const updatedHolidays = [...holidays, addedHoliday].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
           setHolidays(updatedHolidays);
         }
       }
       
       setShowAddModal(false);
       setEditingHolidayId(null);
-      setNewHoliday({ name: '', date: '', type: 'National Holiday', desc: '' });
+      setNewHoliday({ name: '', startDate: '', endDate: '', type: 'National Holiday', desc: '' });
       
     } catch (error) {
       console.error("Failed to save holiday", error);
@@ -149,12 +206,17 @@ const HolidayCalendar = () => {
     }
   };
 
+  const totalDaysCount = holidays.reduce((acc, curr) => acc + (Number(curr.durationDays) || 1), 0);
+
   const stats = {
     total: holidays.length,
+    totalDays: totalDaysCount,
     national: holidays.filter(h => h.type === 'National Holiday').length,
     restricted: holidays.filter(h => h.type === 'Restricted Holiday').length,
     company: holidays.filter(h => h.type === 'Company Holiday').length
   };
+
+  const currentDuration = calculateDays(newHoliday.startDate, newHoliday.endDate);
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 relative">
@@ -166,58 +228,62 @@ const HolidayCalendar = () => {
             <Calendar className="text-indigo-600" size={24} /> Holiday Calendar Setup
           </h1>
           <p className="text-[11px] sm:text-xs text-gray-500">
-            Configure annual gazetted, restricted, and corporate holiday events for payroll and shifts calculations.
+            Configure annual gazetted, multi-day festivals, restricted, and corporate holiday events for payroll and shifts calculations.
           </p>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2 no-print">
-          <button 
-            onClick={handleOpenAddModal}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition"
-          >
-            <Plus size={14} /> Add New Holiday
-          </button>
+          {can(['create_holidays', 'manage_hrms']) && (
+            <button 
+              onClick={handleOpenAddModal}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-100 transition-all cursor-pointer"
+            >
+              <Plus size={15} /> Add New Holiday
+            </button>
+          )}
         </div>
       </div>
 
       {/* Stats Panel */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         
-        <div className="bg-slate-50 dark:bg-slate-50/50 shadow-inner border border-slate-200 border dark:border-slate-200/80 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex items-center justify-between shadow-xs">
           <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase">Total Holidays</div>
-            <div className="text-xl font-bold text-slate-800 dark:text-slate-700 mt-1">{stats.total}</div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase">Total Events</div>
+            <div className="text-xl font-bold text-slate-800 mt-1">
+              {stats.total} <span className="text-xs font-semibold text-indigo-600">({stats.totalDays} Days)</span>
+            </div>
           </div>
-          <div className="bg-blue-100 text-indigo-600 p-2.5 rounded-lg">
+          <div className="bg-indigo-100 text-indigo-600 p-2.5 rounded-lg">
             <Calendar size={18} />
           </div>
         </div>
 
-        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between shadow-xs">
           <div>
             <div className="text-[10px] font-bold text-emerald-700 uppercase">National Gazetted</div>
-            <div className="text-xl font-bold text-emerald-800 dark:text-emerald-400 mt-1">{stats.national}</div>
+            <div className="text-xl font-bold text-emerald-800 mt-1">{stats.national}</div>
           </div>
           <div className="bg-emerald-100 text-emerald-600 p-2.5 rounded-lg">
             <Sun size={18} />
           </div>
         </div>
 
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-center justify-between shadow-xs">
           <div>
             <div className="text-[10px] font-bold text-amber-700 uppercase">Restricted (RH)</div>
-            <div className="text-xl font-bold text-amber-800 dark:text-amber-400 mt-1">{stats.restricted}</div>
+            <div className="text-xl font-bold text-amber-800 mt-1">{stats.restricted}</div>
           </div>
           <div className="bg-amber-100 text-amber-600 p-2.5 rounded-lg">
             <Star size={18} />
           </div>
         </div>
 
-        <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/40 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 flex items-center justify-between shadow-xs">
           <div>
-            <div className="text-[10px] font-bold text-purple-700 uppercase">Company declared</div>
-            <div className="text-xl font-bold text-purple-800 dark:text-purple-400 mt-1">{stats.company}</div>
+            <div className="text-[10px] font-bold text-purple-700 uppercase">Company Declared</div>
+            <div className="text-xl font-bold text-purple-800 mt-1">{stats.company}</div>
           </div>
           <div className="bg-purple-100 text-purple-600 p-2.5 rounded-lg">
             <Info size={18} />
@@ -227,35 +293,42 @@ const HolidayCalendar = () => {
       </div>
 
       {/* Holiday Calendar List */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-        <div className="bg-slate-50/50 p-4 border-b border-gray-200">
+      <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+        <div className="bg-slate-50/80 p-4 border-b border-slate-200 flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Official Calendar Holiday Matrix</h3>
+          <span className="text-[11px] text-slate-500 font-medium">Scheduled leaves for attendance & payroll</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100/50 border-b border-gray-200 text-gray-500 font-semibold">
+            <thead className="bg-slate-100/60 border-b border-slate-200 text-slate-600 font-semibold">
               <tr>
                 <th className="p-3">Holiday Name</th>
-                <th className="p-3">Calendar Date</th>
+                <th className="p-3">Date Range</th>
+                <th className="p-3 text-center">Duration</th>
                 <th className="p-3">Day of Week</th>
                 <th className="p-3">Classification Type</th>
                 <th className="p-3">Short Notes / Description</th>
                 <th className="p-3 text-right no-print">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                 <tr><td colSpan="6" className="p-4 text-center text-gray-500">Loading holidays...</td></tr>
+                 <tr><td colSpan="7" className="p-6 text-center text-gray-500">Loading holidays...</td></tr>
               ) : holidays.length === 0 ? (
-                 <tr><td colSpan="6" className="p-4 text-center text-gray-500">No holidays added yet.</td></tr>
+                 <tr><td colSpan="7" className="p-6 text-center text-gray-500 italic">No holidays scheduled yet. Click 'Add New Holiday' to create one.</td></tr>
               ) : (
                 holidays.map((h) => (
-                  <tr key={h.id} className="hover:bg-slate-50/30">
+                  <tr key={h.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-3 font-bold text-slate-800">{h.name}</td>
-                    <td className="p-3 text-indigo-600 font-semibold font-mono">
-                      {new Date(h.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <td className="p-3 text-indigo-600 font-semibold font-mono whitespace-nowrap">
+                      {formatDateDisplay(h.startDate, h.endDate)}
                     </td>
-                    <td className="p-3 text-gray-650 font-medium">{h.day}</td>
+                    <td className="p-3 text-center">
+                      <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        {h.durationDays} {h.durationDays > 1 ? 'Days' : 'Day'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-slate-600 font-medium whitespace-nowrap">{h.day}</td>
                     <td className="p-3">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         h.type === 'National Holiday' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
@@ -265,23 +338,27 @@ const HolidayCalendar = () => {
                         {h.type}
                       </span>
                     </td>
-                    <td className="p-3 text-gray-500 max-w-xs truncate" title={h.desc}>{h.desc}</td>
-                    <td className="p-3 text-right no-print">
-                      <div className="flex items-center justify-end gap-1">
-                        <button 
-                          onClick={() => handleOpenEditModal(h)}
-                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded text-indigo-600 border border-slate-200 transition"
-                          title="Edit Holiday"
-                        >
-                          <Edit size={13} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(h.id)}
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 rounded text-rose-600 border border-rose-100 transition"
-                          title="Delete Holiday"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                    <td className="p-3 text-gray-500 max-w-xs truncate" title={h.desc}>{h.desc || '-'}</td>
+                    <td className="p-3 text-right no-print whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {can(['edit_holidays', 'manage_hrms']) && (
+                          <button 
+                            onClick={() => handleOpenEditModal(h)}
+                            className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-indigo-600 border border-slate-200 transition"
+                            title="Edit Holiday"
+                          >
+                            <Edit size={13} />
+                          </button>
+                        )}
+                        {can(['delete_holidays', 'manage_hrms']) && (
+                          <button 
+                            onClick={() => handleDelete(h.id)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg text-rose-600 border border-rose-100 transition"
+                            title="Delete Holiday"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -294,85 +371,181 @@ const HolidayCalendar = () => {
 
       {/* ADD / EDIT HOLIDAY MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-50/50 shadow-inner border border-slate-200/50 flex items-center justify-center z-50 p-4 no-print">
-          <div className="bg-white rounded-xl shadow-xl border w-full max-w-sm overflow-hidden text-xs">
-            <div className="bg-slate-50 px-4 py-3 border-b flex items-center justify-between">
-              <span className="font-bold text-slate-800 uppercase tracking-wider">
-                {editingHolidayId ? 'Edit Holiday Setup' : 'Add New Holiday Setup'}
-              </span>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 no-print animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden text-xs transform transition-all scale-100 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-600 px-6 py-4.5 text-white flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white border border-white/20 shadow-inner">
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm tracking-wide text-white">
+                    {editingHolidayId ? 'Edit Holiday Details' : 'Add New Holiday'}
+                  </h3>
+                  <p className="text-[11px] text-indigo-100/80 font-normal">
+                    {editingHolidayId ? 'Update event parameters and date span' : 'Schedule single or multi-day holidays'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowAddModal(false)} 
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleAddOrEditHoliday} className="p-4 space-y-3.5 font-semibold">
+
+            {/* Modal Form */}
+            <form onSubmit={handleAddOrEditHoliday} className="p-6 space-y-4">
+              {/* Event Name */}
               <div>
-                <label className="block text-gray-600 mb-1">Holiday Event Name *</label>
-                <input 
-                  type="text" 
-                  value={newHoliday.name}
-                  onChange={(e) => setNewHoliday({...newHoliday, name: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  placeholder="e.g. Maha Shivratri"
-                  required
-                />
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Holiday Event Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={newHoliday.name}
+                    onChange={(e) => setNewHoliday({...newHoliday, name: e.target.value})}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none font-medium text-xs"
+                    placeholder="e.g. Diwali Vacation, Durga Puja, Eid Holiday"
+                    required
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-gray-600 mb-1">Holiday Date *</label>
-                <input 
-                  type="date" 
-                  value={newHoliday.date}
-                  onChange={(e) => setNewHoliday({...newHoliday, date: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  required
-                />
+              {/* Start Date & End Date Range */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                      Starting Date <span className="text-rose-500">*</span>
+                    </label>
+                  </div>
+                  <input 
+                    type="date" 
+                    value={newHoliday.startDate}
+                    onChange={(e) => {
+                      const s = e.target.value;
+                      setNewHoliday(prev => ({
+                        ...prev, 
+                        startDate: s,
+                        endDate: prev.endDate && new Date(prev.endDate) < new Date(s) ? s : (prev.endDate || s)
+                      }));
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none font-medium text-xs cursor-pointer"
+                    required
+                  />
+                  {newHoliday.startDate && (
+                    <span className="text-[10px] text-indigo-600 font-semibold block mt-1">
+                      {getDayName(newHoliday.startDate)}
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                      Ending Date <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                    </label>
+                  </div>
+                  <input 
+                    type="date" 
+                    min={newHoliday.startDate}
+                    value={newHoliday.endDate || newHoliday.startDate}
+                    onChange={(e) => setNewHoliday({...newHoliday, endDate: e.target.value})}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none font-medium text-xs cursor-pointer"
+                  />
+                  {newHoliday.endDate && (
+                    <span className="text-[10px] text-indigo-600 font-semibold block mt-1">
+                      {getDayName(newHoliday.endDate)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Duration Badge */}
+                {newHoliday.startDate && (
+                  <div className="col-span-1 sm:col-span-2 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500 font-medium">Calculated Holiday Duration:</span>
+                    <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold border border-indigo-200">
+                      ⏱️ {currentDuration} {currentDuration > 1 ? 'Days Vacation' : 'Single Day'}
+                    </span>
+                  </div>
+                )}
               </div>
 
+              {/* Classification Type */}
               <div>
-                <label className="block text-gray-600 mb-1">Classification Type</label>
-                <select 
-                  value={newHoliday.type}
-                  onChange={(e) => setNewHoliday({...newHoliday, type: e.target.value})}
-                  className="w-full p-2 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="National Holiday">National Holiday</option>
-                  <option value="Restricted Holiday">Restricted Holiday</option>
-                  <option value="Company Holiday">Company Holiday</option>
-                </select>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Classification Category
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'National Holiday', icon: '🏛️' },
+                    { label: 'Restricted Holiday', icon: '⭐' },
+                    { label: 'Company Holiday', icon: '🏢' }
+                  ].map((cat) => (
+                    <button
+                      type="button"
+                      key={cat.label}
+                      onClick={() => setNewHoliday({...newHoliday, type: cat.label})}
+                      className={`px-2.5 py-2 rounded-xl text-[10px] font-bold border transition-all text-center flex flex-col items-center gap-1 cursor-pointer ${
+                        newHoliday.type === cat.label 
+                          ? 'border-indigo-600 bg-indigo-50/80 text-indigo-700 ring-2 ring-indigo-200 shadow-xs' 
+                          : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      <span className="text-sm">{cat.icon}</span>
+                      <span className="leading-tight">{cat.label.replace(' Holiday', '')}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
+              {/* Description / Notes */}
               <div>
-                <label className="block text-gray-600 mb-1">Description / Notes</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Description / Remarks <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                </label>
                 <textarea 
                   value={newHoliday.desc}
                   onChange={(e) => setNewHoliday({...newHoliday, desc: e.target.value})}
-                  className="w-full h-16 p-2 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
-                  placeholder="Notes about the holiday event..."
+                  rows={2}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none font-medium text-xs resize-none"
+                  placeholder="Additional context, celebration plans, or shift applicability notes..."
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                 <button 
                   type="button" 
                   onClick={() => setShowAddModal(false)}
                   disabled={isSubmitting}
-                  className="px-3 py-1.5 border rounded text-gray-650 hover:bg-gray-50 font-bold disabled:opacity-50"
+                  className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl font-bold transition-all disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold shadow-xs disabled:opacity-50"
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-bold shadow-md shadow-indigo-200 transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
-                  {isSubmitting ? 'Saving...' : (editingHolidayId ? 'Update Holiday' : 'Save Holiday')}
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>{editingHolidayId ? 'Update Holiday' : 'Save Holiday'}</span>
+                  )}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 };

@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const SaleList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
 
   const [sales, setSales] = useState([]);
@@ -29,8 +31,8 @@ const SaleList = () => {
         reference: s.referenceNo || s.invoiceNo,
         date: s.saleDate || new Date(s.createdAt).toLocaleDateString(),
         createdBy: s.biller || 'Admin',
-        customer: s.customer,
-        warehouse: s.warehouse,
+        customer: s.customer?.name || s.customer?.customerName || s.customer || 'Unknown',
+        warehouse: s.warehouse?.name || s.warehouse || 'Unknown',
         status: s.saleStatus || 'Completed',
         paymentStatus: s.paymentStatus || 'Pending',
         paymentMethod: s.paymentMode || 'Cash',
@@ -180,21 +182,27 @@ const SaleList = () => {
         {/* Global Toolbar buttons */}
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import CSV
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_sales', 'manage_sales']) && (
+            <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <Upload size={14} /> Import CSV
+            </button>
+          )}
+          {can(['create_sales', 'manage_sales']) && (
+            <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button onClick={handleExport} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
             <Download size={14} /> Export CSV
           </button>
-          <button
-            onClick={() => navigate('/sales/add-sale')}
-            className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
-          >
-            <Plus size={14} /> Add Sale
-          </button>
+          {can(['create_sales', 'manage_sales']) && (
+            <button
+              onClick={() => navigate('/sales/add-sale')}
+              className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+            >
+              <Plus size={14} /> Add Sale
+            </button>
+          )}
         </div>
       </div>
 
@@ -309,31 +317,34 @@ const SaleList = () => {
                       >
                         <Eye size={15} />
                       </button>
-                      <button
-                        onClick={() => {
-                          alert(`Redirecting to edit sale reference: ${item.reference}`);
-                          navigate('/sales/add-sale');
-                        }}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit Sale"
-                      >
-                        <Edit size={15} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSale(item.id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Sale record"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {can(['edit_sales', 'manage_sales']) && (
+                        <button
+                          onClick={() => {
+                            navigate('/sales/add-sale');
+                          }}
+                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          title="Edit Sale"
+                        >
+                          <Edit size={15} />
+                        </button>
+                      )}
+                      {can(['delete_sales', 'manage_sales']) && (
+                        <button
+                          onClick={() => handleDeleteSale(item.id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Sale record"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </td>
 
                   <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-700 font-medium">{item.date}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">{item.reference}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{item.createdBy}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800 font-semibold">{item.customer}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{item.warehouse}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 font-semibold">{item.customer}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.warehouse}</td>
 
                   {/* Sale Status */}
                   <td className="px-4 py-3 whitespace-nowrap text-xs">
@@ -351,9 +362,9 @@ const SaleList = () => {
                     </span>
                   </td>
 
-                  <td className="px-4 py-3 text-xs text-gray-600 font-semibold">{item.paymentMethod}</td>
-                  <td className="px-4 py-3 text-xs font-mono text-gray-600">{item.currencyRate}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600 text-center font-medium">{item.deliveryStatus}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 font-semibold">{item.paymentMethod}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs font-mono text-gray-600">{item.currencyRate}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 text-center font-medium">{item.deliveryStatus}</td>
 
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">INR {item.grandTotal.toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">INR {item.returnedAmount.toFixed(2)}</td>
@@ -375,10 +386,10 @@ const SaleList = () => {
             {/* Calculations total sum row */}
             <tr className="bg-gray-50/90 font-bold border-t border-blue-500 text-gray-900">
               <td colSpan="11" className="px-4 py-3 text-sm text-gray-800">Total</td>
-              <td className="px-4 py-3 text-sm font-extrabold">INR {totalGrandAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-red-700 font-semibold">INR {totalReturnedAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-emerald-700 font-extrabold">INR {totalPaidAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 text-sm text-amber-700 font-extrabold">INR {totalDueAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm font-extrabold">INR {totalGrandAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-red-700 font-semibold">INR {totalReturnedAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-extrabold">INR {totalPaidAmount.toFixed(2)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-extrabold">INR {totalDueAmount.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>

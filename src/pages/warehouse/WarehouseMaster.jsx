@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, CheckCircle, XCircle, FileDown, Upload, Download } from 'lucide-react';
 import api from '../../api';
 import Swal from 'sweetalert2';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const WarehouseMaster = () => {
+  const { can } = usePermissions();
   const [warehouses, setWarehouses] = useState([]);
   const [branches, setBranches] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -219,18 +221,24 @@ const WarehouseMaster = () => {
         </div>
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_warehouses', 'manage_stock']) && (
+            <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <Upload size={14} /> Import
+            </button>
+          )}
+          {can(['create_warehouses', 'manage_stock']) && (
+            <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
             <Download size={14} /> CSV
           </button>
-          <button onClick={openAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded shadow transition-colors">
-            <Plus size={14} /> Add Warehouse
-          </button>
+          {can(['create_warehouses', 'manage_stock']) && (
+            <button onClick={openAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded shadow transition-colors">
+              <Plus size={14} /> Add Warehouse
+            </button>
+          )}
         </div>
       </div>
 
@@ -259,13 +267,23 @@ const WarehouseMaster = () => {
                   {wh.email && <div>{wh.email}</div>}
                 </td>
                 <td className="p-4 text-center">
-                  <button onClick={() => toggleStatus(wh)} className={`px-2 py-1 rounded text-xs font-semibold ${wh.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {wh.status ? 'Active' : 'Inactive'}
-                  </button>
+                  {can(['edit_warehouses', 'manage_stock']) ? (
+                    <button onClick={() => toggleStatus(wh)} className={`px-2 py-1 rounded text-xs font-semibold ${wh.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {wh.status ? 'Active' : 'Inactive'}
+                    </button>
+                  ) : (
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${wh.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {wh.status ? 'Active' : 'Inactive'}
+                    </span>
+                  )}
                 </td>
                 <td className="p-4 text-right flex justify-end gap-2">
-                  <button onClick={() => openEditModal(wh)} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit size={16} /></button>
-                  <button onClick={() => handleDelete(wh._id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16} /></button>
+                  {can(['edit_warehouses', 'manage_stock']) && (
+                    <button onClick={() => openEditModal(wh)} className="text-blue-500 hover:bg-blue-50 p-1 rounded" title="Edit"><Edit size={16} /></button>
+                  )}
+                  {can(['delete_warehouses', 'manage_stock']) && (
+                    <button onClick={() => handleDelete(wh._id)} className="text-red-500 hover:bg-red-50 p-1 rounded" title="Delete"><Trash2 size={16} /></button>
+                  )}
                 </td>
               </tr>
             )) : (

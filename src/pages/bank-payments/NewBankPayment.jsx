@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const NewBankPayment = () => {
   const navigate = useNavigate();
@@ -65,18 +66,18 @@ const NewBankPayment = () => {
         })));
         setAllSuppliers((suppRes.data?.data || []).map(s => ({
           id: s._id,
-          name: s.supplierName || s.name,
-          phone: s.mobile || s.phone || '',
+          name: s.companyName || s.supplierName || s.name,
+          phone: s.phone || s.mobile || '',
           balance: s.openingBalance || 0
         })));
         setAllPurchases((purchRes.data?.data || []).map(p => ({
           id: p._id,
           referenceNo: p.referenceNo,
-          supplier: p.supplier,
+          supplier: p.supplier?.companyName || p.supplier || '',
           paymentStatus: p.paymentStatus,
           grandTotal: p.grandTotal || 0,
-          paidAmount: p.paidAmount || 0,
-          dueAmount: (p.grandTotal || 0) - (p.paidAmount || 0)
+          paidAmount: p.amountPaid || 0,
+          dueAmount: (p.grandTotal || 0) - (p.amountPaid || 0)
         })));
         
         const pmData = pmRes.data?.data || [];
@@ -97,7 +98,18 @@ const NewBankPayment = () => {
     setForm(prev => {
       const updated = { ...prev, [name]: value };
       if (name === 'amount') {
-        calculateTotals(Number(value) || 0, invoiceAdjustments);
+        const amt = Number(value) || 0;
+        let remaining = amt;
+        const newAdjustments = invoiceAdjustments.map(inv => {
+          if (remaining > 0) {
+            const adjust = Math.min(remaining, inv.dueAmount);
+            remaining -= adjust;
+            return { ...inv, adjustAmount: adjust };
+          }
+          return { ...inv, adjustAmount: 0 };
+        });
+        setInvoiceAdjustments(newAdjustments);
+        calculateTotals(amt, newAdjustments);
       }
       return updated;
     });
@@ -151,16 +163,16 @@ const NewBankPayment = () => {
       
       if (id) {
         await api.put(`/bank-payments/${id}`, payload);
-        alert('Bank Payment Updated successfully!');
+        Swal.fire('Success', 'Bank Payment Updated successfully!', 'success');
       } else {
         await api.post('/bank-payments', payload);
-        alert('Bank Payment Posted successfully!');
+        Swal.fire('Success', 'Bank Payment Posted successfully!', 'success');
       }
       navigate('/bank-payment/list');
     } catch (error) {
       console.error('Error saving bank payment', error);
       const errMsg = error.response?.data?.message || error.response?.data || error.message;
-      alert('Failed to save bank payment. Backend error: ' + JSON.stringify(errMsg));
+      Swal.fire('Error', 'Failed to save bank payment: ' + JSON.stringify(errMsg), 'error');
     }
   };
 
@@ -227,7 +239,7 @@ const NewBankPayment = () => {
                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Party Details</h3>
                  {form.supplierParty && (
                     <span className="text-sm font-bold text-red-600">
-                      Outstanding: ₹{suppliers.find(s => s.name === form.supplierParty || s.id === form.supplierParty)?.balance || 0}
+                      Outstanding: ₹{suppliers.find(s => s.name === form.supplierParty)?.balance || 0}
                     </span>
                  )}
               </div>
@@ -239,12 +251,11 @@ const NewBankPayment = () => {
                     value={form.supplierParty} 
                     onChange={handleSupplierSelect}
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-orange-500 outline-none bg-white"
-                    disabled={!warehouse}
                     required
                   >
-                    <option value="">{warehouse ? "-- Select Supplier --" : "Select warehouse first"}</option>
+                    <option value="">-- Select Supplier --</option>
                     {suppliers.map(s => (
-                      <option key={s.id} value={s.id}>
+                      <option key={s.id} value={s.name}>
                         {s.name} {s.phone ? `(${s.phone})` : ''}
                       </option>
                     ))}
