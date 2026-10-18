@@ -261,8 +261,13 @@ function App() {
   // Synchronize latest permissions from backend profile on application load
   useEffect(() => {
     const syncUserProfile = async () => {
+      const path = window.location.pathname;
+      if (path === '/login' || path === '/register') {
+        return;
+      }
       const token = localStorage.getItem('erp_token');
-      if (token) {
+      const isLoggedIn = localStorage.getItem('isLoggedIn');
+      if (token && isLoggedIn === 'true') {
         try {
           const res = await api.get('/auth/profile');
           if (res.data) {
