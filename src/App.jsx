@@ -64,7 +64,6 @@ import Unit from './pages/products/Unit';
 import ProductList from './pages/products/ProductList';
 import EditProduct from './pages/products/EditProduct';
 import AddAdjustment from './pages/products/AddAdjustment';
-import ProductGroup from './pages/products/ProductGroup';
 import ProductLedger from './pages/products/ProductLedger';
 import AdjustmentList from './pages/products/AdjustmentList';
 import StockCount from './pages/products/StockCount';
@@ -403,7 +402,6 @@ function App() {
           <Route path="products/edit-product/:id" element={<EditProduct />} />
           <Route path="products/add-adjustment" element={<AddAdjustment />} />
           <Route path="products/adjustment-list" element={<AdjustmentList />} />
-          <Route path="products/group" element={<ProductGroup />} />
           <Route path="products/ledger" element={<ProductLedger />} />
           <Route path="products/stock-count" element={<StockCount />} />
           <Route path="purchases/add-purchase" element={<AddPurchase />} />
