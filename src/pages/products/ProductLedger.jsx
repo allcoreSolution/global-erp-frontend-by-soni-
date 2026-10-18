@@ -185,13 +185,13 @@ const ProductLedger = () => {
           1. HEADER SECTION
       ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-200 shrink-0">
               <BookOpen size={22} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
                 Supplier Ledger & Purchase Hub
                 <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full font-semibold">
                   {filteredSuppliers.length} Parties
@@ -204,21 +204,21 @@ const ProductLedger = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 self-stretch lg:self-auto">
+        {/* Action Buttons - Clean single row with Export CSV & Add Purchase Invoice side-by-side */}
+        <div className="flex items-center gap-2 sm:gap-2.5 self-stretch sm:self-auto shrink-0 flex-nowrap">
           <button
             onClick={fetchLedgerSummary}
             disabled={loading}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
             title="Refresh Ledger Data"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-indigo-600' : 'text-slate-500'} />
-            <span>Refresh</span>
+            <RefreshCw size={15} className={loading ? 'animate-spin text-indigo-600' : 'text-slate-500'} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
 
           <button
             onClick={handleExportCSV}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap"
             title="Export CSV"
           >
             <Download size={16} className="text-emerald-600" />
@@ -227,10 +227,11 @@ const ProductLedger = () => {
 
           <button
             onClick={() => navigate('/purchases/add-purchase')}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
+            title="Add Purchase Invoice"
           >
             <Plus size={18} />
-            <span>+ Add Purchase Invoice</span>
+            <span>Add Purchase Invoice</span>
           </button>
         </div>
       </div>
