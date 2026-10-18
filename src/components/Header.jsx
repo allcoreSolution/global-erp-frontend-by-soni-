@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Menu,
   MoreVertical,
+  MoreHorizontal,
   Maximize,
   Minimize,
   Sun,
@@ -82,30 +83,31 @@ const QuickPunchHeader = () => {
         <button
           onClick={handlePunch}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-[11px] rounded-lg shadow-xs transition disabled:opacity-50"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-[10px] sm:text-[11px] rounded-lg shadow-xs transition disabled:opacity-50 shrink-0 cursor-pointer whitespace-nowrap"
           title="Click to Punch In for today"
         >
-          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-          {loading ? 'Punching...' : 'Punch In'}
+          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-pulse shrink-0" />
+          <span>{loading ? '...' : 'Punch In'}</span>
         </button>
       ) : !status.hasPunchedOut ? (
         <button
           onClick={handlePunch}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-[11px] rounded-lg shadow-xs transition disabled:opacity-50"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-[10px] sm:text-[11px] rounded-lg shadow-xs transition disabled:opacity-50 shrink-0 cursor-pointer whitespace-nowrap"
           title="Click to Punch Out"
         >
-          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-          {loading ? 'Punching...' : `Punch Out (${status.attendance?.checkIn || ''})`}
+          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-ping shrink-0" />
+          <span>{loading ? '...' : `Punch Out (${status.attendance?.checkIn || ''})`}</span>
         </button>
       ) : (
         <button
           onClick={() => navigate('/hrms/attendance/daily')}
-          className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[10px] rounded-lg border border-slate-200 dark:border-slate-700 transition"
+          className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[10px] rounded-lg border border-slate-200 dark:border-slate-700 transition shrink-0 cursor-pointer whitespace-nowrap"
           title="View Today Attendance"
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          Punched Out ({status.attendance?.workingHours || 'Done'})
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <span className="hidden sm:inline">Punched Out</span>
+          <span className="sm:hidden">Done</span>
         </button>
       )}
     </div>
@@ -220,6 +222,8 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   const msgRef = useRef(null);
   const adminRef = useRef(null);
   const shortcutRef = useRef(null);
+  const moreToolsRef = useRef(null);
+  const [isMoreToolsOpen, setIsMoreToolsOpen] = useState(false);
 
   useEffect(() => {
     const clickOutside = (e) => {
@@ -231,6 +235,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
       if (msgRef.current && !msgRef.current.contains(e.target)) setIsMessageOpen(false);
       if (adminRef.current && !adminRef.current.contains(e.target)) setIsAdminOpen(false);
       if (shortcutRef.current && !shortcutRef.current.contains(e.target)) setIsShortcutManagerOpen(false);
+      if (moreToolsRef.current && !moreToolsRef.current.contains(e.target)) setIsMoreToolsOpen(false);
     };
     document.addEventListener('mousedown', clickOutside);
     return () => document.removeEventListener('mousedown', clickOutside);
@@ -281,9 +286,9 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   };
 
   return (
-    <div className="h-14 flex items-center justify-between px-2 md:px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 gap-2 transition-colors relative">
-      {/* Left section: Sidebar toggle & Real-time Date / Time */}
-      <div className="flex items-center gap-2 sm:gap-3">
+    <div className="h-14 flex items-center justify-between px-2 sm:px-3 md:px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 gap-2 transition-colors relative z-20">
+      {/* Left section: Sidebar toggle, Brand Logo & Live Date/Time */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
         {/* Sidebar Toggle */}
         <button
           onClick={() => {
@@ -291,17 +296,17 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             if (onToggleDesktopSidebar) onToggleDesktopSidebar();
           }}
           title="Toggle Sidebar"
-          className="p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+          className="p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0 cursor-pointer"
         >
           <Menu size={20} strokeWidth={2} />
         </button>
 
         {/* Brand Logo in Header */}
-        <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200 dark:border-slate-700 shadow-xs">
+        <div className="flex items-center bg-white rounded-lg p-1 border border-slate-200 dark:border-slate-700 shadow-2xs shrink-0">
           <img 
             src="/image-removebg-preview (1).png" 
             alt="Logo" 
-            className="h-8 w-auto max-w-[120px] object-contain"
+            className="h-7 sm:h-8 w-auto max-w-[85px] sm:max-w-[115px] object-contain"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = "/logo.png";
@@ -309,11 +314,11 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
           />
         </div>
 
-        {/* Live Date & Time Display */}
-        <div className="flex items-center gap-2 sm:gap-2.5 py-1 px-2.5 sm:px-3 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg select-none">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
-            <CalendarIcon size={13} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="hidden sm:inline">
+        {/* Live Date & Time Display - Adaptive Responsive */}
+        <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 py-1 px-2 sm:px-2.5 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-lg select-none shrink-0">
+          <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">
+            <CalendarIcon size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="hidden lg:inline">
               {currentDateTime.toLocaleDateString('en-IN', {
                 weekday: 'short',
                 day: '2-digit',
@@ -321,7 +326,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                 year: 'numeric'
               })}
             </span>
-            <span className="sm:hidden text-[11px]">
+            <span className="lg:hidden">
               {currentDateTime.toLocaleDateString('en-IN', {
                 day: '2-digit',
                 month: 'short'
@@ -329,11 +334,11 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             </span>
           </div>
 
-          <span className="w-[1px] h-3.5 bg-slate-300 dark:bg-slate-600" />
+          <span className="w-[1px] h-3 bg-slate-300 dark:bg-slate-600 shrink-0" />
 
-          <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tight">
-            <Clock size={13} className="text-indigo-500 animate-pulse shrink-0" />
-            <span>
+          <div className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tight shrink-0">
+            <Clock size={12} className="text-indigo-500 animate-pulse shrink-0" />
+            <span className="hidden lg:inline">
               {currentDateTime.toLocaleTimeString('en-IN', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -341,23 +346,34 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                 hour12: true
               })}
             </span>
+            <span className="lg:hidden">
+              {currentDateTime.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions & User Profile */}
-      <div className="flex items-center gap-3 md:gap-6 ml-2 md:ml-4 min-w-0 justify-end">
-        {/* Actions - Scrollable on Mobile */}
-        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 py-1 shrink-0 lg:flex-nowrap overflow-x-auto no-scrollbar max-w-[160px] sm:max-w-[300px] md:max-w-none">
+      {/* Right section: Quick Actions, Punch Button & User Profile */}
+      <div className="flex items-center gap-1 sm:gap-2 md:gap-2.5 shrink-0 ml-auto min-w-0 justify-end">
+        {/* Actions Row */}
+        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-gray-600 dark:text-gray-300 py-1 shrink-0">
 
-          {/* Calculator Popup */}
-          <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={calcRef}>
-            <div onClick={() => setIsCalcOpen(!isCalcOpen)} className="flex flex-col items-center">
-              <Calculator size={20} strokeWidth={1.5} />
-              <span className="hidden xl:block text-[10px] mt-1 font-medium">Calculator</span>
-            </div>
+          {/* Calculator - Direct button on md+ */}
+          <div className="relative hidden md:flex flex-col items-center shrink-0" ref={calcRef}>
+            <button
+              onClick={() => setIsCalcOpen(!isCalcOpen)}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+              title="Calculator"
+            >
+              <Calculator size={18} strokeWidth={1.7} />
+              <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Calc</span>
+            </button>
             {isCalcOpen && (
-              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[70] bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-2xl text-slate-800 dark:text-slate-100 w-[240px]">
                 <div className="flex justify-between items-center mb-1.5 px-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Calculator</span>
                   <X size={14} className="cursor-pointer hover:text-red-500" onClick={() => setIsCalcOpen(false)} />
@@ -374,7 +390,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                     <button
                       key={char}
                       onClick={() => handleCalcClick(char)}
-                      className={`p-2 rounded-lg font-bold transition-all shadow-xs ${char === '='
+                      className={`p-2 rounded-lg font-bold transition-all shadow-xs cursor-pointer ${char === '='
                         ? 'bg-blue-600 hover:bg-blue-700 text-white col-span-2'
                         : ['/', '*', '-', '+', 'C', '⌫', '%'].includes(char)
                           ? 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400'
@@ -389,21 +405,25 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Notepad Popup */}
-          <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={noteRef}>
-            <div onClick={() => setIsNoteOpen(!isNoteOpen)} className="flex flex-col items-center">
-              <StickyNote size={20} strokeWidth={1.5} />
-              <span className="hidden xl:block text-[10px] mt-1 font-medium">Notepad</span>
-            </div>
+          {/* Notepad - Direct button on xl+ */}
+          <div className="relative hidden xl:flex flex-col items-center shrink-0" ref={noteRef}>
+            <button
+              onClick={() => setIsNoteOpen(!isNoteOpen)}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+              title="Quick Notepad"
+            >
+              <StickyNote size={18} strokeWidth={1.7} />
+              <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Notes</span>
+            </button>
             {isNoteOpen && (
-              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[70] bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl text-slate-800 dark:text-slate-100 w-80">
                 <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-amber-200 dark:border-slate-800">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-500">Quick Notepad</span>
                     <span className="text-[9px] bg-amber-200/60 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded font-semibold">Auto-saved</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => handleNotesChange('')} className="text-[10px] text-rose-600 font-bold hover:underline">Clear</button>
+                    <button onClick={() => handleNotesChange('')} className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer">Clear</button>
                     <X size={14} className="cursor-pointer text-slate-500 hover:text-slate-700" onClick={() => setIsNoteOpen(false)} />
                   </div>
                 </div>
@@ -417,18 +437,22 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Real Dynamic Calendar Popup */}
-          <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={calRef}>
-            <div onClick={() => setIsCalOpen(!isCalOpen)} className="flex flex-col items-center">
-              <CalendarIcon size={20} strokeWidth={1.5} />
-              <span className="hidden xl:block text-[10px] mt-1 font-medium">Calendar</span>
-            </div>
+          {/* Calendar - Direct button on xl+ */}
+          <div className="relative hidden xl:flex flex-col items-center shrink-0" ref={calRef}>
+            <button
+              onClick={() => setIsCalOpen(!isCalOpen)}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+              title="Calendar"
+            >
+              <CalendarIcon size={18} strokeWidth={1.7} />
+              <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Calendar</span>
+            </button>
             {isCalOpen && (
-              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl z-50 text-slate-800 dark:text-slate-100">
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[70] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-2xl text-slate-800 dark:text-slate-100 w-72">
                 <div className="flex justify-between items-center mb-3 pb-1 border-b border-slate-100 dark:border-slate-800">
                   <button
                     onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() - 1, 1))}
-                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded font-bold text-xs"
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded font-bold text-xs cursor-pointer"
                   >
                     &lt;
                   </button>
@@ -437,7 +461,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                   </span>
                   <button
                     onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() + 1, 1))}
-                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded font-bold text-xs"
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded font-bold text-xs cursor-pointer"
                   >
                     &gt;
                   </button>
@@ -448,12 +472,9 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-[11px] text-center font-semibold">
-                  {/* Empty cells offset */}
                   {Array.from({ length: new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay() }).map((_, i) => (
                     <span key={`empty-${i}`} className="p-1"></span>
                   ))}
-
-                  {/* Days in month */}
                   {Array.from({ length: new Date(calDate.getFullYear(), calDate.getMonth() + 1, 0).getDate() }, (_, i) => {
                     const dayNum = i + 1;
                     const today = new Date();
@@ -464,7 +485,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                       <span
                         key={dayNum}
                         className={`p-1 rounded-md transition-all ${isToday
-                          ? 'bg-blue-600 text-white font-bold shadow-sm'
+                          ? 'bg-blue-600 text-white font-bold shadow-xs'
                           : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                           }`}
                       >
@@ -477,25 +498,160 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Reminder / Notification Dropdown */}
-          <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={reminderRef}>
-            <div onClick={() => setIsReminderOpen(!isReminderOpen)} className="flex flex-col items-center">
+          {/* Quick Add Modules Dropdown - Direct button on lg+ */}
+          <div className="relative hidden lg:flex flex-col items-center shrink-0" ref={addMenuRef}>
+            <button
+              onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300"
+              title="Quick Add Entry"
+            >
+              <PlusCircle size={18} strokeWidth={1.7} />
+              <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Add</span>
+            </button>
+            {isAddMenuOpen && (
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[70] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1.5 divide-y divide-slate-100 dark:divide-slate-800 text-[11px] font-semibold min-w-[180px]">
+                {[
+                  [
+                    { text: 'Sale Entry', to: '/sales/add-sale' },
+                    { text: 'Purchase Entry', to: '/purchases/add-purchase' },
+                    { text: 'Receipt Entry', to: '/receipt/new' },
+                    { text: 'Payment Entry', to: '/payment/new' }
+                  ],
+                  [
+                    { text: 'Bank Receipt', to: '/bank-receipt/new' },
+                    { text: 'Bank Payment', to: '/bank-payment/new' },
+                    { text: 'Contra Entry', to: '/contra/new' },
+                    { text: 'Journal Entry', to: '/journal/new' }
+                  ],
+                  [
+                    { text: 'Stock Entry', to: '/stock-entry/new' },
+                    { text: 'Stock Transfer', to: '/stock-transfer/new' },
+                    { text: 'Add Product', to: '/products/add-product' }
+                  ]
+                ].map((group, gIdx) => {
+                  const filteredGroup = group.filter(item => isSuperAdmin || isAdmin || canRoute(item.to));
+                  if (filteredGroup.length === 0) return null;
+                  return (
+                    <div key={gIdx} className="py-1">
+                      {filteredGroup.map((item, idx) => (
+                        <Link 
+                          key={idx} 
+                          to={item.to} 
+                          onClick={() => setIsAddMenuOpen(false)} 
+                          className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          {item.text}
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Fullscreen - Direct button on 2xl+ */}
+          <div 
+            className="hidden 2xl:flex flex-col items-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0 cursor-pointer" 
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          >
+            {isFullscreen ? <Minimize size={18} strokeWidth={1.7} /> : <Maximize size={18} strokeWidth={1.7} />}
+            <span className="text-[9px] mt-0.5 font-medium">{isFullscreen ? 'Exit' : 'Full'}</span>
+          </div>
+
+          {/* Keyboard Shortcuts - Direct button on 2xl+ */}
+          <div className="relative hidden 2xl:flex flex-col items-center shrink-0" ref={shortcutRef}>
+            <div
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+              onClick={() => setIsShortcutManagerOpen(!isShortcutManagerOpen)}
+              title="Manage Shortcut Keys"
+            >
+              <Keyboard size={18} strokeWidth={1.7} />
+              <span className="text-[9px] mt-0.5 font-medium">Keys</span>
+            </div>
+
+            {isShortcutManagerOpen && (
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[70] w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-4 space-y-3.5 text-xs font-semibold">
+                <div className="flex items-center justify-between border-b pb-2 dark:border-slate-800">
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Shortcut Keys</span>
+                  <label className="relative inline-flex items-center cursor-pointer" title="Enable/Disable Shortcuts">
+                    <input
+                      type="checkbox"
+                      checked={shortcutsEnabled}
+                      onChange={() => {
+                        const nextVal = !shortcutsEnabled;
+                        setShortcutsEnabled(nextVal);
+                        localStorage.setItem('erp_shortcuts_enabled', String(nextVal));
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                <div className="space-y-2 overflow-y-auto max-h-[300px] pr-1">
+                  {[
+                    { key: 'F2', label: 'Sale Entry' },
+                    { key: 'F3', label: 'Purchase Entry' },
+                    { key: 'F4', label: 'Receipt Entry' },
+                    { key: 'F5', label: 'Payment Entry' },
+                    { key: 'F6', label: 'Bank Receipt' },
+                    { key: 'F7', label: 'Bank Payment' },
+                    { key: 'F8', label: 'Journal Entry' },
+                    { key: 'F9', label: 'Stock View' },
+                    { key: 'F10', label: 'Stock Entry' },
+                    { key: 'F11', label: 'Stock Transfer' },
+                    { key: 'Ctrl+L', label: 'Ledger' },
+                    { key: 'Ctrl+O', label: 'Outstanding' },
+                  ].map((shortcut, index) => (
+                    <div key={index} className="flex items-center justify-between border-b border-gray-50 dark:border-slate-800/50 pb-1.5 last:border-0">
+                      <span className="bg-slate-100 dark:bg-slate-800 border dark:border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-blue-600 dark:text-blue-400 font-bold font-mono min-w-[50px] text-center shadow-xs">
+                        {shortcut.key}
+                      </span>
+                      <span className="text-gray-700 dark:text-gray-300 text-[11px] text-right font-medium">
+                        {shortcut.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Help & Support - Direct button on 2xl+ */}
+          <div 
+            className="hidden 2xl:flex flex-col items-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0 cursor-pointer" 
+            onClick={() => navigate('/setup/help-support')}
+            title="Help & Support"
+          >
+            <HelpCircle size={18} strokeWidth={1.7} />
+            <span className="text-[9px] mt-0.5 font-medium">Help</span>
+          </div>
+
+          {/* Reminder / Notification Dropdown - ALWAYS VISIBLE */}
+          <div className="relative flex flex-col items-center shrink-0" ref={reminderRef}>
+            <button
+              onClick={() => setIsReminderOpen(!isReminderOpen)}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300 relative"
+              title="Notifications & Reminders"
+            >
               <div className="relative">
-                <Bell size={20} strokeWidth={1.5} />
+                <Bell size={18} strokeWidth={1.7} />
                 {reminders.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shadow-xs">
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold px-1 py-0.2 rounded-full min-w-[15px] h-[15px] flex items-center justify-center shadow-xs">
                     {reminders.length}
                   </span>
                 )}
               </div>
-              <span className="hidden xl:block text-[10px] mt-1 font-medium">Reminder</span>
-            </div>
+              <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Alerts</span>
+            </button>
             {isReminderOpen && (
-              <div className="absolute top-12 right-0 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 py-1.5 text-slate-800 dark:text-slate-100 text-xs font-semibold">
+              <div className="fixed sm:absolute top-[52px] sm:top-12 right-2 sm:right-0 w-[calc(100vw-16px)] sm:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[70] py-1.5 text-slate-800 dark:text-slate-100 text-xs font-semibold">
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Reminders ({reminders.length})</span>
                   {reminders.length > 0 && (
-                    <button onClick={handleClearAllReminders} className="text-[10px] text-blue-600 font-bold hover:underline">Clear All</button>
+                    <button onClick={handleClearAllReminders} className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer">Clear All</button>
                   )}
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
@@ -532,25 +688,29 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Message Dropdown */}
-          <div className="relative flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" ref={msgRef}>
-            <div onClick={() => setIsMessageOpen(!isMessageOpen)} className="flex flex-col items-center">
+          {/* Messages Dropdown - ALWAYS VISIBLE */}
+          <div className="relative flex flex-col items-center shrink-0" ref={msgRef}>
+            <button
+              onClick={() => setIsMessageOpen(!isMessageOpen)}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300 relative"
+              title="Messages"
+            >
               <div className="relative">
-                <MessageSquare size={20} strokeWidth={1.5} />
+                <MessageSquare size={18} strokeWidth={1.7} />
                 {messages.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shadow-xs">
+                  <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[9px] font-bold px-1 py-0.2 rounded-full min-w-[15px] h-[15px] flex items-center justify-center shadow-xs">
                     {messages.length}
                   </span>
                 )}
               </div>
-              <span className="hidden xl:block text-[10px] mt-1 font-medium">Message</span>
-            </div>
+              <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Chat</span>
+            </button>
             {isMessageOpen && (
-              <div className="absolute top-12 right-0 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 py-1.5 text-slate-800 dark:text-slate-100 text-xs font-semibold">
+              <div className="fixed sm:absolute top-[52px] sm:top-12 right-2 sm:right-0 w-[calc(100vw-16px)] sm:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[70] py-1.5 text-slate-800 dark:text-slate-100 text-xs font-semibold">
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Unread Messages ({messages.length})</span>
                   {messages.length > 0 && (
-                    <button onClick={handleClearAllMessages} className="text-[10px] text-blue-600 font-bold hover:underline">Mark all read</button>
+                    <button onClick={handleClearAllMessages} className="text-[10px] text-blue-600 font-bold hover:underline cursor-pointer">Mark all read</button>
                   )}
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
@@ -576,165 +736,163 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Quick Add Modules Dropdown */}
-          <div className="relative shrink-0 flex flex-col items-center" ref={addMenuRef}>
-            <button
-              onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-              className="flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors focus:outline-none bg-transparent border-0 p-0 text-gray-600 dark:text-gray-300"
-            >
-              <PlusCircle size={20} strokeWidth={1.5} />
-              <span className="hidden xl:block text-[10px] mt-1 font-medium flex items-center gap-0.5">
-                Add Entry <ChevronDown size={10} />
-              </span>
-            </button>
-            {isAddMenuOpen && (
-              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60] bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-lg shadow-lg z-50 py-1.5 divide-y divide-gray-150 dark:divide-slate-800 text-[11px] font-semibold">
-                {[
-                  [
-                    { text: 'Sale Entry', to: '/sales/add-sale' },
-                    { text: 'Purchase Entry', to: '/purchases/add-purchase' },
-                    { text: 'Receipt Entry', to: '/receipt/new' },
-                    { text: 'Payment Entry', to: '/payment/new' }
-                  ],
-                  [
-                    { text: 'Bank Receipt', to: '/bank-receipt/new' },
-                    { text: 'Bank Payment', to: '/bank-payment/new' },
-                    { text: 'Contra Entry', to: '/contra/new' },
-                    { text: 'Journal Entry', to: '/journal/new' }
-                  ],
-                  [
-                    { text: 'Stock Entry', to: '/stock-entry/new' },
-                    { text: 'Stock Transfer', to: '/stock-transfer/new' },
-                    { text: 'Add Product', to: '/products/add-product' }
-                  ]
-                ].map((group, gIdx) => {
-                  const filteredGroup = group.filter(item => isSuperAdmin || isAdmin || canRoute(item.to));
-                  if (filteredGroup.length === 0) return null;
-                  return (
-                    <div key={gIdx} className="py-1">
-                      {filteredGroup.map((item, idx) => (
-                        <Link 
-                          key={idx} 
-                          to={item.to} 
-                          onClick={() => setIsAddMenuOpen(false)} 
-                          className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        >
-                          {item.text}
-                        </Link>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0" onClick={toggleFullscreen}>
-            {isFullscreen ? <Minimize size={20} strokeWidth={1.5} /> : <Maximize size={20} strokeWidth={1.5} />}
-            <span className="hidden xl:block text-[10px] mt-1 font-medium">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
-          </div>
-
-          {/* Dark Mode */}
+          {/* Dark / Light Theme Toggle - ALWAYS VISIBLE */}
           <div
-            className="flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer shrink-0"
             onClick={toggleTheme}
             title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
-            {isDarkMode ? <Sun size={20} strokeWidth={1.5} className="text-amber-400" /> : <Moon size={20} strokeWidth={1.5} />}
-            <span className="hidden xl:block text-[10px] mt-1 font-medium">{isDarkMode ? 'Light' : 'Dark'}</span>
+            {isDarkMode ? <Sun size={18} strokeWidth={1.7} className="text-amber-400" /> : <Moon size={18} strokeWidth={1.7} />}
+            <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">{isDarkMode ? 'Light' : 'Dark'}</span>
           </div>
 
-          <div className="relative shrink-0" ref={shortcutRef}>
-            <div
-              className="flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              onClick={() => setIsShortcutManagerOpen(!isShortcutManagerOpen)}
-              title="Manage Shortcut Keys"
+          {/* More Tools Popover for screens < 2xl */}
+          <div className="relative flex 2xl:hidden shrink-0" ref={moreToolsRef}>
+            <button
+              onClick={() => setIsMoreToolsOpen(!isMoreToolsOpen)}
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isMoreToolsOpen 
+                  ? 'bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400' 
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300 hover:text-blue-600'
+              }`}
+              title="More Tools"
             >
-              <Keyboard size={20} strokeWidth={1.5} />
-              <span className="hidden xl:block text-[10px] mt-1 font-medium">Shortcuts</span>
-            </div>
+              <MoreHorizontal size={18} strokeWidth={1.8} />
+            </button>
 
-            {isShortcutManagerOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-lg shadow-lg z-50 p-4 space-y-3.5 text-xs font-semibold">
-                <div className="flex items-center justify-between border-b pb-2 dark:border-slate-800">
-                  <span className="font-bold text-slate-800 dark:text-slate-200">Shortcut Keys</span>
-                  <label className="relative inline-flex items-center cursor-pointer" title="Enable/Disable Shortcuts">
-                    <input
-                      type="checkbox"
-                      checked={shortcutsEnabled}
-                      onChange={() => {
-                        const nextVal = !shortcutsEnabled;
-                        setShortcutsEnabled(nextVal);
-                        localStorage.setItem('erp_shortcuts_enabled', String(nextVal));
-                      }}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
+            {isMoreToolsOpen && (
+              <div className="fixed sm:absolute top-[52px] sm:top-12 right-2 sm:right-0 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[70] py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  Quick Tools
+                </div>
+                
+                <div className="py-1">
+                  {/* Calculator - shown in dropdown when screen < md */}
+                  <button
+                    onClick={() => {
+                      setIsMoreToolsOpen(false);
+                      setIsCalcOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors md:hidden cursor-pointer"
+                  >
+                    <Calculator size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>Calculator</span>
+                  </button>
+
+                  {/* Add Entry - shown in dropdown when screen < lg */}
+                  <button
+                    onClick={() => {
+                      setIsMoreToolsOpen(false);
+                      setIsAddMenuOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors lg:hidden cursor-pointer"
+                  >
+                    <PlusCircle size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Quick Add Entry...</span>
+                  </button>
+
+                  {/* Notepad - shown in dropdown when screen < xl */}
+                  <button
+                    onClick={() => {
+                      setIsMoreToolsOpen(false);
+                      setIsNoteOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors xl:hidden cursor-pointer"
+                  >
+                    <StickyNote size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Quick Notepad</span>
+                  </button>
+
+                  {/* Calendar - shown in dropdown when screen < xl */}
+                  <button
+                    onClick={() => {
+                      setIsMoreToolsOpen(false);
+                      setIsCalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors xl:hidden cursor-pointer"
+                  >
+                    <CalendarIcon size={15} className="text-purple-600 dark:text-purple-400 shrink-0" />
+                    <span>Calendar</span>
+                  </button>
                 </div>
 
-                <div className="space-y-2 overflow-y-auto max-h-[300px] pr-1">
-                  {[
-                    { key: 'F2', label: 'Sale Entry' },
-                    { key: 'F3', label: 'Purchase Entry' },
-                    { key: 'F4', label: 'Receipt Entry' },
-                    { key: 'F5', label: 'Payment Entry' },
-                    { key: 'F6', label: 'Bank Receipt' },
-                    { key: 'F7', label: 'Bank Payment' },
-                    { key: 'F8', label: 'Journal Entry' },
-                    { key: 'F9', label: 'Stock View' },
-                    { key: 'F10', label: 'Stock Entry' },
-                    { key: 'F11', label: 'Stock Transfer' },
-                    { key: 'Ctrl+L', label: 'Ledger' },
-                    { key: 'Ctrl+O', label: 'Outstanding' },
-                  ].map((shortcut, index) => (
-                    <div key={index} className="flex items-center justify-between border-b border-gray-50 dark:border-slate-800/50 pb-1.5 last:border-0">
-                      <span className="bg-slate-100 dark:bg-slate-800 border dark:border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-blue-600 dark:text-blue-400 font-bold font-mono min-w-[50px] text-center shadow-sm">
-                        {shortcut.key}
-                      </span>
-                      <span className="text-gray-700 dark:text-gray-300 text-[11px] text-right font-medium">
-                        {shortcut.label}
-                      </span>
-                    </div>
-                  ))}
+                <div className="py-1">
+                  {/* Shortcuts */}
+                  <button
+                    onClick={() => {
+                      setIsMoreToolsOpen(false);
+                      setIsShortcutManagerOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  >
+                    <Keyboard size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span>Keyboard Shortcuts</span>
+                  </button>
+
+                  {/* Fullscreen */}
+                  <button
+                    onClick={() => {
+                      setIsMoreToolsOpen(false);
+                      toggleFullscreen();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  >
+                    {isFullscreen ? (
+                      <>
+                        <Minimize size={15} className="text-slate-600 dark:text-slate-400 shrink-0" />
+                        <span>Exit Fullscreen</span>
+                      </>
+                    ) : (
+                      <>
+                        <Maximize size={15} className="text-slate-600 dark:text-slate-400 shrink-0" />
+                        <span>Fullscreen</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Help */}
+                  <button
+                    onClick={() => {
+                      setIsMoreToolsOpen(false);
+                      navigate('/setup/help-support');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  >
+                    <HelpCircle size={15} className="text-teal-600 dark:text-teal-400 shrink-0" />
+                    <span>Help & Support</span>
+                  </button>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Help & Support */}
-          <div className="flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-450 transition-colors shrink-0" onClick={() => navigate('/setup/help-support')}>
-            <HelpCircle size={20} strokeWidth={1.5} />
-            <span className="hidden xl:block text-[10px] mt-1 font-medium">Help</span>
           </div>
         </div>
 
         {/* Quick Punch Button for Current Logged-in User */}
         <QuickPunchHeader />
 
-        <div className="h-8 w-[1px] bg-gray-200 dark:bg-slate-800"></div>
+        <div className="h-6 w-[1px] bg-gray-200 dark:bg-slate-800 hidden sm:block shrink-0"></div>
 
         {/* User Profile */}
-        <div className="relative" ref={adminRef}>
+        <div className="relative shrink-0" ref={adminRef}>
           <div
             onClick={() => setIsAdminOpen(!isAdminOpen)}
-            className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 p-1.5 rounded-md transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 p-1 sm:p-1.5 rounded-lg transition-colors select-none"
           >
-            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-slate-800 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold overflow-hidden border border-blue-200 dark:border-slate-700">
+            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-slate-800 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold overflow-hidden border border-blue-200 dark:border-slate-700 shrink-0">
               <img src="https://ui-avatars.com/api/?name=Admin&background=random" alt="Admin" className="w-full h-full object-cover" />
             </div>
-            <div className="hidden sm:block">
-              <div className="text-sm font-bold text-gray-800 dark:text-slate-100 leading-tight truncate max-w-[120px]">
+            <div className="hidden xl:block text-left">
+              <div className="text-xs font-bold text-gray-800 dark:text-slate-100 leading-tight truncate max-w-[100px]">
                 {localStorage.getItem('userName') || 'ADMIN'}
               </div>
-              <div className="text-[12px] text-gray-500 dark:text-gray-400 capitalize">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 capitalize truncate max-w-[100px]">
                 {localStorage.getItem('userRole') || 'User'}
               </div>
             </div>
-            <ChevronDown size={16} className="text-gray-400 dark:text-gray-500" />
+            <ChevronDown size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
           </div>
           {isAdminOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-lg shadow-lg z-50 py-1.5 text-xs font-semibold">
+            <div className="fixed sm:absolute top-[52px] sm:top-12 right-2 sm:right-0 w-48 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-xl z-[70] py-1.5 text-xs font-semibold">
               <div className="px-4 py-2 border-b text-gray-500 dark:text-gray-400">Status: Online</div>
               <Link to="/setup/user-master" onClick={() => setIsAdminOpen(false)} className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-850">Manage Users</Link>
               <Link to="/setup/system-settings" onClick={() => setIsAdminOpen(false)} className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-850">Settings</Link>

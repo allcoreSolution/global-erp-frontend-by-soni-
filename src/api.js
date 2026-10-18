@@ -11,18 +11,10 @@ const api = axios.create({
 // Request Interceptor: Attach JWT Token before sending any request
 api.interceptors.request.use(
   (config) => {
-    // Priority 1: Check if there's a dynamically set token in localStorage
-    let token = localStorage.getItem('erp_token');
-    
-    // Priority 2: Fallback to the token from .env (useful for testing before login works)
-    if (!token) {
-      token = import.meta.env.VITE_API_TOKEN;
-    }
-    
+    const token = localStorage.getItem('erp_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
     return config;
   },
   (error) => {
