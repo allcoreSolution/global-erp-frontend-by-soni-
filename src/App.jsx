@@ -403,6 +403,7 @@ function App() {
           <Route path="products/add-adjustment" element={<AddAdjustment />} />
           <Route path="products/adjustment-list" element={<AdjustmentList />} />
           <Route path="products/ledger" element={<ProductLedger />} />
+          <Route path="products/ledger/:supplierId" element={<ProductLedger />} />
           <Route path="products/stock-count" element={<StockCount />} />
           <Route path="purchases/add-purchase" element={<AddPurchase />} />
           <Route path="purchases/edit-purchase/:id" element={<AddPurchase />} />
