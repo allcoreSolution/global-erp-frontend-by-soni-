@@ -11,7 +11,6 @@ import {
   ChevronDown,
   Menu,
   MoreVertical,
-  MoreHorizontal,
   Maximize,
   Minimize,
   Sun,
@@ -222,8 +221,6 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   const msgRef = useRef(null);
   const adminRef = useRef(null);
   const shortcutRef = useRef(null);
-  const moreToolsRef = useRef(null);
-  const [isMoreToolsOpen, setIsMoreToolsOpen] = useState(false);
 
   useEffect(() => {
     const clickOutside = (e) => {
@@ -235,7 +232,6 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
       if (msgRef.current && !msgRef.current.contains(e.target)) setIsMessageOpen(false);
       if (adminRef.current && !adminRef.current.contains(e.target)) setIsAdminOpen(false);
       if (shortcutRef.current && !shortcutRef.current.contains(e.target)) setIsShortcutManagerOpen(false);
-      if (moreToolsRef.current && !moreToolsRef.current.contains(e.target)) setIsMoreToolsOpen(false);
     };
     document.addEventListener('mousedown', clickOutside);
     return () => document.removeEventListener('mousedown', clickOutside);
@@ -286,9 +282,9 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   };
 
   return (
-    <div className="h-14 flex items-center justify-between px-2 sm:px-3 md:px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 gap-2 transition-colors relative z-20">
-      {/* Left section: Sidebar toggle, Brand Logo & Live Date/Time */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
+    <div className="h-14 flex items-center justify-between px-2 sm:px-3 md:px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 gap-1.5 sm:gap-2 transition-colors relative z-20">
+      {/* 1. Left Fixed Section: Sidebar toggle, Brand Logo & Live Date/Time */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Sidebar Toggle */}
         <button
           onClick={() => {
@@ -315,10 +311,10 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
         </div>
 
         {/* Live Date & Time Display - Adaptive Responsive */}
-        <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 py-1 px-2 sm:px-2.5 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-lg select-none shrink-0">
+        <div className="hidden md:flex items-center gap-1.5 sm:gap-2 py-1 px-2 sm:px-2.5 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-lg select-none shrink-0">
           <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">
             <CalendarIcon size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="hidden lg:inline">
+            <span className="hidden xl:inline">
               {currentDateTime.toLocaleDateString('en-IN', {
                 weekday: 'short',
                 day: '2-digit',
@@ -326,7 +322,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                 year: 'numeric'
               })}
             </span>
-            <span className="lg:hidden">
+            <span className="xl:hidden">
               {currentDateTime.toLocaleDateString('en-IN', {
                 day: '2-digit',
                 month: 'short'
@@ -338,7 +334,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
 
           <div className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tight shrink-0">
             <Clock size={12} className="text-indigo-500 animate-pulse shrink-0" />
-            <span className="hidden lg:inline">
+            <span className="hidden xl:inline">
               {currentDateTime.toLocaleTimeString('en-IN', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -346,7 +342,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                 hour12: true
               })}
             </span>
-            <span className="lg:hidden">
+            <span className="xl:hidden">
               {currentDateTime.toLocaleTimeString('en-IN', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -357,16 +353,15 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
         </div>
       </div>
 
-      {/* Right section: Quick Actions, Punch Button & User Profile */}
-      <div className="flex items-center gap-1 sm:gap-2 md:gap-2.5 shrink-0 ml-auto min-w-0 justify-end">
-        {/* Actions Row */}
-        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-gray-600 dark:text-gray-300 py-1 shrink-0">
+      {/* 2. Middle Section: All Action Buttons - Direct on Desktop, Smooth Horizontal Swipe/Scroll on Phone & Smaller Screens */}
+      <div className="flex-1 min-w-0 flex items-center justify-end overflow-hidden px-1">
+        <div className="flex items-center gap-1 sm:gap-1.5 text-gray-600 dark:text-gray-300 overflow-x-auto no-scrollbar scroll-smooth py-1 touch-pan-x">
 
-          {/* Calculator - Direct button on md+ */}
-          <div className="relative hidden md:flex flex-col items-center shrink-0" ref={calcRef}>
+          {/* Calculator */}
+          <div className="relative flex flex-col items-center shrink-0" ref={calcRef}>
             <button
               onClick={() => setIsCalcOpen(!isCalcOpen)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer shrink-0"
               title="Calculator"
             >
               <Calculator size={18} strokeWidth={1.7} />
@@ -405,11 +400,11 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Notepad - Direct button on xl+ */}
-          <div className="relative hidden xl:flex flex-col items-center shrink-0" ref={noteRef}>
+          {/* Quick Notepad */}
+          <div className="relative flex flex-col items-center shrink-0" ref={noteRef}>
             <button
               onClick={() => setIsNoteOpen(!isNoteOpen)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer shrink-0"
               title="Quick Notepad"
             >
               <StickyNote size={18} strokeWidth={1.7} />
@@ -437,11 +432,11 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Calendar - Direct button on xl+ */}
-          <div className="relative hidden xl:flex flex-col items-center shrink-0" ref={calRef}>
+          {/* Calendar */}
+          <div className="relative flex flex-col items-center shrink-0" ref={calRef}>
             <button
               onClick={() => setIsCalOpen(!isCalOpen)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer shrink-0"
               title="Calendar"
             >
               <CalendarIcon size={18} strokeWidth={1.7} />
@@ -498,11 +493,11 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Quick Add Modules Dropdown - Direct button on lg+ */}
-          <div className="relative hidden lg:flex flex-col items-center shrink-0" ref={addMenuRef}>
+          {/* Quick Add Modules Dropdown */}
+          <div className="relative flex flex-col items-center shrink-0" ref={addMenuRef}>
             <button
               onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300 shrink-0"
               title="Quick Add Entry"
             >
               <PlusCircle size={18} strokeWidth={1.7} />
@@ -550,26 +545,16 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Fullscreen - Direct button on 2xl+ */}
-          <div 
-            className="hidden 2xl:flex flex-col items-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0 cursor-pointer" 
-            onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-          >
-            {isFullscreen ? <Minimize size={18} strokeWidth={1.7} /> : <Maximize size={18} strokeWidth={1.7} />}
-            <span className="text-[9px] mt-0.5 font-medium">{isFullscreen ? 'Exit' : 'Full'}</span>
-          </div>
-
-          {/* Keyboard Shortcuts - Direct button on 2xl+ */}
-          <div className="relative hidden 2xl:flex flex-col items-center shrink-0" ref={shortcutRef}>
-            <div
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer"
+          {/* Keyboard Shortcuts */}
+          <div className="relative flex flex-col items-center shrink-0" ref={shortcutRef}>
+            <button
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer shrink-0 text-gray-600 dark:text-gray-300"
               onClick={() => setIsShortcutManagerOpen(!isShortcutManagerOpen)}
               title="Manage Shortcut Keys"
             >
               <Keyboard size={18} strokeWidth={1.7} />
-              <span className="text-[9px] mt-0.5 font-medium">Keys</span>
-            </div>
+              <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Keys</span>
+            </button>
 
             {isShortcutManagerOpen && (
               <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[70] w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-4 space-y-3.5 text-xs font-semibold">
@@ -619,21 +604,21 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Help & Support - Direct button on 2xl+ */}
-          <div 
-            className="hidden 2xl:flex flex-col items-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0 cursor-pointer" 
-            onClick={() => navigate('/setup/help-support')}
-            title="Help & Support"
+          {/* Fullscreen */}
+          <button
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center shrink-0 cursor-pointer text-gray-600 dark:text-gray-300" 
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           >
-            <HelpCircle size={18} strokeWidth={1.7} />
-            <span className="text-[9px] mt-0.5 font-medium">Help</span>
-          </div>
+            {isFullscreen ? <Minimize size={18} strokeWidth={1.7} /> : <Maximize size={18} strokeWidth={1.7} />}
+            <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">{isFullscreen ? 'Exit' : 'Full'}</span>
+          </button>
 
-          {/* Reminder / Notification Dropdown - ALWAYS VISIBLE */}
+          {/* Reminders / Notifications */}
           <div className="relative flex flex-col items-center shrink-0" ref={reminderRef}>
             <button
               onClick={() => setIsReminderOpen(!isReminderOpen)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300 relative"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300 relative shrink-0"
               title="Notifications & Reminders"
             >
               <div className="relative">
@@ -688,11 +673,11 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Messages Dropdown - ALWAYS VISIBLE */}
+          {/* Messages */}
           <div className="relative flex flex-col items-center shrink-0" ref={msgRef}>
             <button
               onClick={() => setIsMessageOpen(!isMessageOpen)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300 relative"
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer text-gray-600 dark:text-gray-300 relative shrink-0"
               title="Messages"
             >
               <div className="relative">
@@ -736,138 +721,31 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             )}
           </div>
 
-          {/* Dark / Light Theme Toggle - ALWAYS VISIBLE */}
-          <div
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer shrink-0"
+          {/* Dark / Light Theme Toggle */}
+          <button
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center cursor-pointer shrink-0 text-gray-600 dark:text-gray-300"
             onClick={toggleTheme}
             title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
             {isDarkMode ? <Sun size={18} strokeWidth={1.7} className="text-amber-400" /> : <Moon size={18} strokeWidth={1.7} />}
             <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">{isDarkMode ? 'Light' : 'Dark'}</span>
-          </div>
+          </button>
 
-          {/* More Tools Popover for screens < 2xl */}
-          <div className="relative flex 2xl:hidden shrink-0" ref={moreToolsRef}>
-            <button
-              onClick={() => setIsMoreToolsOpen(!isMoreToolsOpen)}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                isMoreToolsOpen 
-                  ? 'bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400' 
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300 hover:text-blue-600'
-              }`}
-              title="More Tools"
-            >
-              <MoreHorizontal size={18} strokeWidth={1.8} />
-            </button>
-
-            {isMoreToolsOpen && (
-              <div className="fixed sm:absolute top-[52px] sm:top-12 right-2 sm:right-0 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[70] py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 divide-y divide-slate-100 dark:divide-slate-800">
-                <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Quick Tools
-                </div>
-                
-                <div className="py-1">
-                  {/* Calculator - shown in dropdown when screen < md */}
-                  <button
-                    onClick={() => {
-                      setIsMoreToolsOpen(false);
-                      setIsCalcOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors md:hidden cursor-pointer"
-                  >
-                    <Calculator size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span>Calculator</span>
-                  </button>
-
-                  {/* Add Entry - shown in dropdown when screen < lg */}
-                  <button
-                    onClick={() => {
-                      setIsMoreToolsOpen(false);
-                      setIsAddMenuOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors lg:hidden cursor-pointer"
-                  >
-                    <PlusCircle size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Quick Add Entry...</span>
-                  </button>
-
-                  {/* Notepad - shown in dropdown when screen < xl */}
-                  <button
-                    onClick={() => {
-                      setIsMoreToolsOpen(false);
-                      setIsNoteOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors xl:hidden cursor-pointer"
-                  >
-                    <StickyNote size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span>Quick Notepad</span>
-                  </button>
-
-                  {/* Calendar - shown in dropdown when screen < xl */}
-                  <button
-                    onClick={() => {
-                      setIsMoreToolsOpen(false);
-                      setIsCalOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors xl:hidden cursor-pointer"
-                  >
-                    <CalendarIcon size={15} className="text-purple-600 dark:text-purple-400 shrink-0" />
-                    <span>Calendar</span>
-                  </button>
-                </div>
-
-                <div className="py-1">
-                  {/* Shortcuts */}
-                  <button
-                    onClick={() => {
-                      setIsMoreToolsOpen(false);
-                      setIsShortcutManagerOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
-                  >
-                    <Keyboard size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span>Keyboard Shortcuts</span>
-                  </button>
-
-                  {/* Fullscreen */}
-                  <button
-                    onClick={() => {
-                      setIsMoreToolsOpen(false);
-                      toggleFullscreen();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
-                  >
-                    {isFullscreen ? (
-                      <>
-                        <Minimize size={15} className="text-slate-600 dark:text-slate-400 shrink-0" />
-                        <span>Exit Fullscreen</span>
-                      </>
-                    ) : (
-                      <>
-                        <Maximize size={15} className="text-slate-600 dark:text-slate-400 shrink-0" />
-                        <span>Fullscreen</span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* Help */}
-                  <button
-                    onClick={() => {
-                      setIsMoreToolsOpen(false);
-                      navigate('/setup/help-support');
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
-                  >
-                    <HelpCircle size={15} className="text-teal-600 dark:text-teal-400 shrink-0" />
-                    <span>Help & Support</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Help & Support */}
+          <button 
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex flex-col items-center shrink-0 cursor-pointer text-gray-600 dark:text-gray-300" 
+            onClick={() => navigate('/setup/help-support')}
+            title="Help & Support"
+          >
+            <HelpCircle size={18} strokeWidth={1.7} />
+            <span className="hidden 2xl:block text-[9px] mt-0.5 font-medium">Help</span>
+          </button>
         </div>
+      </div>
 
-        {/* Quick Punch Button for Current Logged-in User */}
+      {/* 3. Right Fixed Section: Quick Punch Button & User Profile */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-1">
+        {/* Quick Punch Button */}
         <QuickPunchHeader />
 
         <div className="h-6 w-[1px] bg-gray-200 dark:bg-slate-800 hidden sm:block shrink-0"></div>
