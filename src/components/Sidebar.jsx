@@ -578,7 +578,7 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
                 { text: 'Product List', to: '/products/product-list', permission: ['view_products', 'view_stock'] },
                 { text: 'Add Adjustment', to: '/products/add-adjustment', permission: 'create_adjustments' },
                 { text: 'Adjustment List', to: '/products/adjustment-list', permission: 'view_adjustments' },
-                { text: 'Ledger', to: '/products/ledger', permission: 'view_ledgers' }
+                { text: 'Supplier Ledger', to: '/products/ledger', permission: ['view_ledgers', 'view_suppliers', 'view_purchases', 'view_products'] }
               ]}
             />
 
