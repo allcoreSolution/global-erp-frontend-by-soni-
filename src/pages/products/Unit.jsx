@@ -5,8 +5,10 @@ import {
   ChevronLeft, ChevronRight, AlertCircle, X 
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const Unit = () => {
+  const { can } = usePermissions();
   // Mock Unit Data
   const [units, setUnits] = useState([]);
   
@@ -45,11 +47,17 @@ const Unit = () => {
   });
 
   // Handle Search
-  const filteredUnits = units.filter(unit => 
-    unit.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    unit.baseUnit.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUnits = units.filter(unit => {
+    const code = unit.code || unit.unitCode || '';
+    const name = unit.name || unit.unitName || '';
+    const baseUnit = unit.baseUnit || '';
+    const search = searchTerm.toLowerCase();
+    return (
+      code.toLowerCase().includes(search) ||
+      name.toLowerCase().includes(search) ||
+      baseUnit.toLowerCase().includes(search)
+    );
+  });
 
   // Pagination calculation
   const indexOfLastRecord = currentPage * recordsPerPage;
@@ -74,11 +82,11 @@ const Unit = () => {
     setIsEditMode(true);
     setSelectedUnit(unit);
     setUnitForm({ 
-      code: unit.code, 
-      name: unit.name, 
-      baseUnit: unit.baseUnit, 
-      operator: unit.operator, 
-      operationValue: unit.operationValue 
+      code: unit.code || unit.unitCode || '', 
+      name: unit.name || unit.unitName || '', 
+      baseUnit: unit.baseUnit || 'None', 
+      operator: unit.operator || 'None', 
+      operationValue: unit.operationValue || '1' 
     });
     setIsModalOpen(true);
   };
@@ -253,18 +261,26 @@ const Unit = () => {
         {/* Global Toolbar buttons */}
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
-          <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
-            <Download size={14} /> CSV
-          </button>
-          <button onClick={handleOpenAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
-            <Plus size={14} /> Add Unit
-          </button>
+          {can(['create_units', 'create_products']) && (
+            <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <Upload size={14} /> Import
+            </button>
+          )}
+          {can(['create_units', 'create_products']) && (
+            <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <FileDown size={14} /> Sample
+            </button>
+          )}
+          {can(['view_units', 'view_products']) && (
+            <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
+              <Download size={14} /> CSV
+            </button>
+          )}
+          {can(['create_units', 'create_products']) && (
+            <button onClick={handleOpenAddModal} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
+              <Plus size={14} /> Add Unit
+            </button>
+          )}
         </div>
       </div>
 
@@ -322,23 +338,23 @@ const Unit = () => {
                 <tr key={unit._id} className="hover:bg-gray-50/70 transition-colors">
                   {/* Unit Code */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {unit.code}
+                    {unit.code || unit.unitCode || '-'}
                   </td>
                   {/* Unit Name */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {unit.name}
+                    {unit.name || unit.unitName || '-'}
                   </td>
                   {/* Base Unit */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {unit.baseUnit}
+                    {unit.baseUnit || 'None'}
                   </td>
                   {/* Operator */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {unit.operator}
+                    {unit.operator || 'None'}
                   </td>
                   {/* Operation Value */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                    {unit.operationValue}
+                    {unit.operationValue || '1'}
                   </td>
                   {/* Actions (View, Edit, Delete) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -354,22 +370,26 @@ const Unit = () => {
                       </button>
 
                       {/* Edit Action */}
-                      <button
-                        onClick={() => handleOpenEditModal(unit)}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit Unit"
-                      >
-                        <Edit size={16} />
-                      </button>
+                      {can(['edit_units', 'edit_products']) && (
+                        <button
+                          onClick={() => handleOpenEditModal(unit)}
+                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          title="Edit Unit"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
 
                       {/* Delete Action */}
-                      <button
-                        onClick={() => handleDeleteUnit(unit._id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Unit"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {can(['delete_units', 'delete_products']) && (
+                        <button
+                          onClick={() => handleDeleteUnit(unit._id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Unit"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -549,23 +569,23 @@ const Unit = () => {
             <div className="space-y-4 py-2 text-sm">
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Unit Code:</span>
-                <span className="font-bold text-gray-900">{selectedUnit.code}</span>
+                <span className="font-bold text-gray-900">{selectedUnit.code || selectedUnit.unitCode || '-'}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Unit Name:</span>
-                <span className="font-bold text-gray-900">{selectedUnit.name}</span>
+                <span className="font-bold text-gray-900">{selectedUnit.name || selectedUnit.unitName || '-'}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Base Unit:</span>
-                <span className="text-gray-900">{selectedUnit.baseUnit}</span>
+                <span className="text-gray-900">{selectedUnit.baseUnit || 'None'}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Operator:</span>
-                <span className="text-gray-900">{selectedUnit.operator}</span>
+                <span className="text-gray-900">{selectedUnit.operator || 'None'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-semibold text-gray-600">Operation Value:</span>
-                <span className="font-bold text-gray-900">{selectedUnit.operationValue}</span>
+                <span className="font-bold text-gray-900">{selectedUnit.operationValue || '1'}</span>
               </div>
             </div>
 

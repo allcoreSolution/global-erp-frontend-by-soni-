@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 import Swal from 'sweetalert2';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const ProductList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
@@ -371,9 +373,11 @@ const ProductList = () => {
           <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
             <Download size={14} /> Export
           </button>
-          <button onClick={() => navigate('/purchases/add-purchase')} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
-            <Plus size={14} /> Add Product
-          </button>
+          {can('create_products') && (
+            <button onClick={() => navigate('/purchases/add-purchase')} className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
+              <Plus size={14} /> Add Product
+            </button>
+          )}
         </div>
       </div>
 
@@ -577,13 +581,15 @@ const ProductList = () => {
                       </button>
 
                       {/* Delete Action */}
-                      <button
-                        onClick={() => handleDeleteProduct(product._id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Product"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {can('delete_products') && (
+                        <button
+                          onClick={() => handleDeleteProduct(product._id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Product"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

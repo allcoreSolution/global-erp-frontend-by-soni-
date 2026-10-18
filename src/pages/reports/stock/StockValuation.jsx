@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Percent, Download, Printer, Filter } from 'lucide-react';
+import { Percent, Download, Printer, Filter, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 
 const StockValuation = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [totalValuation, setTotalValuation] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -29,11 +31,16 @@ const StockValuation = () => {
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Percent className="text-slate-600" size={22} /> Stock Valuation
-          </h1>
-          <p className="text-[11px] sm:text-xs text-gray-500">Evaluate stock worth indices using Average Costing models.</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            <ArrowLeft size={16} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Percent className="text-slate-600" size={22} /> Stock Valuation
+            </h1>
+            <p className="text-[11px] sm:text-xs text-gray-500">Evaluate stock worth indices using Average Costing models.</p>
+          </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-semibold hover:bg-slate-50 transition-colors">
@@ -74,13 +81,13 @@ const StockValuation = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-               <tr>
-                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">Fetching stock valuation...</td>
-               </tr>
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-gray-500 italic">Fetching stock valuation...</td>
+              </tr>
             ) : data.length === 0 ? (
-               <tr>
-                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">No products found.</td>
-               </tr>
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-gray-500 italic">No products found.</td>
+              </tr>
             ) : (
               data.map((item, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">

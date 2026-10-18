@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Download, Printer, Plus, Trash2, Eye, Edit, FileText, CheckCircle, Upload, FileDown } from 'lucide-react';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const CreditNoteList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
   const [creditNotes, setCreditNotes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -172,25 +174,29 @@ const CreditNoteList = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
           {/* Import CSV */}
-          <label className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-2 rounded shadow transition-all cursor-pointer">
-            <Upload size={14} />
-            Import CSV
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleImportCSV}
-              className="hidden"
-            />
-          </label>
+          {can(['create_credit_notes', 'create_sales']) && (
+            <label className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-2 rounded shadow transition-all cursor-pointer">
+              <Upload size={14} />
+              Import CSV
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                className="hidden"
+              />
+            </label>
+          )}
 
           {/* Sample CSV */}
-          <button
-            onClick={handleDownloadSample}
-            className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-2 rounded shadow transition-all cursor-pointer"
-          >
-            <FileDown size={14} />
-            Sample File
-          </button>
+          {can(['create_credit_notes', 'create_sales']) && (
+            <button
+              onClick={handleDownloadSample}
+              className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-2 rounded shadow transition-all cursor-pointer"
+            >
+              <FileDown size={14} />
+              Sample File
+            </button>
+          )}
 
           {/* Export CSV */}
           <button
@@ -201,12 +207,14 @@ const CreditNoteList = () => {
             Export CSV
           </button>
 
-          <Link
-            to="/credit-note/new"
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 shadow transition-colors no-print"
-          >
-            <Plus size={14} /> New Credit Note
-          </Link>
+          {can(['create_credit_notes', 'create_sales']) && (
+            <Link
+              to="/credit-note/new"
+              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 shadow transition-colors no-print"
+            >
+              <Plus size={14} /> New Credit Note
+            </Link>
+          )}
         </div>
       </div>
 
@@ -262,15 +270,19 @@ const CreditNoteList = () => {
                         </span>
                       </td>
                       <td className="p-2 text-center whitespace-nowrap space-x-1 no-print">
-                        <button onClick={() => addLog(`Previewing Credit Note Voucher ${d.creditNoteNo}`)} className="p-1 hover:bg-slate-100 rounded text-slate-600">
+                        <button onClick={() => addLog(`Previewing Credit Note Voucher ${d.creditNoteNo}`)} className="p-1 hover:bg-slate-100 rounded text-slate-600" title="View Voucher">
                           <Eye size={12} />
                         </button>
-                        <button onClick={() => navigate(`/credit-note/edit/${d._id}`)} className="p-1 hover:bg-blue-50 rounded text-blue-600">
-                          <Edit size={12} />
-                        </button>
-                        <button onClick={() => handleDelete(d._id, d.creditNoteNo)} className="p-1 hover:bg-red-55 rounded text-red-600">
-                          <Trash2 size={12} />
-                        </button>
+                        {can(['edit_credit_notes', 'edit_sales']) && (
+                          <button onClick={() => navigate(`/credit-note/edit/${d._id}`)} className="p-1 hover:bg-blue-50 rounded text-blue-600" title="Edit">
+                            <Edit size={12} />
+                          </button>
+                        )}
+                        {can(['delete_credit_notes', 'delete_sales']) && (
+                          <button onClick={() => handleDelete(d._id, d.creditNoteNo)} className="p-1 hover:bg-red-55 rounded text-red-600" title="Delete">
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )

@@ -21,45 +21,23 @@ const NewDebitNote = () => {
     
     // Supplier Details
     supplier: '',
-    supplierCode: '',
-    contact: '',
-    mobile: '',
 
     // Original Purchase Details
     originalInvoiceNo: '',
-    originalInvoiceDate: '',
     poNo: '',
     grnNo: '',
     
     // Summary Inputs
     discount: 0,
-    cgst: 0,
-    sgst: 0,
-    igst: 0,
-    roundOff: 0,
-    
-    // Adjustment / Settlement
-    adjustmentType: 'Adjust Against Invoice',
-    adjustInvoiceNo: '',
-    adjustAmount: '',
-    remainingAmount: '',
-    
-    // Accounting
-    supplierLedger: '',
-    purchaseReturnLedger: '',
-    taxAccount: '',
-    costCenter: '',
+    taxAmount: 0,
     
     // Remarks
     remarks: ''
   });
 
-  const fileInputRef = useRef(null);
-  const [attachment, setAttachment] = useState(null);
-
   // Debit Note Items Rows
   const [items, setItems] = useState([
-    { id: 1, product: '', batch: '', qty: 0, rate: 0, taxPercent: 0, amount: 0 }
+    { id: 1, product: '', qty: 0, rate: 0, amount: 0 }
   ]);
 
   // Summary Calculated State
@@ -83,26 +61,11 @@ const NewDebitNote = () => {
               type: data.type || 'Purchase Return',
               status: data.status || 'Draft',
               supplier: data.supplier || '',
-              supplierCode: data.supplierCode || '',
-              contact: data.contact || '',
-              mobile: data.mobile || '',
               originalInvoiceNo: data.originalInvoiceNo || '',
-              originalInvoiceDate: data.originalInvoiceDate || '',
               poNo: data.poNo || '',
               grnNo: data.grnNo || '',
               discount: data.discount || 0,
-              cgst: data.cgst || 0,
-              sgst: data.sgst || 0,
-              igst: data.igst || 0,
-              roundOff: data.roundOff || 0,
-              adjustmentType: data.adjustmentType || 'Adjust Against Invoice',
-              adjustInvoiceNo: data.adjustInvoiceNo || '',
-              adjustAmount: data.adjustAmount || 0,
-              remainingAmount: data.remainingAmount || 0,
-              supplierLedger: data.supplierLedger || '',
-              purchaseReturnLedger: data.purchaseReturnLedger || '',
-              taxAccount: data.taxAccount || '',
-              costCenter: data.costCenter || '',
+              taxAmount: data.taxAmount || 0,
               remarks: data.remarks || ''
             });
             if (data.items && data.items.length > 0) {
@@ -134,7 +97,7 @@ const NewDebitNote = () => {
     const { name, value } = e.target;
     setForm(prev => {
       const updated = { ...prev, [name]: value };
-      if (['discount', 'cgst', 'sgst', 'igst', 'roundOff'].includes(name)) {
+      if (['discount', 'taxAmount'].includes(name)) {
         calculateSummary(items, { ...updated, [name]: Number(value) || 0 });
       }
       return updated;
@@ -162,7 +125,7 @@ const NewDebitNote = () => {
 
   const addItem = () => {
     const newId = items.length > 0 ? Math.max(...items.map(p => p.id)) + 1 : 1;
-    setItems([...items, { id: newId, product: '', batch: '', qty: 0, rate: 0, taxPercent: 0, amount: 0 }]);
+    setItems([...items, { id: newId, product: '', qty: 0, rate: 0, amount: 0 }]);
   };
 
   const removeItem = (id) => {
@@ -177,12 +140,9 @@ const NewDebitNote = () => {
     const subT = currentItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     
     const d = Number(currentForm.discount) || 0;
-    const c = Number(currentForm.cgst) || 0;
-    const s = Number(currentForm.sgst) || 0;
-    const i = Number(currentForm.igst) || 0;
-    const r = Number(currentForm.roundOff) || 0;
+    const t = Number(currentForm.taxAmount) || 0;
     
-    const grandT = subT - d + c + s + i + r;
+    const grandT = subT - d + t;
 
     setSummary({
       subTotal: subT,
@@ -190,44 +150,71 @@ const NewDebitNote = () => {
     });
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setAttachment(e.target.files[0]);
-    }
-  };
+  // ──────────────────────────────────────────────────────────────
+  // AUTO-POPULATE ITEMS WHEN INVOICE NO IS SELECTED
+  // ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchInvoiceItems = async () => {
+      // Avoid fetching if we don't have the required fields
+      if (!form.originalInvoiceNo || !form.supplier) return;
+      
+      try {
+        const res = await api.get(`/purchases?supplierName=${encodeURIComponent(form.supplier)}`);
+        const purchases = res.data?.data || [];
+        const selectedPurchase = purchases.find(p => p.purchaseNo === form.originalInvoiceNo);
+        
+        if (selectedPurchase && selectedPurchase.orderItems && selectedPurchase.orderItems.length > 0) {
+          const newItems = selectedPurchase.orderItems.map((item, index) => {
+             const qty = Number(item.quantity) || 0;
+             const rate = Number(item.netUnitCost || item.cost) || 0;
+             return {
+                id: index + 1,
+                product: item.product?.productName || item.name || '',
+                qty: qty,
+                rate: rate,
+                amount: qty * rate
+             };
+          });
+          setItems(newItems);
+          calculateSummary(newItems, form);
+        }
+      } catch (err) {
+        console.error('Failed to fetch invoice details', err);
+      }
+    };
 
-  const removeAttachment = () => {
-    setAttachment(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+    fetchInvoiceItems();
+  }, [form.originalInvoiceNo, form.supplier]);
 
   const handleSave = async (e) => {
     e.preventDefault();
     
+    if (!form.branch || !form.supplier || !form.originalInvoiceNo) {
+      alert("Please fill all mandatory fields (Branch, Supplier, Invoice No).");
+      return;
+    }
+
+    if (items.some(i => !i.product)) {
+      alert("Please select a product for all items.");
+      return;
+    }
+
     try {
       // The file object (attachment) is omitted from the JSON payload
       // In a real scenario, you'd use FormData to send files.
       const payload = {
         ...form,
-        voucherNo: form.debitNoteNo, // Protect from duplicate unique index
+        voucherNo: form.debitNoteNo, // Protect from duplicate unique index E11000
+        noteNo: form.debitNoteNo, // Protect from duplicate unique index noteNo_1
         
         // Deep Casting numbers
         discount: Number(form.discount) || 0,
-        cgst: Number(form.cgst) || 0,
-        sgst: Number(form.sgst) || 0,
-        igst: Number(form.igst) || 0,
-        roundOff: Number(form.roundOff) || 0,
-        adjustAmount: Number(form.adjustAmount) || 0,
-        remainingAmount: Number(form.remainingAmount) || 0,
+        taxAmount: Number(form.taxAmount) || 0,
 
         items: items.map(item => ({
           product: item.product,
-          batch: item.batch,
           qty: Number(item.qty) || 0,
           rate: Number(item.rate) || 0,
-          taxPercent: Number(item.taxPercent) || 0,
           amount: Number(item.amount) || 0,
         })),
 
@@ -236,6 +223,10 @@ const NewDebitNote = () => {
           grandTotal: Number(summary.grandTotal) || 0
         }
       };
+
+      if (!payload.company) {
+        delete payload.company;
+      }
 
       if (isEditMode) {
         await api.put(`/debit-notes/${id}`, payload);
@@ -269,9 +260,7 @@ const NewDebitNote = () => {
            <button type="button" className="px-4 py-2 bg-indigo-100 border border-indigo-200 text-indigo-700 rounded text-sm font-semibold hover:bg-indigo-200 transition-colors shadow-sm">
              Save Draft
            </button>
-           <button type="button" className="px-4 py-2 bg-blue-100 border border-blue-200 text-blue-700 rounded text-sm font-semibold hover:bg-blue-200 transition-colors shadow-sm">
-             Approve
-           </button>
+
            <button onClick={handleSave} type="button" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold shadow-md transition-colors">
              <CheckCircle size={16} /> Post
            </button>
@@ -281,12 +270,12 @@ const NewDebitNote = () => {
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden max-w-6xl mx-auto">
         
         {/* Main Title Header */}
-        <div className="bg-gradient-to-r from-red-50 to-white px-6 py-4 border-b border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-red-100 rounded-lg text-red-600">
+        <div className="bg-white px-6 py-4 border-b border-slate-200 flex items-center gap-3">
+          <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
              <FileMinus size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-red-900 uppercase tracking-wide">CREATE DEBIT NOTE</h2>
+            <h2 className="text-xl font-bold text-slate-800 uppercase tracking-wide">CREATE DEBIT NOTE</h2>
             <p className="text-sm text-slate-500 font-medium">Record purchase returns or supplier debits</p>
           </div>
         </div>
@@ -307,79 +296,36 @@ const NewDebitNote = () => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Date *</label>
                   <input type="date" name="date" value={form.date} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none transition-all" />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <DynamicSelect 
-                    name="company" 
-                    category="Company" 
-                    value={form.company} 
-                    onChange={handleChange} 
-                    defaultOptions={['Main Corp']} 
-                    className="w-full text-sm"
-                  />
-                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <DynamicSelect 
+                  <DynamicSelect hideAddButton 
                     name="branch" 
                     category="Branch" 
                     value={form.branch} 
                     onChange={handleChange} 
-                    defaultOptions={['HQ']} 
                     className="w-full text-sm"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Type *</label>
-                  <DynamicSelect 
-                    name="type" 
-                    category="Debit Note Type" 
-                    value={form.type} 
-                    onChange={handleChange} 
-                    defaultOptions={['Purchase Return', 'Price Difference', 'Discount Received']} 
-                    className="w-full text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <DynamicSelect 
-                    name="status" 
-                    category="Status" 
-                    value={form.status} 
-                    onChange={handleChange} 
-                    defaultOptions={['Draft', 'Approved']} 
-                    className="w-full text-sm"
-                  />
-                </div>
               </div>
             </div>
+          </div>
 
             {/* SECTION: SUPPLIER DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Supplier Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier *</label>
-                  <DynamicSelect 
+                  <DynamicSelect hideAddButton 
                     name="supplier" 
                     category="Supplier" 
                     value={form.supplier} 
-                    onChange={handleChange} 
-                    defaultOptions={['Global Electronics']} 
+                    onChange={handleChange}
+                    dependentValue={form.branch}
+                    disabled={!form.branch}
+                    defaultOptions={[]} 
                     className="w-full text-sm"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Code</label>
-                  <input type="text" name="supplierCode" value={form.supplierCode} onChange={handleChange} placeholder="SUP-001" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Contact</label>
-                  <input type="text" name="contact" value={form.contact} onChange={handleChange} placeholder="Person Name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mobile</label>
-                  <input type="text" name="mobile" value={form.mobile} onChange={handleChange} placeholder="Phone No" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
                 </div>
               </div>
             </div>
@@ -387,29 +333,18 @@ const NewDebitNote = () => {
             {/* SECTION: ORIGINAL PURCHASE DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Original Purchase Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No. *</label>
-                  <DynamicSelect 
+                  <DynamicSelect hideAddButton 
                     name="originalInvoiceNo" 
-                    category="Invoice" 
+                    category="Purchase Invoice" 
                     value={form.originalInvoiceNo} 
                     onChange={handleChange} 
-                    defaultOptions={['INV-2023-445']} 
-                    className="w-full text-sm"
+                    dependentValue={form.supplier}
+                    dependentValue2={form.branch}
+                    disabled={!form.supplier}
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Date</label>
-                  <input type="date" name="originalInvoiceDate" value={form.originalInvoiceDate} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">PO No.</label>
-                  <input type="text" name="poNo" value={form.poNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">GRN No.</label>
-                  <input type="text" name="grnNo" value={form.grnNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
                 </div>
               </div>
             </div>
@@ -429,10 +364,8 @@ const NewDebitNote = () => {
                 <thead>
                   <tr className="bg-slate-50 text-slate-600">
                     <th className="px-2 py-2 text-xs font-bold uppercase w-1/4">Product</th>
-                    <th className="px-2 py-2 text-xs font-bold uppercase">Batch</th>
                     <th className="px-2 py-2 text-xs font-bold uppercase w-24">Qty</th>
                     <th className="px-2 py-2 text-xs font-bold uppercase w-28">Rate (₹)</th>
-                    <th className="px-2 py-2 text-xs font-bold uppercase w-24">Tax (%)</th>
                     <th className="px-2 py-2 text-xs font-bold uppercase w-32">Amount (₹)</th>
                     <th className="px-2 py-2 text-xs font-bold uppercase text-center w-10">Act</th>
                   </tr>
@@ -441,7 +374,7 @@ const NewDebitNote = () => {
                   {items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-2 py-2">
-                        <DynamicSelect 
+                        <DynamicSelect hideAddButton 
                           name="product" 
                           category="Product" 
                           value={item.product} 
@@ -451,16 +384,10 @@ const NewDebitNote = () => {
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <input type="text" value={item.batch} onChange={(e) => handleItemChange(item.id, 'batch', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-red-500 outline-none bg-white" />
-                      </td>
-                      <td className="px-2 py-2">
                         <input type="number" min="0" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm font-bold text-red-700 focus:border-red-500 outline-none bg-white text-right" />
                       </td>
                       <td className="px-2 py-2">
                         <input type="number" min="0" value={item.rate} onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-red-500 outline-none bg-white text-right" />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input type="number" min="0" value={item.taxPercent} onChange={(e) => handleItemChange(item.id, 'taxPercent', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-red-500 outline-none bg-white text-right" />
                       </td>
                       <td className="px-2 py-2">
                         <input type="number" value={item.amount} readOnly className="w-full border border-slate-200 rounded px-2 py-1.5 text-sm font-bold text-slate-800 bg-slate-100 text-right cursor-not-allowed" />
@@ -474,7 +401,7 @@ const NewDebitNote = () => {
                   ))}
                   {items.length === 0 && (
                     <tr>
-                      <td colSpan="7" className="px-4 py-8 text-center text-sm text-slate-500 italic bg-slate-50 rounded-lg border border-dashed border-slate-200 mt-2 block">
+                      <td colSpan="6" className="px-4 py-8 text-center text-sm text-slate-500 italic bg-slate-50 rounded-lg border border-dashed border-slate-200 mt-2 block">
                         No items added. Click "Add Item" to start.
                       </td>
                     </tr>
@@ -489,121 +416,13 @@ const NewDebitNote = () => {
             {/* LEFT COLUMN: SETTLEMENT, ACCOUNTING & REMARKS */}
             <div className="lg:col-span-2 space-y-6">
                
-               {/* SECTION: ADJUSTMENT / SETTLEMENT */}
-               <div className="border border-slate-200 rounded-lg p-5">
-                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Adjustment / Settlement</h3>
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                   <div className="col-span-2 md:col-span-4">
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                     <DynamicSelect 
-                       name="adjustmentType" 
-                       category="Adjustment Type" 
-                       value={form.adjustmentType} 
-                       onChange={handleChange} 
-                       defaultOptions={['Adjust Against Invoice', 'Keep on Account / Advance', 'Cash Refund']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                   <div className="col-span-2 text-slate-500">
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice</label>
-                     <input type="text" name="adjustInvoiceNo" value={form.adjustInvoiceNo} onChange={handleChange} placeholder="Select Invoice to Adjust" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Adjust Amount</label>
-                     <input type="number" name="adjustAmount" value={form.adjustAmount} onChange={handleChange} placeholder="₹" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none" />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Remaining</label>
-                     <input type="number" name="remainingAmount" value={form.remainingAmount} onChange={handleChange} placeholder="₹" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none bg-slate-50" />
-                   </div>
-                 </div>
-               </div>
 
-               {/* SECTION: ACCOUNTING */}
+               {/* SECTION: REMARKS */}
                <div className="border border-slate-200 rounded-lg p-5">
-                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Accounting</h3>
-                 <div className="grid grid-cols-2 gap-4">
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier Ledger</label>
-                     <DynamicSelect 
-                       name="supplierLedger" 
-                       category="Supplier Ledger" 
-                       value={form.supplierLedger} 
-                       onChange={handleChange} 
-                       defaultOptions={['Creditors - Global Electronics']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Return Ledger</label>
-                     <DynamicSelect 
-                       name="purchaseReturnLedger" 
-                       category="Return Ledger" 
-                       value={form.purchaseReturnLedger} 
-                       onChange={handleChange} 
-                       defaultOptions={['Purchase Returns A/C']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Tax Account</label>
-                     <DynamicSelect 
-                       name="taxAccount" 
-                       category="Tax Account" 
-                       value={form.taxAccount} 
-                       onChange={handleChange} 
-                       defaultOptions={['Input GST A/C']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Center</label>
-                     <DynamicSelect 
-                       name="costCenter" 
-                       category="Cost Center" 
-                       value={form.costCenter} 
-                       onChange={handleChange} 
-                       defaultOptions={['Main Branch Operations']} 
-                       className="w-full text-sm"
-                     />
-                   </div>
-                 </div>
-               </div>
-               
-               {/* SECTION: REMARKS & ATTACHMENT */}
-               <div className="border border-slate-200 rounded-lg p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Remarks</label>
                       <textarea name="remarks" value={form.remarks} onChange={handleChange} rows="3" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-red-500 outline-none resize-none" placeholder="Reason for return..."></textarea>
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attachment</label>
-                       
-                       <input 
-                          type="file" 
-                          ref={fileInputRef} 
-                          onChange={handleFileChange} 
-                          className="hidden" 
-                       />
-
-                       {!attachment ? (
-                         <button 
-                            type="button" 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex flex-col items-center justify-center gap-1 w-full h-[76px] border-2 border-dashed border-slate-300 rounded hover:bg-slate-50 hover:border-red-400 hover:text-red-600 transition-colors text-sm font-medium text-slate-500"
-                         >
-                            <UploadCloud size={20} />
-                            <span className="text-xs">Upload Document</span>
-                         </button>
-                       ) : (
-                         <div className="flex items-center justify-between w-full h-[76px] border border-slate-200 rounded px-4 bg-slate-50 text-sm">
-                            <span className="truncate max-w-[200px] font-medium text-slate-700">{attachment.name}</span>
-                            <button type="button" onClick={removeAttachment} className="text-red-500 hover:bg-red-100 p-1.5 rounded transition-colors">
-                              <X size={16} />
-                            </button>
-                         </div>
-                       )}
                     </div>
                   </div>
                </div>
@@ -626,23 +445,8 @@ const NewDebitNote = () => {
                   </div>
 
                   <div className="flex justify-between items-center text-sm">
-                     <span className="font-semibold text-slate-600">CGST (+)</span>
-                     <input type="number" name="cgst" value={form.cgst} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-red-500 outline-none bg-white" />
-                  </div>
-                  
-                  <div className="flex justify-between items-center text-sm">
-                     <span className="font-semibold text-slate-600">SGST (+)</span>
-                     <input type="number" name="sgst" value={form.sgst} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-red-500 outline-none bg-white" />
-                  </div>
-                  
-                  <div className="flex justify-between items-center text-sm">
-                     <span className="font-semibold text-slate-600">IGST (+)</span>
-                     <input type="number" name="igst" value={form.igst} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-red-500 outline-none bg-white" />
-                  </div>
-                  
-                  <div className="flex justify-between items-center text-sm">
-                     <span className="font-semibold text-slate-600">Round Off</span>
-                     <input type="number" name="roundOff" value={form.roundOff} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-red-500 outline-none bg-white" />
+                     <span className="font-semibold text-slate-600">Total Tax (+)</span>
+                     <input type="number" name="taxAmount" value={form.taxAmount} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-red-500 outline-none bg-white" />
                   </div>
 
                   <div className="pt-4 mt-2 border-t border-slate-300 flex justify-between items-center">

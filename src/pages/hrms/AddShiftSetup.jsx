@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, Save, X, Clock, CalendarDays, ClipboardCheck, Settings, Users, Moon, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Save, X, Clock, CalendarDays, ClipboardCheck, Settings, Moon, Plus, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
 
@@ -13,7 +13,6 @@ const AddShiftSetup = () => {
     shiftCode: `SHT-${Math.floor(Math.random() * 9000) + 1000}`,
     shiftName: '',
     shiftType: 'Fixed',
-    company: '',
     branch: '',
     department: '',
     status: 'Active',
@@ -31,92 +30,46 @@ const AddShiftSetup = () => {
     // Break Config
     breakApplicable: 'Yes',
     breakType: 'Fixed',
-    breakDuration: '30',
-    paidBreak: 'Yes',
-    
+
     // Working Days
     workDays: { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: true, Sun: false },
     weeklyOff: 'Sunday',
 
-    // Attendance Rules
-    attendanceRequired: 'Yes',
-    lateComing: 'Allowed',
+    // Attendance Rules (simplified)
     halfDayAfter: '4',
     minimumHours: '8',
-    attendanceMethod: 'Biometric',
-    autoCheckout: 'No',
 
-    // Shift Assignment
-    assignTo: 'Department',
-    employee: '',
+    // Assignment & General
     effectiveFrom: '',
-    effectiveTo: '',
     defaultShift: 'No',
 
     // Night Shift
     nightShift: 'No',
-    crossMidnight: 'No',
-    nextDayCheckout: 'Auto'
   });
 
   const [breaks, setBreaks] = useState([
     { id: 1, name: 'Lunch', start: '13:00', end: '13:30', duration: '30m', paid: 'Yes' }
   ]);
 
-  const [modalType, setModalType] = useState(null);
-  const [modalData, setModalData] = useState({ name: '' });
+  const [departments, setDepartments] = useState([]);
+  const [branches, setBranches] = useState([]);
 
-  const [shiftTypes, setShiftTypes] = useState(['Fixed', 'Flexible', 'Rotating']);
-  const [companies, setCompanies] = useState(['Acme Corp']);
-  const [branches, setBranches] = useState(['HQ - Mumbai']);
-  const [departments, setDepartments] = useState(['IT & Systems', 'HR']);
-  const [statuses, setStatuses] = useState(['Active', 'Inactive']);
-  const [earlyLeavings, setEarlyLeavings] = useState(['No', 'Yes']);
-  const [overtimes, setOvertimes] = useState(['Yes', 'No']);
-  const [breakApplicables, setBreakApplicables] = useState(['Yes', 'No']);
-  const [breakTypes, setBreakTypes] = useState(['Fixed', 'Flexible']);
-  const [weeklyOffs, setWeeklyOffs] = useState(['Sunday', 'Saturday & Sunday']);
-  const [attendanceRequireds, setAttendanceRequireds] = useState(['Yes', 'No']);
-  const [lateComings, setLateComings] = useState(['Allowed', 'Not Allowed']);
-  const [attendanceMethods, setAttendanceMethods] = useState(['Biometric', 'Web Check-in', 'Mobile App']);
-  const [autoCheckouts, setAutoCheckouts] = useState(['No', 'Yes']);
-  const [assignTos, setAssignTos] = useState(['Department', 'Employee']);
-  const [employees, setEmployees] = useState(['All Staff']);
-  const [defaultShifts, setDefaultShifts] = useState(['No', 'Yes']);
-  const [nightShifts, setNightShifts] = useState(['No', 'Yes']);
-  const [crossMidnights, setCrossMidnights] = useState(['No', 'Yes']);
-  const [nextDayCheckouts, setNextDayCheckouts] = useState(['Auto', 'Manual']);
-
-  const handleQuickAdd = (e) => {
-    e.preventDefault();
-    if (!modalData.name) return;
-    
-    if (modalType === 'Shift Type') setShiftTypes([...shiftTypes, modalData.name]);
-    if (modalType === 'Company') setCompanies([...companies, modalData.name]);
-    if (modalType === 'Branch') setBranches([...branches, modalData.name]);
-    if (modalType === 'Department') setDepartments([...departments, modalData.name]);
-    if (modalType === 'Status') setStatuses([...statuses, modalData.name]);
-    if (modalType === 'Early Leaving') setEarlyLeavings([...earlyLeavings, modalData.name]);
-    if (modalType === 'Overtime') setOvertimes([...overtimes, modalData.name]);
-    if (modalType === 'Break Applicable') setBreakApplicables([...breakApplicables, modalData.name]);
-    if (modalType === 'Break Type') setBreakTypes([...breakTypes, modalData.name]);
-    if (modalType === 'Weekly Off') setWeeklyOffs([...weeklyOffs, modalData.name]);
-    if (modalType === 'Attendance Required') setAttendanceRequireds([...attendanceRequireds, modalData.name]);
-    if (modalType === 'Late Coming') setLateComings([...lateComings, modalData.name]);
-    if (modalType === 'Attendance Method') setAttendanceMethods([...attendanceMethods, modalData.name]);
-    if (modalType === 'Auto Checkout') setAutoCheckouts([...autoCheckouts, modalData.name]);
-    if (modalType === 'Assign To') setAssignTos([...assignTos, modalData.name]);
-    if (modalType === 'Employee / Dept') setEmployees([...employees, modalData.name]);
-    if (modalType === 'Default Shift') setDefaultShifts([...defaultShifts, modalData.name]);
-    if (modalType === 'Night Shift') setNightShifts([...nightShifts, modalData.name]);
-    if (modalType === 'Cross Midnight') setCrossMidnights([...crossMidnights, modalData.name]);
-    if (modalType === 'Next Day Checkout') setNextDayCheckouts([...nextDayCheckouts, modalData.name]);
-
-    const tempType = modalType;
-    setModalType(null);
-    setModalData({ name: '' });
-    alert(`${tempType} added successfully!`);
-  };
+  // Fetch departments and branches from backend
+  useEffect(() => {
+    const fetchDropdowns = async () => {
+      try {
+        const [deptRes, branchRes] = await Promise.all([
+          api.get('/departments'),
+          api.get('/branches').catch(() => ({ data: { data: [] } }))
+        ]);
+        if (deptRes.data?.data) setDepartments(deptRes.data.data.map(d => d.deptName));
+        if (branchRes.data?.data) setBranches(branchRes.data.data.map(b => b.branchName || b.name));
+      } catch (err) {
+        console.error('Failed to load dropdowns', err);
+      }
+    };
+    fetchDropdowns();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -130,6 +83,19 @@ const AddShiftSetup = () => {
       setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     }
   };
+
+  // Auto-calculate working hours when start/end time changes
+  useEffect(() => {
+    if (form.startTime && form.endTime) {
+      const [sh, sm] = form.startTime.split(':').map(Number);
+      const [eh, em] = form.endTime.split(':').map(Number);
+      let totalMins = (eh * 60 + em) - (sh * 60 + sm);
+      if (totalMins < 0) totalMins += 24 * 60; // overnight shift
+      const hrs = Math.floor(totalMins / 60);
+      const mins = totalMins % 60;
+      setForm(prev => ({ ...prev, workingHours: `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}` }));
+    }
+  }, [form.startTime, form.endTime]);
 
   const handleAddBreak = () => {
     setBreaks([...breaks, { id: Date.now(), name: '', start: '', end: '', duration: '', paid: 'No' }]);
@@ -152,47 +118,35 @@ const AddShiftSetup = () => {
   const fetchShiftDetails = async () => {
     try {
       const response = await api.get(`/shift-setups/${id}`);
-      const shiftData = response.data.data || response.data;
-      if (shiftData) {
+      const s = response.data.data || response.data;
+      if (s) {
         setForm({
-          shiftCode: shiftData.shiftCode || '',
-          shiftName: shiftData.shiftName || '',
-          shiftType: shiftData.shiftType || 'Fixed',
-          company: shiftData.company || '',
-          branch: shiftData.branch || '',
-          department: shiftData.department || '',
-          status: shiftData.status || 'Active',
-          startTime: shiftData.startTime || '09:00',
-          endTime: shiftData.endTime || '18:00',
-          workingHours: shiftData.workingHours || '08:30',
-          graceTime: shiftData.graceTime || '15',
-          lateMarkAfter: shiftData.lateMarkAfter || '15',
-          earlyLeaving: shiftData.earlyLeaving || 'No',
-          overtime: shiftData.overtime || 'Yes',
-          otAfter: shiftData.otAfter || '30',
-          breakApplicable: shiftData.breakApplicable || 'Yes',
-          breakType: shiftData.breakType || 'Fixed',
-          breakDuration: shiftData.breakDuration || '30',
-          paidBreak: shiftData.paidBreak || 'Yes',
-          workDays: shiftData.workDays || { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: true, Sun: false },
-          weeklyOff: shiftData.weeklyOff || 'Sunday',
-          attendanceRequired: shiftData.attendanceRequired || 'Yes',
-          lateComing: shiftData.lateComing || 'Allowed',
-          halfDayAfter: shiftData.halfDayAfter || '4',
-          minimumHours: shiftData.minimumHours || '8',
-          attendanceMethod: shiftData.attendanceMethod || 'Biometric',
-          autoCheckout: shiftData.autoCheckout || 'No',
-          assignTo: shiftData.assignTo || 'Department',
-          employee: shiftData.employee || '',
-          effectiveFrom: shiftData.effectiveFrom || '',
-          effectiveTo: shiftData.effectiveTo || '',
-          defaultShift: shiftData.defaultShift || 'No',
-          nightShift: shiftData.nightShift || 'No',
-          crossMidnight: shiftData.crossMidnight || 'No',
-          nextDayCheckout: shiftData.nextDayCheckout || 'Auto'
+          shiftCode: s.shiftCode || '',
+          shiftName: s.shiftName || '',
+          shiftType: s.shiftType || 'Fixed',
+          branch: s.branch || '',
+          department: s.department || '',
+          status: s.status || 'Active',
+          startTime: s.startTime || '09:00',
+          endTime: s.endTime || '18:00',
+          workingHours: s.workingHours || '08:30',
+          graceTime: s.graceTime || '15',
+          lateMarkAfter: s.lateMarkAfter || '15',
+          earlyLeaving: s.earlyLeaving || 'No',
+          overtime: s.overtime || 'Yes',
+          otAfter: s.otAfter || '30',
+          breakApplicable: s.breakApplicable || 'Yes',
+          breakType: s.breakType || 'Fixed',
+          workDays: s.workDays || { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: true, Sun: false },
+          weeklyOff: s.weeklyOff || 'Sunday',
+          halfDayAfter: s.halfDayAfter || '4',
+          minimumHours: s.minimumHours || '8',
+          effectiveFrom: s.effectiveFrom || '',
+          defaultShift: s.defaultShift || 'No',
+          nightShift: s.nightShift || 'No',
         });
-        if (shiftData.breaks && shiftData.breaks.length > 0) {
-          setBreaks(shiftData.breaks.map(b => ({ ...b, id: b._id || Date.now() + Math.random() })));
+        if (s.breaks && s.breaks.length > 0) {
+          setBreaks(s.breaks.map(b => ({ ...b, id: b._id || Date.now() + Math.random() })));
         }
       }
     } catch (error) {
@@ -220,414 +174,570 @@ const AddShiftSetup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 font-sans text-slate-800 pb-20">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 max-w-7xl mx-auto">
-        <button 
-          onClick={() => navigate('/hrms/setup/shifts')}
-          className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-bold transition-colors bg-white px-4 py-2 border border-slate-200 rounded-xl shadow-sm"
-        >
-          <ArrowLeft size={18} /> Back to Shift List
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-indigo-50/30 p-4 sm:p-6 lg:p-8 font-sans text-slate-800 pb-24">
+      {/* Top Navigation / Breadcrumb Header */}
+      <div className="max-w-6xl mx-auto mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/80 backdrop-blur-md p-4 sm:px-6 sm:py-4 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/hrms/setup/shifts')}
+              className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/80 rounded-xl transition-all border border-slate-200/70 shadow-sm"
+              title="Go Back"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                  HRMS &bull; Shift Setup
+                </span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${form.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                  {form.status}
+                </span>
+              </div>
+              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5">
+                {isEditMode ? 'Edit Shift Configuration' : 'Create New Shift'}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => navigate('/hrms/setup/shifts')}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100/80 hover:bg-slate-200 rounded-xl transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-md shadow-indigo-200 rounded-xl transition flex items-center gap-1.5"
+            >
+              <Save size={14} /> {isEditMode ? 'Update Shift' : 'Save Shift'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto">
         <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          <div className="lg:col-span-8 space-y-6">
-            
-            {/* 1. BASIC INFORMATION */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <Settings size={14} className="text-indigo-500" /> Basic Information
-                </h3>
+
+          {/* LEFT COLUMN - Primary Details */}
+          <div className="lg:col-span-7 space-y-6">
+
+            {/* 1. Basic Information */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-r from-slate-50 to-indigo-50/20 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
+                    <Settings size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Basic Information</h2>
+                    <p className="text-[11px] text-slate-400">Shift identity and department assignment</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200">
+                  {form.shiftCode}
+                </span>
               </div>
-              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Shift Code *</label>
-                  <input type="text" name="shiftCode" value={form.shiftCode} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none font-mono" />
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                    Shift Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="shiftName"
+                    value={form.shiftName}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g. Regular Day Shift"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none text-slate-800 placeholder-slate-400 font-medium bg-slate-50/30 focus:bg-white"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Shift Name *</label>
-                  <input type="text" name="shiftName" value={form.shiftName} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="e.g. General Shift" />
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                    Shift Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="shiftCode"
+                    value={form.shiftCode}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none bg-slate-50/50"
+                  />
                 </div>
+
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Shift Type *</label>
-                    <button type="button" onClick={() => setModalType('Shift Type')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="shiftType" value={form.shiftType} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {shiftTypes.map(o => <option key={o} value={o}>{o}</option>)}
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                    Shift Type
+                  </label>
+                  <select
+                    name="shiftType"
+                    value={form.shiftType}
+                    onChange={handleChange}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none bg-white font-medium"
+                  >
+                    <option value="Fixed">Fixed Schedule</option>
+                    <option value="Flexible">Flexible Schedule</option>
+                    <option value="Rotating">Rotating Schedule</option>
                   </select>
                 </div>
+
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Company *</label>
-                    <button type="button" onClick={() => setModalType('Company')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="company" value={form.company} onChange={handleChange} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    <option value="">Select Company</option>
-                    {companies.map(o => <option key={o} value={o}>{o}</option>)}
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none bg-white font-medium"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                   </select>
                 </div>
+
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Branch</label>
-                    <button type="button" onClick={() => setModalType('Branch')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="branch" value={form.branch} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    <option value="">Select Branch</option>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                    Branch
+                  </label>
+                  <select
+                    name="branch"
+                    value={form.branch}
+                    onChange={handleChange}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none bg-white"
+                  >
+                    <option value="">All Branches</option>
                     {branches.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
+
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Department</label>
-                    <button type="button" onClick={() => setModalType('Department')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="department" value={form.department} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    <option value="">Select Department</option>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                    Department
+                  </label>
+                  <select
+                    name="department"
+                    value={form.department}
+                    onChange={handleChange}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none bg-white"
+                  >
+                    <option value="">All Departments</option>
                     {departments.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
-                <div className="md:col-span-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Status *</label>
-                    <button type="button" onClick={() => setModalType('Status')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none text-emerald-600 font-bold">
-                    {statuses.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
               </div>
             </div>
 
-            {/* 4. WORKING DAYS */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4 flex justify-between items-center">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <CalendarDays size={14} className="text-blue-500" /> Working Days
-                </h3>
+            {/* 2. Working Days & Weekly Off */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50/20 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100">
+                    <CalendarDays size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Working Schedule</h2>
+                    <p className="text-[11px] text-slate-400">Select active days and default weekend rest</p>
+                  </div>
+                </div>
               </div>
-              <div className="p-5">
-                <div className="flex flex-wrap gap-4 mb-4">
-                  {Object.keys(form.workDays).map(day => (
-                    <label key={day} className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        name={`day_${day}`}
-                        checked={form.workDays[day]} 
-                        onChange={handleChange}
-                        className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm font-semibold text-slate-700">{day}</span>
+
+              <div className="p-6 space-y-5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-2.5">
+                    Active Working Days
+                  </label>
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                    {Object.keys(form.workDays).map(day => {
+                      const isActive = form.workDays[day];
+                      return (
+                        <label
+                          key={day}
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-bold cursor-pointer transition-all select-none ${
+                            isActive
+                              ? 'bg-indigo-50/90 border-indigo-300 text-indigo-700 shadow-sm'
+                              : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            name={`day_${day}`}
+                            checked={isActive}
+                            onChange={handleChange}
+                            className="sr-only"
+                          />
+                          <span>{day}</span>
+                          <span className={`text-[9px] mt-1 font-semibold ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
+                            {isActive ? 'Work' : 'Off'}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                      Weekly Off Day
                     </label>
-                  ))}
-                </div>
-                <div className="w-1/2">
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Weekly Off</label>
-                    <button type="button" onClick={() => setModalType('Weekly Off')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+                    <select
+                      name="weeklyOff"
+                      value={form.weeklyOff}
+                      onChange={handleChange}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none bg-white font-medium"
+                    >
+                      <option value="Sunday">Sunday</option>
+                      <option value="Saturday & Sunday">Saturday & Sunday</option>
+                      <option value="Saturday">Saturday</option>
+                      <option value="Friday">Friday</option>
+                      <option value="None">None (Rotational Off)</option>
+                    </select>
                   </div>
-                  <select name="weeklyOff" value={form.weeklyOff} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {weeklyOffs.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                      Effective Date From
+                    </label>
+                    <input
+                      type="date"
+                      name="effectiveFrom"
+                      value={form.effectiveFrom}
+                      onChange={handleChange}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition outline-none bg-white font-medium"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 5. ATTENDANCE RULES */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4 flex items-center gap-2">
-                <ClipboardCheck size={14} className="text-emerald-500" />
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Attendance Rules</h3>
+            {/* 3. Attendance & Present Rules */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-r from-slate-50 to-emerald-50/20 px-6 py-4 border-b border-slate-100 flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
+                  <ClipboardCheck size={16} />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Attendance Rules</h2>
+                  <p className="text-[11px] text-slate-400">Half day and full day minimum thresholds</p>
+                </div>
               </div>
-              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Attendance Required</label>
-                    <button type="button" onClick={() => setModalType('Attendance Required')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1">
+                    Half-Day Threshold
+                  </label>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      name="halfDayAfter"
+                      value={form.halfDayAfter}
+                      onChange={handleChange}
+                      min={1}
+                      max={12}
+                      className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-800 outline-none focus:border-indigo-500"
+                    />
+                    <span className="text-xs font-semibold text-slate-500">Hours worked</span>
                   </div>
-                  <select name="attendanceRequired" value={form.attendanceRequired} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {attendanceRequireds.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+                  <p className="text-[10px] text-slate-400 mt-2">Working less than this is marked as Absent / Half Day.</p>
                 </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Late Coming</label>
-                    <button type="button" onClick={() => setModalType('Late Coming')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+
+                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/70">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1">
+                    Full-Day Minimum Hours
+                  </label>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      name="minimumHours"
+                      value={form.minimumHours}
+                      onChange={handleChange}
+                      min={1}
+                      max={24}
+                      className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-800 outline-none focus:border-indigo-500"
+                    />
+                    <span className="text-xs font-semibold text-slate-500">Hours required</span>
                   </div>
-                  <select name="lateComing" value={form.lateComing} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {lateComings.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Half Day After</label>
-                  <div className="flex items-center gap-2">
-                    <input type="number" name="halfDayAfter" value={form.halfDayAfter} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
-                    <span className="text-sm font-medium text-slate-500">Hours</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Minimum Hours</label>
-                  <div className="flex items-center gap-2">
-                    <input type="number" name="minimumHours" value={form.minimumHours} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
-                    <span className="text-sm font-medium text-slate-500">Hours</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Attendance Method</label>
-                    <button type="button" onClick={() => setModalType('Attendance Method')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="attendanceMethod" value={form.attendanceMethod} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {attendanceMethods.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Auto Checkout</label>
-                    <button type="button" onClick={() => setModalType('Auto Checkout')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="autoCheckout" value={form.autoCheckout} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {autoCheckouts.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+                  <p className="text-[10px] text-slate-400 mt-2">Required minimum time to count a full-day present.</p>
                 </div>
               </div>
             </div>
 
           </div>
 
+          {/* RIGHT COLUMN - Timings & Break Management */}
+          <div className="lg:col-span-5 space-y-6">
 
-          {/* RIGHT COLUMN */}
-          <div className="lg:col-span-4 space-y-6">
-
-            {/* 2. SHIFT TIMING */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <Clock size={14} className="text-emerald-500" /> Shift Timing
-                </h3>
+            {/* 4. Shift Timings Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-r from-slate-50 to-emerald-50/20 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
+                    <Clock size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Shift Timings</h2>
+                    <p className="text-[11px] text-slate-400">Start & end clock, grace & overtime</p>
+                  </div>
+                </div>
               </div>
-              <div className="p-5 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+
+              <div className="p-6 space-y-4">
+                {/* Clock In / Out */}
+                <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/70">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Start Time *</label>
-                    <input type="time" name="startTime" value={form.startTime} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                      Start Time <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      name="startTime"
+                      value={form.startTime}
+                      onChange={handleChange}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none"
+                    />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">End Time *</label>
-                    <input type="time" name="endTime" value={form.endTime} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Working Hours (Auto)</label>
-                  <input type="text" value={`${form.workingHours} Hrs`} disabled className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-emerald-600 font-bold" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Grace Time</label>
-                    <div className="flex items-center gap-2">
-                      <input type="number" name="graceTime" value={form.graceTime} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none" />
-                      <span className="text-xs text-slate-500">Min</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Late Mark After</label>
-                    <div className="flex items-center gap-2">
-                      <input type="number" name="lateMarkAfter" value={form.lateMarkAfter} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none" />
-                      <span className="text-xs text-slate-500">Min</span>
-                    </div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                      End Time <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      name="endTime"
+                      value={form.endTime}
+                      onChange={handleChange}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-800 focus:border-indigo-500 outline-none"
+                    />
                   </div>
                 </div>
+
+                {/* Auto Calculated Hours Pill */}
+                <div className="flex items-center justify-between p-3.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl text-emerald-800">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle size={16} className="text-emerald-600" />
+                    <span className="text-xs font-bold">Total Shift Duration:</span>
+                  </div>
+                  <span className="text-sm font-extrabold font-mono bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 shadow-xs">
+                    {form.workingHours} Hrs
+                  </span>
+                </div>
+
+                {/* Grace & Late Mark */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                      Grace Time
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="graceTime"
+                        value={form.graceTime}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:border-indigo-500 outline-none pr-10"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-slate-400 font-semibold">min</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                      Late Mark After
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="lateMarkAfter"
+                        value={form.lateMarkAfter}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:border-indigo-500 outline-none pr-10"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-slate-400 font-semibold">min</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Early Leaving & Overtime */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[10px] font-bold text-slate-600 uppercase">Early Leaving</label>
-                      <button type="button" onClick={() => setModalType('Early Leaving')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                    </div>
-                    <select name="earlyLeaving" value={form.earlyLeaving} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none">
-                      {earlyLeavings.map(o => <option key={o} value={o}>{o}</option>)}
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                      Early Leaving
+                    </label>
+                    <select
+                      name="earlyLeaving"
+                      value={form.earlyLeaving}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:border-indigo-500 outline-none bg-white"
+                    >
+                      <option value="No">Disallowed</option>
+                      <option value="Yes">Allowed</option>
                     </select>
                   </div>
+
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[10px] font-bold text-slate-600 uppercase">Overtime</label>
-                      <button type="button" onClick={() => setModalType('Overtime')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                    </div>
-                    <select name="overtime" value={form.overtime} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none">
-                      {overtimes.map(o => <option key={o} value={o}>{o}</option>)}
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                      Overtime (OT)
+                    </label>
+                    <select
+                      name="overtime"
+                      value={form.overtime}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:border-indigo-500 outline-none bg-white"
+                    >
+                      <option value="Yes">Allowed</option>
+                      <option value="No">No OT</option>
                     </select>
                   </div>
                 </div>
+
                 {form.overtime === 'Yes' && (
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">OT After (Min)</label>
-                    <input type="number" name="otAfter" value={form.otAfter} onChange={handleChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:border-emerald-400 outline-none" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 3. BREAK CONFIGURATION */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <Clock size={14} className="text-amber-500" /> Break Configuration
-                </h3>
-              </div>
-              <div className="p-5 space-y-4 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Break Applicable</label>
-                      <button type="button" onClick={() => setModalType('Break Applicable')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                    </div>
-                    <select name="breakApplicable" value={form.breakApplicable} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none">
-                      {breakApplicables.map(o => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-[11px] font-bold text-slate-600 uppercase">Break Type</label>
-                      <button type="button" onClick={() => setModalType('Break Type')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                    </div>
-                    <select name="breakType" value={form.breakType} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none">
-                      {breakTypes.map(o => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                </div>
-                
-                {form.breakApplicable === 'Yes' && (
-                  <div className="border rounded-xl overflow-hidden mt-4">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b text-slate-600 uppercase">
-                        <tr>
-                          <th className="px-3 py-2 font-bold">Name</th>
-                          <th className="px-3 py-2 font-bold">Start/End</th>
-                          <th className="px-3 py-2 font-bold">Paid</th>
-                          <th className="px-3 py-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {breaks.map(b => (
-                          <tr key={b.id}>
-                            <td className="px-3 py-2">
-                              <input type="text" value={b.name} onChange={(e) => handleBreakChange(b.id, 'name', e.target.value)} placeholder="e.g. Lunch" className="w-full p-1 border rounded" />
-                            </td>
-                            <td className="px-3 py-2 space-y-1">
-                              <input type="time" value={b.start} onChange={(e) => handleBreakChange(b.id, 'start', e.target.value)} className="w-full p-1 border rounded text-[10px]" />
-                              <input type="time" value={b.end} onChange={(e) => handleBreakChange(b.id, 'end', e.target.value)} className="w-full p-1 border rounded text-[10px]" />
-                            </td>
-                            <td className="px-3 py-2">
-                              <select value={b.paid} onChange={(e) => handleBreakChange(b.id, 'paid', e.target.value)} className="w-full p-1 border rounded text-[10px]">
-                                <option>Yes</option>
-                                <option>No</option>
-                              </select>
-                            </td>
-                            <td className="px-3 py-2">
-                              <button type="button" onClick={() => handleRemoveBreak(b.id)} className="text-red-500 hover:text-red-700">
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="p-2 bg-slate-50 border-t">
-                      <button type="button" onClick={handleAddBreak} className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800">
-                        <Plus size={14} /> Add Break
-                      </button>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                      OT Calculation Starts After
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="otAfter"
+                        value={form.otAfter}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:border-indigo-500 outline-none pr-10"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-slate-400 font-semibold">min</span>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 6. SHIFT ASSIGNMENT */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <Users size={14} className="text-purple-500" /> Shift Assignment
-                </h3>
-              </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Assign To</label>
-                    <button type="button" onClick={() => setModalType('Assign To')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="assignTo" value={form.assignTo} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {assignTos.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Employee / Dept</label>
-                    <button type="button" onClick={() => setModalType('Employee / Dept')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="employee" value={form.employee} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    <option value="">Select Target...</option>
-                    {employees.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Effective From *</label>
-                    <input type="date" name="effectiveFrom" value={form.effectiveFrom} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
+            {/* 5. Breaks Management */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-r from-slate-50 to-amber-50/20 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-50 text-amber-600 rounded-lg border border-amber-100">
+                    <Clock size={16} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Effective To</label>
-                    <input type="date" name="effectiveTo" value={form.effectiveTo} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" />
+                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Break Slots</h2>
+                    <p className="text-[11px] text-slate-400">Lunch & rest intervals</p>
                   </div>
                 </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Default Shift</label>
-                    <button type="button" onClick={() => setModalType('Default Shift')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="defaultShift" value={form.defaultShift} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {defaultShifts.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] font-bold text-slate-600 cursor-pointer">
+                    Enable
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={form.breakApplicable === 'Yes'}
+                    onChange={(e) => setForm(p => ({ ...p, breakApplicable: e.target.checked ? 'Yes' : 'No' }))}
+                    className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  />
                 </div>
               </div>
+
+              {form.breakApplicable === 'Yes' && (
+                <div className="p-5 space-y-3">
+                  {breaks.map((b, idx) => (
+                    <div key={b.id} className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/70 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase">
+                          Break #{idx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBreak(b.id)}
+                          className="text-slate-400 hover:text-red-500 transition"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          value={b.name}
+                          onChange={(e) => handleBreakChange(b.id, 'name', e.target.value)}
+                          placeholder="e.g. Lunch"
+                          className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-indigo-500"
+                        />
+                        <input
+                          type="time"
+                          value={b.start}
+                          onChange={(e) => handleBreakChange(b.id, 'start', e.target.value)}
+                          className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-indigo-500"
+                        />
+                        <input
+                          type="time"
+                          value={b.end}
+                          onChange={(e) => handleBreakChange(b.id, 'end', e.target.value)}
+                          className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={handleAddBreak}
+                    className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1"
+                  >
+                    <Plus size={14} /> Add Another Break Slot
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* 7. NIGHT SHIFT */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-4">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <Moon size={14} className="text-slate-700" /> Night Shift
-                </h3>
+            {/* 6. General Settings (Default & Night Shift) */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="bg-gradient-to-r from-slate-50 to-purple-50/20 px-6 py-4 border-b border-slate-100 flex items-center gap-2.5">
+                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg border border-purple-100">
+                  <Moon size={16} />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Flags & Defaults</h2>
+                  <p className="text-[11px] text-slate-400">Night shift & auto-assignment</p>
+                </div>
               </div>
-              <div className="p-5 grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Night Shift</label>
-                    <button type="button" onClick={() => setModalType('Night Shift')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between p-3 bg-slate-50/70 rounded-xl border border-slate-200/70">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Default Shift</span>
+                    <span className="text-[10px] text-slate-400">Auto-assign to new joining employees</span>
                   </div>
-                  <select name="nightShift" value={form.nightShift} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {nightShifts.map(o => <option key={o} value={o}>{o}</option>)}
+                  <select
+                    name="defaultShift"
+                    value={form.defaultShift}
+                    onChange={handleChange}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none"
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
                   </select>
                 </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Cross Midnight</label>
-                    <button type="button" onClick={() => setModalType('Cross Midnight')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
+
+                <div className="flex items-center justify-between p-3 bg-slate-50/70 rounded-xl border border-slate-200/70">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Night Shift</span>
+                    <span className="text-[10px] text-slate-400">Shift ends next calendar day (past midnight)</span>
                   </div>
-                  <select name="crossMidnight" value={form.crossMidnight} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {crossMidnights.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">Next Day Checkout</label>
-                    <button type="button" onClick={() => setModalType('Next Day Checkout')} className="text-indigo-600 hover:text-indigo-800"><Plus size={14} /></button>
-                  </div>
-                  <select name="nextDayCheckout" value={form.nextDayCheckout} onChange={handleChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none">
-                    {nextDayCheckouts.map(o => <option key={o} value={o}>{o}</option>)}
+                  <select
+                    name="nightShift"
+                    value={form.nightShift}
+                    onChange={handleChange}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none"
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
                   </select>
                 </div>
               </div>
@@ -635,55 +745,25 @@ const AddShiftSetup = () => {
 
           </div>
 
-          {/* Action Buttons */}
-          <div className="lg:col-span-12 flex justify-end items-center gap-3 mt-4 pt-4 border-t border-slate-200">
-            <button type="button" onClick={() => navigate('/hrms/setup/shifts')} className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl font-bold text-sm shadow-sm hover:bg-slate-50 flex items-center gap-2">
-              <X size={16} /> Cancel
+          {/* Bottom Floating-style Action Bar */}
+          <div className="lg:col-span-12 flex justify-end items-center gap-3 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={() => navigate('/hrms/setup/shifts')}
+              className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-50 transition shadow-sm"
+            >
+              Cancel
             </button>
-            <button type="button" className="px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm shadow-sm hover:bg-slate-900 flex items-center gap-2">
-              <Save size={16} /> Save Draft
-            </button>
-            <button type="submit" className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-              <CheckCircle size={16} /> {isEditMode ? 'Update Shift' : 'Create Shift'}
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-200 active:scale-95 transition flex items-center gap-1.5"
+            >
+              <CheckCircle size={15} /> {isEditMode ? 'Update Shift Configuration' : 'Create & Save Shift'}
             </button>
           </div>
 
         </form>
       </div>
-
-      {/* QUICK ADD MODAL */}
-      {modalType && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 uppercase tracking-wider text-xs">
-                Add New {modalType}
-              </h3>
-              <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleQuickAdd} className="p-5 space-y-4">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">{modalType} Name *</label>
-                <input 
-                  type="text" 
-                  value={modalData.name} 
-                  onChange={(e) => setModalData({...modalData, name: e.target.value})} 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-500 outline-none" 
-                  placeholder={`Enter ${modalType} Name`}
-                  required 
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setModalType(null)} className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-colors shadow-md shadow-indigo-200">Save</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

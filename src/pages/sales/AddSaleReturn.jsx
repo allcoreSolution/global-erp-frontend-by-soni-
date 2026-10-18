@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCcw, Save, Search, Upload, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
+import Swal from 'sweetalert2';
 import DynamicSelect from '../../components/DynamicSelect';
 
 const AddSaleReturn = () => {
@@ -9,22 +10,73 @@ const AddSaleReturn = () => {
   const { id } = useParams();
 
   const [form, setForm] = useState({
-    returnNumber: 'RET-2023-001',
+    returnNumber: `RET-${Date.now()}`,
     returnDate: new Date().toISOString().split('T')[0],
-    customerName: '',
+    customer: '',
+    sale: '',
     invoiceNumber: '',
     returnReason: 'Defective Product',
-    status: 'Pending',
     refundMethod: 'Original Payment Method',
     restockingFee: '0',
     totalRefundAmount: '0',
-    remarks: '',
-    company: 'Select'
+    remarks: ''
   });
 
-  const [items, setItems] = useState([
-    { id: 1, product: '', quantity: 1, unitPrice: 0, condition: 'Good', returnTotal: 0 }
-  ]);
+  const [items, setItems] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [sales, setSales] = useState([]);
+
+  // Fetch Customers on Load
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const { data } = await api.get('/customers');
+        if (data.success) {
+          setCustomers(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching customers', error);
+      }
+    };
+    fetchCustomers();
+  }, []);
+
+  // Fetch Sales when Customer is Selected
+  useEffect(() => {
+    if (form.customer) {
+      const fetchSales = async () => {
+        try {
+          const { data } = await api.get(`/sales?customer=${form.customer}`);
+          if (data.success) {
+            setSales(data.data || []);
+          }
+        } catch (error) {
+          console.error('Error fetching sales for customer', error);
+        }
+      };
+      fetchSales();
+    } else {
+      setSales([]);
+    }
+  }, [form.customer]);
+
+  // Auto-populate Items when Sale is Selected
+  useEffect(() => {
+    if (form.sale && sales.length > 0) {
+      const selectedSale = sales.find(s => s._id === form.sale);
+      if (selectedSale && selectedSale.orderItems) {
+        setForm(prev => ({ ...prev, invoiceNumber: selectedSale.invoiceNo }));
+        setItems(selectedSale.orderItems.map((item, idx) => ({
+          id: idx + 1,
+          product: item.name || '',
+          condition: 'Good',
+          quantity: item.quantity || 1,
+          unitPrice: item.netUnitPrice || 0,
+          returnTotal: (item.quantity || 1) * (item.netUnitPrice || 0)
+        })));
+      }
+    }
+  }, [form.sale, sales]);
 
   useEffect(() => {
     if (id) {
@@ -36,15 +88,15 @@ const AddSaleReturn = () => {
             setForm({
               returnNumber: sr.returnNumber || '',
               returnDate: sr.returnDate || '',
-              customerName: sr.customerName || '',
+              customer: sr.customer?._id || sr.customer || '',
+              sale: sr.sale?._id || sr.sale || '',
               invoiceNumber: sr.invoiceNumber || '',
               returnReason: sr.returnReason || 'Defective Product',
               status: sr.status || 'Pending',
               refundMethod: sr.refundMethod || 'Original Payment Method',
               restockingFee: sr.restockingFee || '0',
               totalRefundAmount: sr.totalRefundAmount || '0',
-              remarks: sr.remarks || '',
-              company: sr.company || 'Select'
+              remarks: sr.remarks || ''
             });
             if (sr.items && sr.items.length > 0) {
               setItems(sr.items.map((item, idx) => ({
@@ -95,18 +147,29 @@ const AddSaleReturn = () => {
   };
 
   const removeItemRow = (id) => {
-    if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
-    }
+    setItems(items.filter(item => item.id !== id));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    if (items.length === 0) {
+      Swal.fire('Warning', 'Please select an Invoice. The return must have at least one product.', 'warning');
+      return;
+    }
+
+    const invalidItem = items.find(i => !i.product || i.product.trim() === '');
+    if (invalidItem) {
+      Swal.fire('Warning', 'One or more products have no name. Please remove empty rows before saving.', 'warning');
+      return;
+    }
+
     try {
       const payload = {
         returnNumber: form.returnNumber,
         returnDate: form.returnDate,
-        customerName: form.customerName,
+        customer: form.customer,
+        sale: form.sale,
         invoiceNumber: form.invoiceNumber,
         returnReason: form.returnReason,
         status: form.status,
@@ -114,7 +177,6 @@ const AddSaleReturn = () => {
         restockingFee: Number(form.restockingFee) || 0,
         totalRefundAmount: finalRefund >= 0 ? Number(finalRefund) : 0,
         remarks: form.remarks,
-        company: form.company,
         items: items.map(item => ({
           product: item.product,
           condition: item.condition,
@@ -126,15 +188,15 @@ const AddSaleReturn = () => {
 
       if (id) {
         await api.put(`/sale-returns/${id}`, payload);
-        alert('Sale Return updated successfully!');
+        Swal.fire('Success', 'Sale Return updated successfully!', 'success');
       } else {
         await api.post('/sale-returns', payload);
-        alert('Sale Return processed successfully!');
+        Swal.fire('Success', 'Sale Return processed successfully!', 'success');
       }
       navigate('/sales/sale-return');
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || 'Error saving sale return');
+      Swal.fire('Error', error.response?.data?.message || 'Error saving sale return', 'error');
     }
   };
 
@@ -185,25 +247,31 @@ const AddSaleReturn = () => {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Name *</label>
-                  <div className="relative">
-                    <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
-                    <input type="text" name="customerName" value={form.customerName} onChange={handleChange} required placeholder="Search or Enter Customer Name" className="w-full border border-slate-300 rounded pl-9 pr-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
-                  </div>
+                  <select name="customer" value={form.customer} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all">
+                    <option value="">Select Customer</option>
+                    {customers.map(c => (
+                      <option key={c._id} value={c._id}>{c.customerName || c.name || c.contactPerson || 'Unknown'}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Original Invoice Number *</label>
-                  <input type="text" name="invoiceNumber" value={form.invoiceNumber} onChange={handleChange} required placeholder="e.g. INV-10293" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option>Select</option>
-                    <option>Allcore Solutions</option>
+                  <select name="sale" value={form.sale} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all">
+                    <option value="">Select Invoice</option>
+                    {sales.map(s => (
+                      <option key={s._id} value={s._id}>{s.invoiceNo} ({s.saleDate}) - ₹{s.grandTotal}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
+                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all">
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Refunded">Refunded</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -214,11 +282,23 @@ const AddSaleReturn = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Return Reason *</label>
-                  <DynamicSelect category="ReturnReason" name="returnReason" value={form.returnReason} onChange={handleChange} />
+                  <select name="returnReason" value={form.returnReason} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all">
+                    <option value="">Select Reason</option>
+                    <option value="Defective">Defective</option>
+                    <option value="Wrong Item">Wrong Item</option>
+                    <option value="Changed Mind">Changed Mind</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Refund Method</label>
-                  <DynamicSelect category="RefundMethod" name="refundMethod" value={form.refundMethod} onChange={handleChange} />
+                  <select name="refundMethod" value={form.refundMethod} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all">
+                    <option value="">Select Method</option>
+                    <option value="Credit Note">Credit Note</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="UPI">UPI</option>
+                  </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Restocking Fee (₹)</label>
@@ -235,10 +315,7 @@ const AddSaleReturn = () => {
           {/* SECTION: PRODUCT DETAILS (ITEMS TABLE) */}
           <div className="border border-slate-200 rounded-lg p-5">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Products Being Returned</h3>
-              <button type="button" onClick={addItemRow} className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-                <Plus size={14} /> Add Row
-              </button>
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Products Being Returned (Auto-filled from Invoice)</h3>
             </div>
             
             <div className="overflow-x-auto">
@@ -257,7 +334,7 @@ const AddSaleReturn = () => {
                   {items.map((item, index) => (
                     <tr key={item.id} className="hover:bg-slate-50/50">
                       <td className="px-4 py-3">
-                        <input type="text" required placeholder="Select Product" value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none" />
+                        <input type="text" required placeholder="Enter Product Name" value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none" />
                       </td>
                       <td className="px-4 py-3">
                         <DynamicSelect 
@@ -265,6 +342,7 @@ const AddSaleReturn = () => {
                           name="condition" 
                           value={item.condition} 
                           onChange={(name, value) => handleItemChange(item.id, name, value)} 
+                          hideAddButton={true}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -277,7 +355,7 @@ const AddSaleReturn = () => {
                         <input type="number" readOnly value={item.returnTotal} className="w-full border border-slate-300 bg-slate-100 rounded px-2 py-1.5 text-sm font-semibold text-slate-700 outline-none cursor-not-allowed" />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button type="button" onClick={() => removeItemRow(item.id)} disabled={items.length === 1} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <button type="button" onClick={() => removeItemRow(item.id)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </td>

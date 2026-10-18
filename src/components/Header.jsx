@@ -18,20 +18,118 @@ import {
   PlusCircle,
   X,
   Plus,
-  Keyboard
+  Keyboard,
+  Clock
 } from 'lucide-react';
 import api from '../api';
+import { usePermissions } from '../utils/permissionUtils';
+import { useTheme } from '../context/ThemeContext';
+
+const QuickPunchHeader = () => {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const fetchStatus = async () => {
+    try {
+      const res = await api.get('/attendances/my-today');
+      if (res.data?.success) setStatus(res.data.data);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+    const handler = () => fetchStatus();
+    window.addEventListener('attendanceChanged', handler);
+    return () => window.removeEventListener('attendanceChanged', handler);
+  }, []);
+
+  const handlePunch = async (e) => {
+    e.stopPropagation();
+    setLoading(true);
+    try {
+      if (!status?.hasPunchedIn) {
+        const res = await api.post('/attendances/punch-in');
+        alert(res.data?.message || 'Punched in successfully!');
+      } else if (!status?.hasPunchedOut) {
+        if (!window.confirm('Punch Out for the day?')) {
+          setLoading(false);
+          return;
+        }
+        const res = await api.post('/attendances/punch-out');
+        alert(res.data?.message || 'Punched out successfully!');
+      } else {
+        navigate('/hrms/attendance/daily');
+        setLoading(false);
+        return;
+      }
+      fetchStatus();
+      window.dispatchEvent(new Event('attendanceChanged'));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!status) return null;
+
+  return (
+    <div className="flex items-center shrink-0">
+      {!status.hasPunchedIn ? (
+        <button
+          onClick={handlePunch}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-[11px] rounded-lg shadow-xs transition disabled:opacity-50"
+          title="Click to Punch In for today"
+        >
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          {loading ? 'Punching...' : 'Punch In'}
+        </button>
+      ) : !status.hasPunchedOut ? (
+        <button
+          onClick={handlePunch}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-[11px] rounded-lg shadow-xs transition disabled:opacity-50"
+          title="Click to Punch Out"
+        >
+          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+          {loading ? 'Punching...' : `Punch Out (${status.attendance?.checkIn || ''})`}
+        </button>
+      ) : (
+        <button
+          onClick={() => navigate('/hrms/attendance/daily')}
+          className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[10px] rounded-lg border border-slate-200 dark:border-slate-700 transition"
+          title="View Today Attendance"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          Punched Out ({status.attendance?.workingHours || 'Done'})
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   const navigate = useNavigate();
+  const { canRoute, isSuperAdmin, isAdmin } = usePermissions();
   const [isFullscreen, setIsFullscreen] = React.useState(false);
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
-    return localStorage.getItem('theme') === 'dark' ||
-      (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const addMenuRef = useRef(null);
+
+  // Live Date & Time State
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Popups & Dropdowns State
   const [isCalcOpen, setIsCalcOpen] = useState(false);
@@ -47,23 +145,64 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   const [isMessageOpen, setIsMessageOpen] = useState(false);
   const [messages, setMessages] = useState([]);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await api.get('/notifications');
-        if (response.data && response.data.success) {
-          setMessages(response.data.data.messages || []);
-          setReminders(response.data.data.reminders || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch notifications:', error);
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/notifications');
+      if (response.data && response.data.success) {
+        setMessages(response.data.data.messages || []);
+        setReminders(response.data.data.reminders || []);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchNotifications();
-    // Optional: set up polling here
-    // const interval = setInterval(fetchNotifications, 60000);
-    // return () => clearInterval(interval);
+    const handleNotifChanged = () => fetchNotifications();
+    window.addEventListener('notificationChanged', handleNotifChanged);
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notificationChanged', handleNotifChanged);
+    };
   }, []);
+
+  const handleDismissReminder = async (id) => {
+    setReminders(prev => prev.filter(r => r.id !== id));
+    try {
+      await api.put(`/notifications/${id}/read`);
+    } catch (e) {
+      console.error('Failed to dismiss reminder', e);
+    }
+  };
+
+  const handleClearAllReminders = async () => {
+    setReminders([]);
+    try {
+      await api.put('/notifications/clear-all', { type: 'reminder' });
+    } catch (e) {
+      console.error('Failed to clear reminders', e);
+    }
+  };
+
+  const handleDismissMessage = async (id) => {
+    setMessages(prev => prev.filter(m => m.id !== id));
+    try {
+      await api.put(`/notifications/${id}/read`);
+    } catch (e) {
+      console.error('Failed to dismiss message', e);
+    }
+  };
+
+  const handleClearAllMessages = async () => {
+    setMessages([]);
+    try {
+      await api.put('/notifications/clear-all', { type: 'message' });
+    } catch (e) {
+      console.error('Failed to clear messages', e);
+    }
+  };
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isShortcutManagerOpen, setIsShortcutManagerOpen] = useState(false);
@@ -97,15 +236,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
     return () => document.removeEventListener('mousedown', clickOutside);
   }, []);
 
-  React.useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
+
 
   React.useEffect(() => {
     const handleFullscreenChange = () => {
@@ -151,27 +282,67 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
 
   return (
     <div className="h-14 flex items-center justify-between px-2 md:px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 gap-2 transition-colors relative">
-      {/* Sidebar Toggle */}
-      <button
-        onClick={() => {
-          onMenuClick();
-          if (onToggleDesktopSidebar) onToggleDesktopSidebar();
-        }}
-        title="Toggle Sidebar"
-        className="p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors"
-      >
-        <Menu size={20} strokeWidth={2} />
-      </button>
+      {/* Left section: Sidebar toggle & Real-time Date / Time */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Sidebar Toggle */}
+        <button
+          onClick={() => {
+            onMenuClick();
+            if (onToggleDesktopSidebar) onToggleDesktopSidebar();
+          }}
+          title="Toggle Sidebar"
+          className="p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+        >
+          <Menu size={20} strokeWidth={2} />
+        </button>
 
-      {/* Search Bar */}
-      <div className="flex-1 min-w-[120px] max-w-2xl flex items-center relative">
-        <Search className="absolute left-3 text-gray-400 dark:text-gray-500" size={18} />
-        <input
-          type="text"
-          placeholder="Search Menu / Customer / Invoice / Product..."
-          className="w-full pl-10 pr-4 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 dark:placeholder-gray-500 dark:text-slate-100 transition-colors"
-        />
-        <div className="absolute right-3 text-xs text-blue-500 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded hidden sm:block">F3</div>
+        {/* Brand Logo in Header */}
+        <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200 dark:border-slate-700 shadow-xs">
+          <img 
+            src="/image-removebg-preview (1).png" 
+            alt="Logo" 
+            className="h-8 w-auto max-w-[120px] object-contain"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/logo.png";
+            }}
+          />
+        </div>
+
+        {/* Live Date & Time Display */}
+        <div className="flex items-center gap-2 sm:gap-2.5 py-1 px-2.5 sm:px-3 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg select-none">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+            <CalendarIcon size={13} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="hidden sm:inline">
+              {currentDateTime.toLocaleDateString('en-IN', {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              })}
+            </span>
+            <span className="sm:hidden text-[11px]">
+              {currentDateTime.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short'
+              })}
+            </span>
+          </div>
+
+          <span className="w-[1px] h-3.5 bg-slate-300 dark:bg-slate-600" />
+
+          <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tight">
+            <Clock size={13} className="text-indigo-500 animate-pulse shrink-0" />
+            <span>
+              {currentDateTime.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+              })}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions & User Profile */}
@@ -324,7 +495,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Reminders ({reminders.length})</span>
                   {reminders.length > 0 && (
-                    <button onClick={() => setReminders([])} className="text-[10px] text-blue-600 font-bold hover:underline">Clear All</button>
+                    <button onClick={handleClearAllReminders} className="text-[10px] text-blue-600 font-bold hover:underline">Clear All</button>
                   )}
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
@@ -340,11 +511,22 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                         <X
                           size={12}
                           className="cursor-pointer text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all shrink-0 mt-0.5"
-                          onClick={() => setReminders(reminders.filter(item => item.id !== r.id))}
+                          onClick={() => handleDismissReminder(r.id)}
                         />
                       </div>
                     ))
                   )}
+                </div>
+                <div className="p-2 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-center">
+                  <button
+                    onClick={() => {
+                      setIsReminderOpen(false);
+                      navigate('/setup/notifications');
+                    }}
+                    className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    View All Notifications & Broadcasts →
+                  </button>
                 </div>
               </div>
             )}
@@ -368,7 +550,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Unread Messages ({messages.length})</span>
                   {messages.length > 0 && (
-                    <button onClick={() => setMessages([])} className="text-[10px] text-blue-600 font-bold hover:underline">Mark all read</button>
+                    <button onClick={handleClearAllMessages} className="text-[10px] text-blue-600 font-bold hover:underline">Mark all read</button>
                   )}
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
@@ -384,7 +566,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
                         <X
                           size={12}
                           className="cursor-pointer text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all shrink-0 mt-0.5"
-                          onClick={() => setMessages(messages.filter(item => item.id !== m.id))}
+                          onClick={() => handleDismissMessage(m.id)}
                         />
                       </div>
                     ))
@@ -406,24 +588,43 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
               </span>
             </button>
             {isAddMenuOpen && (
-              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60]  bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-lg shadow-lg z-50 py-1.5 divide-y divide-gray-150 dark:divide-slate-800 text-[11px] font-semibold">
-                <div className="py-1">
-                  <Link to="/sales/add-sale" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Sale Entry</Link>
-                  <Link to="/purchases/add-purchase" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Purchase Entry</Link>
-                  <Link to="/receipt/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Receipt Entry</Link>
-                  <Link to="/payment/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Payment Entry</Link>
-                </div>
-                <div className="py-1">
-                  <Link to="/bank-receipt/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Bank Receipt</Link>
-                  <Link to="/bank-payment/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Bank Payment</Link>
-                  <Link to="/contra/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Contra Entry</Link>
-                  <Link to="/journal/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Journal Entry</Link>
-                </div>
-                <div className="py-1">
-                  <Link to="/stock-entry/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Stock Entry</Link>
-                  <Link to="/stock-transfer/new" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Stock Transfer</Link>
-                  <Link to="/products/add-product" onClick={() => setIsAddMenuOpen(false)} className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800">Add Product</Link>
-                </div>
+              <div className="fixed top-[52px] right-2 sm:right-6 md:right-10 z-[60] bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-lg shadow-lg z-50 py-1.5 divide-y divide-gray-150 dark:divide-slate-800 text-[11px] font-semibold">
+                {[
+                  [
+                    { text: 'Sale Entry', to: '/sales/add-sale' },
+                    { text: 'Purchase Entry', to: '/purchases/add-purchase' },
+                    { text: 'Receipt Entry', to: '/receipt/new' },
+                    { text: 'Payment Entry', to: '/payment/new' }
+                  ],
+                  [
+                    { text: 'Bank Receipt', to: '/bank-receipt/new' },
+                    { text: 'Bank Payment', to: '/bank-payment/new' },
+                    { text: 'Contra Entry', to: '/contra/new' },
+                    { text: 'Journal Entry', to: '/journal/new' }
+                  ],
+                  [
+                    { text: 'Stock Entry', to: '/stock-entry/new' },
+                    { text: 'Stock Transfer', to: '/stock-transfer/new' },
+                    { text: 'Add Product', to: '/products/add-product' }
+                  ]
+                ].map((group, gIdx) => {
+                  const filteredGroup = group.filter(item => isSuperAdmin || isAdmin || canRoute(item.to));
+                  if (filteredGroup.length === 0) return null;
+                  return (
+                    <div key={gIdx} className="py-1">
+                      {filteredGroup.map((item, idx) => (
+                        <Link 
+                          key={idx} 
+                          to={item.to} 
+                          onClick={() => setIsAddMenuOpen(false)} 
+                          className="block px-4 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        >
+                          {item.text}
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -436,7 +637,7 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
           {/* Dark Mode */}
           <div
             className="flex flex-col items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
-            onClick={() => setIsDarkMode(prev => !prev)}
+            onClick={toggleTheme}
             title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
             {isDarkMode ? <Sun size={20} strokeWidth={1.5} className="text-amber-400" /> : <Moon size={20} strokeWidth={1.5} />}
@@ -508,6 +709,9 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
           </div>
         </div>
 
+        {/* Quick Punch Button for Current Logged-in User */}
+        <QuickPunchHeader />
+
         <div className="h-8 w-[1px] bg-gray-200 dark:bg-slate-800"></div>
 
         {/* User Profile */}
@@ -523,7 +727,9 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
               <div className="text-sm font-bold text-gray-800 dark:text-slate-100 leading-tight truncate max-w-[120px]">
                 {localStorage.getItem('userName') || 'ADMIN'}
               </div>
-              <div className="text-[12px] text-gray-500 dark:text-gray-400"> Admin</div>
+              <div className="text-[12px] text-gray-500 dark:text-gray-400 capitalize">
+                {localStorage.getItem('userRole') || 'User'}
+              </div>
             </div>
             <ChevronDown size={16} className="text-gray-400 dark:text-gray-500" />
           </div>

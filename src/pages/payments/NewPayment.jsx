@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, UploadCloud } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
+import Swal from 'sweetalert2';
 
 const NewPayment = () => {
   const navigate = useNavigate();
@@ -33,8 +34,8 @@ const NewPayment = () => {
   // Derived filtered options
   const warehouses = allWarehouses.filter(w => !branch || w.branchName === branch).map(w => w.name);
   // We assume suppliers aren't strictly filtered by warehouse in all schemas, but we can filter if they have warehouseName. If not, just show all.
-  const suppliers = allSuppliers; 
-  const invoices = allPurchases.filter(p => p.supplier === form.supplierParty && p.paymentStatus !== 'Paid');
+  const suppliers = allSuppliers;
+  const invoices = allPurchases.filter(p => (p.supplier?._id || p.supplier) === form.supplierParty && p.paymentStatus !== 'Paid');
 
   // Totals State
   const [totals, setTotals] = useState({
@@ -56,7 +57,7 @@ const NewPayment = () => {
           api.get('/payment-modes').catch(() => ({ data: { data: [] } })),
           api.get('/account-ledgers').catch(() => ({ data: { data: [] } }))
         ]);
-        
+
         setBranchesList((branchRes.data?.data || []).map(b => b.name));
         setAllWarehouses((whRes.data?.data || []).map(w => ({
           name: w.name,
@@ -64,9 +65,9 @@ const NewPayment = () => {
         })));
         setAllSuppliers((suppRes.data?.data || []).map(s => ({
           id: s._id,
-          name: s.supplierName || s.name,
+          name: s.companyName || s.supplierName || s.name || 'Unknown Supplier',
           phone: s.mobile || s.phone || '',
-          balance: s.openingBalance || 0
+          balance: s.balance || s.openingBalance || 0
         })));
         setAllPurchases((purchRes.data?.data || []).map(p => ({
           id: p._id,
@@ -74,13 +75,14 @@ const NewPayment = () => {
           supplier: p.supplier,
           paymentStatus: p.paymentStatus,
           grandTotal: p.grandTotal || 0,
-          paidAmount: p.paidAmount || 0,
-          dueAmount: (p.grandTotal || 0) - (p.paidAmount || 0)
+          paidAmount: p.amountPaid || 0,
+          dueAmount: (p.grandTotal || 0) - (p.amountPaid || 0)
         })));
-        
+
         const pmData = pmRes.data?.data || [];
-        setPaymentModesList(pmData.map(p => p.name || p.modeName || p));
-        
+        const defaultModes = ['Cash', 'Bank Transfer', 'UPI', 'Cheque', 'Credit Card'];
+        setPaymentModesList(pmData.length > 0 ? pmData.map(p => p.name || p.modeName || p) : defaultModes);
+
         const accData = accRes.data?.data || [];
         setDepositAccountsList(accData.map(a => a.accountName || a.name || a));
 
@@ -91,12 +93,50 @@ const NewPayment = () => {
     fetchCatalogs();
   }, []);
 
+  useEffect(() => {
+    if (id) {
+      const fetchPaymentData = async () => {
+        try {
+          const res = await api.get(`/payments/${id}`);
+          if (res.data.success) {
+            const p = res.data.data;
+            setForm({
+              paymentNo: p.paymentNo || '',
+              paymentDate: p.paymentDate ? p.paymentDate.substring(0, 10) : '',
+              supplierParty: p.supplierParty || '',
+              paymentAmount: p.paymentAmount || 0,
+              paymentMethod: p.paymentMethod || '',
+              paidFromAccount: p.paidFromAccount || '',
+              transactionRef: p.transactionRef || '',
+              remarks: p.remarks || ''
+            });
+            // Also need to set branch/warehouse logic if we had it, but we can leave them blank since they aren't stored
+          }
+        } catch (error) {
+          console.error('Error fetching payment details:', error);
+        }
+      };
+      fetchPaymentData();
+    }
+  }, [id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => {
       const updated = { ...prev, [name]: value };
       if (name === 'paymentAmount') {
-        calculateTotals(Number(value) || 0, invoiceAdjustments);
+        const amt = Number(value) || 0;
+        let remaining = amt;
+        const newAdjustments = invoiceAdjustments.map(inv => {
+          if (remaining > 0) {
+            const adjust = Math.min(remaining, inv.dueAmount);
+            remaining -= adjust;
+            return { ...inv, adjustAmount: adjust };
+          }
+          return { ...inv, adjustAmount: 0 };
+        });
+        setInvoiceAdjustments(newAdjustments);
+        calculateTotals(amt, newAdjustments);
       }
       return updated;
     });
@@ -105,9 +145,9 @@ const NewPayment = () => {
   const handleSupplierSelect = (e) => {
     const suppId = e.target.value;
     setForm(prev => ({ ...prev, supplierParty: suppId }));
-    
+
     // Automatically prepare pending invoices for this supplier
-    const pending = allPurchases.filter(p => p.supplier === suppId && p.paymentStatus !== 'Paid');
+    const pending = allPurchases.filter(p => (p.supplier?._id || p.supplier) === suppId && p.paymentStatus !== 'Paid');
     const preparedAdjustments = pending.map(inv => ({
       id: inv.id,
       referenceNo: inv.referenceNo,
@@ -146,36 +186,36 @@ const NewPayment = () => {
         paymentAmount: Number(form.paymentAmount) || 0,
         invoices: invoiceAdjustments.filter(i => i.adjustAmount > 0)
       };
-      
+
       if (id) {
         await api.put(`/payments/${id}`, payload);
-        alert('Payment Updated successfully!');
+        Swal.fire({ title: 'Success!', text: 'Payment Updated successfully!', icon: 'success', confirmButtonColor: '#4f46e5' });
       } else {
         await api.post('/payments', payload);
-        alert('Payment Posted successfully!');
+        Swal.fire({ title: 'Success!', text: 'Payment Posted successfully!', icon: 'success', confirmButtonColor: '#4f46e5' });
       }
       navigate('/payment/list');
     } catch (error) {
       console.error('Error saving payment', error);
-      alert('Failed to save payment. Please check the inputs.');
+      Swal.fire({ title: 'Error!', text: 'Failed to save payment. Please check the inputs.', icon: 'error', confirmButtonColor: '#4f46e5' });
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 font-sans text-slate-800">
-      
+
       {/* Header Navigation */}
       <div className="flex justify-between items-center mb-6">
         <button onClick={() => navigate('/payment/list')} className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-semibold transition-colors">
           <ArrowLeft size={18} /> Back to Payment List
         </button>
         <div className="flex gap-2">
-           <button type="button" onClick={() => navigate('/payment/list')} className="px-4 py-2 border border-slate-300 bg-white rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-             Cancel
-           </button>
-           <button onClick={handleSave} type="button" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold shadow-md transition-colors">
-             <CheckCircle size={16} /> Post Payment
-           </button>
+          <button type="button" onClick={() => navigate('/payment/list')} className="px-4 py-2 border border-slate-300 bg-white rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+            Cancel
+          </button>
+          <button onClick={handleSave} type="button" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold shadow-md transition-colors">
+            <CheckCircle size={16} /> Post Payment
+          </button>
         </div>
       </div>
 
@@ -186,9 +226,9 @@ const NewPayment = () => {
         </div>
 
         <form onSubmit={handleSave} className="p-6 space-y-8">
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
+
             {/* SECTION: BASIC INFORMATION */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Basic Information</h3>
@@ -221,25 +261,24 @@ const NewPayment = () => {
             {/* SECTION: PARTY DETAILS */}
             <div className="border border-slate-200 rounded-lg p-5">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Party Details</h3>
-                 {form.supplierParty && (
-                    <span className="text-sm font-bold text-red-600">
-                      Outstanding: ₹{suppliers.find(s => s.name === form.supplierParty || s.id === form.supplierParty)?.balance || 0}
-                    </span>
-                 )}
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Party Details</h3>
+                {form.supplierParty && (
+                  <span className="text-sm font-bold text-red-600">
+                    Outstanding: ₹{suppliers.find(s => s.name === form.supplierParty || s.id === form.supplierParty)?.balance || 0}
+                  </span>
+                )}
               </div>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier / Party *</label>
-                  <select 
-                    name="supplierParty" 
-                    value={form.supplierParty} 
+                  <select
+                    name="supplierParty"
+                    value={form.supplierParty}
                     onChange={handleSupplierSelect}
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white"
-                    disabled={!warehouse}
                     required
                   >
-                    <option value="">{warehouse ? "-- Select Supplier --" : "Select warehouse first"}</option>
+                    <option value="">-- Select Supplier --</option>
                     {suppliers.map(s => (
                       <option key={s.id} value={s.id}>
                         {s.name} {s.phone ? `(${s.phone})` : ''}
@@ -250,45 +289,45 @@ const NewPayment = () => {
               </div>
             </div>
           </div>
-          
+
           {/* SECTION: PAYMENT DETAILS */}
           <div className="border border-slate-200 rounded-lg p-5">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Payment Details</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Amount *</label>
-                  <input type="number" name="paymentAmount" value={form.paymentAmount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold text-blue-700 focus:border-indigo-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method *</label>
-                  <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Mode</option>
-                    {paymentModesList.map((pm, i) => <option key={i} value={pm}>{pm}</option>)}
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Paid From Account *</label>
-                  <select name="paidFromAccount" value={form.paidFromAccount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Account</option>
-                    {depositAccountsList.map((acc, i) => <option key={i} value={acc}>{acc}</option>)}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Transaction Ref.</label>
-                  <input type="text" name="transactionRef" value={form.transactionRef} onChange={handleChange} placeholder="UTR / Cheque No" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
-                <div className="col-span-3">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
-                  <input type="text" name="remarks" value={form.remarks} onChange={handleChange} placeholder="Add any notes here..." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Amount *</label>
+                <input type="number" name="paymentAmount" value={form.paymentAmount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold text-blue-700 focus:border-indigo-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method *</label>
+                <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
+                  <option value="">Select Mode</option>
+                  {paymentModesList.map((pm, i) => <option key={i} value={pm}>{pm}</option>)}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Paid From Account *</label>
+                <select name="paidFromAccount" value={form.paidFromAccount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
+                  <option value="">Select Account</option>
+                  {depositAccountsList.map((acc, i) => <option key={i} value={acc}>{acc}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Transaction Ref.</label>
+                <input type="text" name="transactionRef" value={form.transactionRef} onChange={handleChange} placeholder="UTR / Cheque No" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
+              </div>
+              <div className="col-span-3">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
+                <input type="text" name="remarks" value={form.remarks} onChange={handleChange} placeholder="Add any notes here..." className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none" />
+              </div>
             </div>
           </div>
 
           {/* SECTION: INVOICE ADJUSTMENT */}
           <div className="border border-slate-200 rounded-lg p-5">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Invoice Adjustment (Unpaid Bills)</h3>
-            
+
             <div className="overflow-x-auto mb-6">
               <table className="w-full text-left min-w-[600px]">
                 <thead>
@@ -328,16 +367,16 @@ const NewPayment = () => {
             {/* Totals Summary */}
             <div className="flex flex-col items-end gap-2 text-sm font-medium pr-4 border-t border-slate-200 pt-4">
               <div className="flex w-64 justify-between text-slate-600">
-                 <span>Total Payment:</span>
-                 <span>₹{totals.payment.toFixed(2)}</span>
+                <span>Total Payment:</span>
+                <span>₹{totals.payment.toFixed(2)}</span>
               </div>
               <div className="flex w-64 justify-between text-slate-600">
-                 <span>Total Adjusted:</span>
-                 <span className="text-blue-600">₹{totals.adjusted.toFixed(2)}</span>
+                <span>Total Adjusted:</span>
+                <span className="text-blue-600">₹{totals.adjusted.toFixed(2)}</span>
               </div>
               <div className="flex w-64 justify-between text-slate-800 font-bold border-t border-slate-200 pt-1 mt-1">
-                 <span>Unadjusted / Advance:</span>
-                 <span className={totals.unadjusted < 0 ? 'text-red-600' : 'text-slate-800'}>₹{totals.unadjusted.toFixed(2)}</span>
+                <span>Unadjusted / Advance:</span>
+                <span className={totals.unadjusted < 0 ? 'text-red-600' : 'text-slate-800'}>₹{totals.unadjusted.toFixed(2)}</span>
               </div>
             </div>
           </div>

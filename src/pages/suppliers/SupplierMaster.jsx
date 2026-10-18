@@ -5,8 +5,10 @@ import {
 import SupplierForm, { initialFormState } from './SupplierForm';
 import api from '../../api';
 import Swal from 'sweetalert2';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const SupplierMaster = () => {
+  const { can } = usePermissions();
   const [suppliers, setSuppliers] = useState([]);
 
   const fetchSuppliers = async () => {
@@ -107,6 +109,67 @@ const SupplierMaster = () => {
 
   const handleFormCancel = () => {
     setIsFormOpen(false);
+  };
+
+  const handleOpenView = (sup) => {
+    const htmlContent = `
+      <div style="text-align: left; font-family: 'Inter', sans-serif;">
+        <!-- Header Section -->
+        <div style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); padding: 16px; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="margin: 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">${sup.companyName || 'N/A'}</h3>
+            <p style="margin: 4px 0 0; color: #3b82f6; font-size: 12px; font-weight: 600; font-family: monospace;">ID: ${sup.supplierCode || sup.id || sup._id}</p>
+          </div>
+          <div style="text-align: right;">
+            <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: ${sup.status ? '#dcfce7' : '#fee2e2'}; color: ${sup.status ? '#166534' : '#991b1b'};">
+              ${sup.status ? 'ACTIVE' : 'INACTIVE'}
+            </span>
+          </div>
+        </div>
+
+        <!-- Grid Details -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Contact Person</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.contactPerson || '-'}</div>
+          </div>
+          
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Phone</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.phone || '-'}</div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Email</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.email || '-'}</div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">GSTIN</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.gstin || '-'}</div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Category / Type</div>
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">${sup.category || '-'} (${sup.type || '-'})</div>
+          </div>
+
+          <!-- Highlighted Balance -->
+          <div style="background: #fff1f2; padding: 12px; border-radius: 8px; border: 1px solid #fecdd3;">
+            <div style="color: #9f1239; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Outstanding Balance</div>
+            <div style="color: #e11d48; font-size: 16px; font-weight: 800;">₹ ${(sup.balance || 0).toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    Swal.fire({
+      html: htmlContent,
+      showCloseButton: true,
+      showConfirmButton: false,
+      width: '600px',
+      padding: '24px'
+    });
   };
 
   // Download CSV Sample
@@ -257,18 +320,24 @@ const SupplierMaster = () => {
         </div>
         <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_suppliers', 'manage_purchases']) && (
+            <button onClick={() => fileInputRef.current.click()} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <Upload size={14} /> Import
+            </button>
+          )}
+          {can(['create_suppliers', 'manage_purchases']) && (
+            <button onClick={handleDownloadSample} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded shadow-sm transition-colors">
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button onClick={handleExportCSV} className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded shadow-sm transition-colors">
             <Download size={14} /> CSV
           </button>
-          <button onClick={handleOpenAdd} className="whitespace-nowrap flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
-            <Plus size={14} /> Add Supplier
-          </button>
+          {can(['create_suppliers', 'manage_purchases']) && (
+            <button onClick={handleOpenAdd} className="whitespace-nowrap flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors">
+              <Plus size={14} /> Add Supplier
+            </button>
+          )}
         </div>
       </div>
 
@@ -311,17 +380,29 @@ const SupplierMaster = () => {
                 <td className="p-3">{sup.contactPerson}</td>
                 <td className="p-3">{sup.phone}</td>
                 <td className="p-3 text-center">
-                  <button onClick={() => handleToggleStatus(sup._id)} className="focus:outline-none">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors ${sup.status ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                  {can(['edit_suppliers', 'manage_purchases']) ? (
+                    <button onClick={() => handleToggleStatus(sup._id)} className="focus:outline-none">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors ${sup.status ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                        {sup.status ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                        {sup.status ? 'Active' : 'Inactive'}
+                      </span>
+                    </button>
+                  ) : (
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold inline-flex items-center justify-center gap-1 ${sup.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {sup.status ? <CheckCircle size={10} /> : <XCircle size={10} />}
                       {sup.status ? 'Active' : 'Inactive'}
                     </span>
-                  </button>
+                  )}
                 </td>
                 <td className="p-3 text-center">
                   <div className="flex justify-center gap-2">
-                    <button onClick={() => handleOpenEdit({ ...sup, id: displayId })} className="text-amber-600"><Edit size={14} /></button>
-                    <button onClick={() => handleDelete(sup._id)} className="text-red-600"><Trash2 size={14} /></button>
+                    <button onClick={() => handleOpenView(sup)} className="text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors" title="View Details"><Eye size={14} /></button>
+                    {can(['edit_suppliers', 'manage_purchases']) && (
+                      <button onClick={() => handleOpenEdit({ ...sup, id: displayId })} className="text-amber-600 hover:bg-amber-50 p-1 rounded transition-colors" title="Edit"><Edit size={14} /></button>
+                    )}
+                    {can(['delete_suppliers', 'manage_purchases']) && (
+                      <button onClick={() => handleDelete(sup._id)} className="text-red-600 hover:bg-red-50 p-1 rounded transition-colors" title="Delete"><Trash2 size={14} /></button>
+                    )}
                   </div>
                 </td>
               </tr>

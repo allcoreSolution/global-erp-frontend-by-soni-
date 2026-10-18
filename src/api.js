@@ -36,12 +36,18 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // If the token is expired or invalid (401 error)
+    // If the token is expired or invalid (401 error) on authenticated requests
     if (error.response && error.response.status === 401) {
-      console.warn("Unauthorized! Token might have expired. Logging out...");
-      localStorage.removeItem('erp_token');
-      // You can also force a redirect to the login page here if needed:
-      // window.location.href = '/login';
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (!isLoginRequest) {
+        console.warn("Unauthorized! Token might have expired. Logging out...");
+        const hadAuth = localStorage.getItem('erp_token') || localStorage.getItem('isLoggedIn');
+        localStorage.removeItem('erp_token');
+        localStorage.removeItem('isLoggedIn');
+        if (hadAuth) {
+          window.dispatchEvent(new Event('authChanged'));
+        }
+      }
     }
     
     return Promise.reject(error);

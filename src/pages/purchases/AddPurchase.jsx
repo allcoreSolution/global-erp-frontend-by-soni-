@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, Trash2, Save, ArrowLeft, Search } from 'lucide-react';
 import api from '../../api';
 import Swal from 'sweetalert2';
 
 const AddPurchase = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
 
   // ── Dropdown data ──────────────────────────────
   const [warehousesList, setWarehousesList] = useState([]);
@@ -13,28 +15,96 @@ const AddPurchase = () => {
   const [branchesList, setBranchesList]     = useState([]);
   const [brandsList, setBrandsList]         = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
+  const [taxSlabs, setTaxSlabs]             = useState([]);
+  const [productsCatalog, setProductsCatalog] = useState([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
 
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
-        const [whRes, supRes, brRes, brandRes, catRes] = await Promise.all([
+        const [whRes, supRes, brRes, brandRes, catRes, prodRes, taxRes] = await Promise.all([
           api.get('/catalogs/warehouses').catch(() => ({ data: { data: [] } })),
           api.get('/suppliers').catch(() => ({ data: { data: [] } })),
           api.get('/branches').catch(() => ({ data: { data: [] } })),
           api.get('/products/brands').catch(() => ({ data: { data: [] } })),
           api.get('/products/categories').catch(() => ({ data: { data: [] } })),
+          api.get('/products').catch(() => ({ data: { data: [] } })),
+          api.get('/tax-slabs').catch(() => ({ data: { data: [] } })),
         ]);
         setWarehousesList(whRes.data?.data || []);
         setSuppliersList(supRes.data?.data || []);
         setBranchesList(brRes.data?.data || []);
         setBrandsList(brandRes.data?.data || []);
         setCategoriesList(catRes.data?.data || []);
+        setTaxSlabs(taxRes.data?.data || []);
+
+        const pData = prodRes.data?.data || prodRes.data || [];
+        setProductsCatalog(pData.map(p => ({
+          id: p._id,
+          name: p.productName || p.name,
+          code: p.productCode || p.sku || p.code,
+          cost: p.productCost || 0,
+          price: p.productPrice || p.salePrice || 0,
+          tax: p.productTax || p.taxRate || 0,
+          hsnNumber: p.hsnNumber || '',
+          brand: typeof p.brand === 'object' ? p.brand?._id : p.brand,
+          category: typeof p.category === 'object' ? p.category?._id : p.category,
+        })));
       } catch (err) {
         console.error('Dropdown fetch error:', err);
       }
     };
     fetchDropdowns();
   }, []);
+
+  // Fetch Purchase if Edit Mode
+  useEffect(() => {
+    if (id) {
+      const fetchPurchase = async () => {
+        try {
+          const res = await api.get(`/purchases/${id}`);
+          if (res.data.success) {
+            const data = res.data.data;
+            setPurchaseDate(data.purchaseDate || new Date().toISOString().split('T')[0]);
+            setReferenceNo(data.referenceNo || '');
+            setBranch(data.branch?._id || data.branch || '');
+            setWarehouse(data.warehouse?._id || data.warehouse || '');
+            setSupplier(data.supplier?._id || data.supplier || '');
+            setPurchaseStatus(data.purchaseStatus || 'Received');
+            setPaymentStatus(data.paymentStatus || 'Due');
+            setNote(data.note || '');
+
+            if (data.orderItems && data.orderItems.length > 0) {
+              setOrderItems(data.orderItems.map(item => ({
+                name: item.name || '',
+                code: item.code || '',
+                quantity: item.quantity || 1,
+                netUnitCost: item.netUnitCost || 0,
+                productPrice: item.productPrice || 0,
+                discount: item.discount || 0,
+                taxPercent: item.taxPercent || 0,
+                hsnNumber: item.hsnNumber || '',
+                brand: item.brand || '',
+                category: item.category || '',
+                customBrand: '',
+                customCategory: '',
+                warrantyValue: item.warrantyValue || '',
+                warrantyUnit: item.warrantyUnit || 'Months',
+                guaranteeValue: item.guaranteeValue || '',
+                guaranteeUnit: item.guaranteeUnit || 'Months',
+                alertQuantity: item.alertQuantity || '0'
+              })));
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching purchase:', err);
+          Swal.fire('Error', 'Failed to fetch purchase details.', 'error');
+        }
+      };
+      fetchPurchase();
+    }
+  }, [id]);
 
   // ── Purchase Header ────────────────────────────
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
@@ -53,12 +123,60 @@ const AddPurchase = () => {
     taxPercent: 0, discount: 0,
     // Product extra details
     hsnNumber: '', brand: '', category: '',
+    customBrand: '', customCategory: '',
     warrantyValue: '', warrantyUnit: 'Months',
     guaranteeValue: '', guaranteeUnit: 'Months',
     alertQuantity: ''
   });
 
   const [orderItems, setOrderItems] = useState([emptyItem()]);
+
+  // Search Logic
+  const handleProductSearch = (e) => {
+    const val = e.target.value;
+    setProductSearch(val);
+    if (val.trim() === '') {
+      setSearchResults([]);
+      return;
+    }
+    const filtered = productsCatalog.filter(p =>
+      p.name.toLowerCase().includes(val.toLowerCase()) ||
+      p.code.toLowerCase().includes(val.toLowerCase())
+    );
+    setSearchResults(filtered);
+  };
+
+  const handleSelectProduct = (prod) => {
+    const exists = orderItems.findIndex(item => item.code === prod.code && item.code !== '');
+    if (exists !== -1) {
+      updateItem(exists, 'quantity', Number(orderItems[exists].quantity) + 1);
+    } else {
+      const lastItem = orderItems[orderItems.length - 1];
+      const newItem = {
+        name: prod.name,
+        code: prod.code,
+        quantity: 1,
+        netUnitCost: prod.cost,
+        productPrice: prod.price,
+        taxPercent: prod.tax,
+        discount: 0,
+        hsnNumber: prod.hsnNumber || '',
+        brand: prod.brand || '',
+        category: prod.category || '',
+        warrantyValue: '', warrantyUnit: 'Months',
+        guaranteeValue: '', guaranteeUnit: 'Months',
+        alertQuantity: '0'
+      };
+      
+      if (lastItem && !lastItem.name && !lastItem.code) {
+        setOrderItems(prev => prev.map((item, i) => i === orderItems.length - 1 ? newItem : item));
+      } else {
+        setOrderItems([...orderItems, newItem]);
+      }
+    }
+    setProductSearch('');
+    setSearchResults([]);
+  };
 
   const addItem = () => {
     setOrderItems(prev => [...prev, emptyItem()]);
@@ -72,11 +190,6 @@ const AddPurchase = () => {
       prev.map((item, i) => {
         if (i !== idx) return item;
         const updated = { ...item, [field]: value };
-        // Auto-calculate sale price (25% margin) when cost changes
-        if (field === 'netUnitCost') {
-          const cost = parseFloat(value) || 0;
-          updated.productPrice = parseFloat((cost * 1.25).toFixed(2));
-        }
         return updated;
       })
     );
@@ -122,8 +235,8 @@ const AddPurchase = () => {
           taxPercent:     parseFloat(item.taxPercent)  || 0,
           // Product registration details
           hsnNumber:      item.hsnNumber      || '',
-          brand:          item.brand          || '',
-          category:       item.category       || '',
+          brand:          item.brand === 'Other' ? (item.customBrand || '') : (item.brand || ''),
+          category:       item.category === 'Other' ? (item.customCategory || '') : (item.category || ''),
           warrantyValue:  item.warrantyValue  || '',
           warrantyUnit:   item.warrantyUnit   || 'Months',
           guaranteeValue: item.guaranteeValue || '',
@@ -132,11 +245,16 @@ const AddPurchase = () => {
         })),
       };
 
-      const res = await api.post('/purchases', payload);
+      let res;
+      if (isEditMode) {
+        res = await api.put(`/purchases/${id}`, payload);
+      } else {
+        res = await api.post('/purchases', payload);
+      }
       if (res.data?.success) {
         Swal.fire({
           icon: 'success',
-          title: 'Purchase Saved! ✅',
+          title: isEditMode ? 'Purchase Updated! ✅' : 'Purchase Saved! ✅',
           text: res.data.message || 'Maal aagaya, stock update ho gaya!',
           timer: 2500,
           showConfirmButton: false,
@@ -253,11 +371,51 @@ const AddPurchase = () => {
 
         {/* Order Items Panel */}
         <div className="bg-white border border-blue-400 rounded-xl p-6 shadow space-y-4">
+          
+          {/* Product Autocomplete Lookup Search */}
+          <div className="relative mb-6 pb-6 border-b border-blue-100">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-2">Select Existing Product (Optional)</label>
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                value={productSearch}
+                onChange={handleProductSearch}
+                onFocus={() => {
+                  if (!productSearch.trim()) setSearchResults(productsCatalog);
+                }}
+                onBlur={() => setTimeout(() => setSearchResults([]), 200)}
+                placeholder="Scan/Search existing product by name/code to auto-fill..."
+                className="w-full border border-blue-400 rounded pl-9 pr-3 py-2.5 text-sm bg-white text-black outline-none focus:border-blue-500 placeholder:text-gray-400"
+              />
+            </div>
+
+            {/* Search Dropdown Results */}
+            {searchResults.length > 0 && (
+              <div className="absolute left-0 right-0 z-10 mt-1 bg-white border border-blue-400 rounded shadow-lg max-h-60 overflow-y-auto divide-y divide-gray-100">
+                {searchResults.map((prod, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelectProduct(prod);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-blue-50 transition-colors flex items-center justify-between"
+                  >
+                    <span className="font-semibold">{prod.name} ({prod.code})</span>
+                    <span className="text-xs text-gray-500 font-mono">Cost: ₹{prod.cost} | Tax: {prod.tax}%</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center justify-between border-b border-blue-200 pb-2">
             <h2 className="text-base font-semibold text-blue-700">📦 Purchase Items</h2>
             <button type="button" onClick={addItem}
               className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-              <Plus size={14} /> Add Item
+              <Plus size={14} /> Add New Item Row
             </button>
           </div>
 
@@ -276,7 +434,6 @@ const AddPurchase = () => {
                   <th className="p-2 text-left min-w-32">Guarantee</th>
                   <th className="p-2 text-center">Qty *</th>
                   <th className="p-2 text-right">Cost (₹) *</th>
-                  <th className="p-2 text-right">Sale (₹)</th>
                   <th className="p-2 text-right">Tax %</th>
                   <th className="p-2 text-right">Disc (₹)</th>
                   <th className="p-2 text-right">Total (₹)</th>
@@ -311,22 +468,36 @@ const AddPurchase = () => {
 
                     {/* Brand */}
                     <td className="p-2 min-w-32">
-                      <select value={item.brand} onChange={e => updateItem(idx, 'brand', e.target.value)}
-                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400">
-                        <option value="">-- Brand --</option>
-                        {brandsList.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
-                        <option value="Other">Other</option>
-                      </select>
+                      {item.brand === 'Other' ? (
+                        <div className="flex items-center gap-1">
+                          <input type="text" value={item.customBrand || ''} onChange={e => updateItem(idx, 'customBrand', e.target.value)} placeholder="New Brand" className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400" required />
+                          <button type="button" onClick={() => { updateItem(idx, 'brand', ''); updateItem(idx, 'customBrand', ''); }} className="text-red-500 text-xs px-1 font-bold">X</button>
+                        </div>
+                      ) : (
+                        <select value={item.brand} onChange={e => updateItem(idx, 'brand', e.target.value)}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400">
+                          <option value="">-- Brand --</option>
+                          {brandsList.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+                          <option value="Other">Other</option>
+                        </select>
+                      )}
                     </td>
 
                     {/* Category */}
                     <td className="p-2 min-w-32">
-                      <select value={item.category} onChange={e => updateItem(idx, 'category', e.target.value)}
-                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400">
-                        <option value="">-- Category --</option>
-                        {categoriesList.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                        <option value="Other">Other</option>
-                      </select>
+                      {item.category === 'Other' ? (
+                        <div className="flex items-center gap-1">
+                          <input type="text" value={item.customCategory || ''} onChange={e => updateItem(idx, 'customCategory', e.target.value)} placeholder="New Category" className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400" required />
+                          <button type="button" onClick={() => { updateItem(idx, 'category', ''); updateItem(idx, 'customCategory', ''); }} className="text-red-500 text-xs px-1 font-bold">X</button>
+                        </div>
+                      ) : (
+                        <select value={item.category} onChange={e => updateItem(idx, 'category', e.target.value)}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400">
+                          <option value="">-- Category --</option>
+                          {categoriesList.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                          <option value="Other">Other</option>
+                        </select>
+                      )}
                     </td>
 
                     {/* Alert Qty */}
@@ -376,18 +547,16 @@ const AddPurchase = () => {
                         className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-right outline-none focus:border-blue-400" />
                     </td>
 
-                    {/* Sale Price */}
-                    <td className="p-2">
-                      <input type="number" min="0" step="0.01" value={item.productPrice}
-                        onChange={e => updateItem(idx, 'productPrice', e.target.value)}
-                        className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-right outline-none focus:border-blue-400" />
-                    </td>
-
                     {/* Tax */}
-                    <td className="p-2">
-                      <input type="number" min="0" max="100" value={item.taxPercent}
-                        onChange={e => updateItem(idx, 'taxPercent', e.target.value)}
-                        className="w-14 border border-gray-300 rounded px-2 py-1 text-sm text-right outline-none focus:border-blue-400" />
+                    <td className="p-2 min-w-24">
+                      <select value={item.taxPercent}
+                        onChange={e => updateItem(idx, 'taxPercent', Number(e.target.value))}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400">
+                        <option value={0}>0%</option>
+                        {taxSlabs.map(tax => (
+                          <option key={tax._id} value={tax.rate}>{tax.name} ({tax.rate}%)</option>
+                        ))}
+                      </select>
                     </td>
 
                     {/* Discount */}
@@ -446,7 +615,7 @@ const AddPurchase = () => {
           </button>
           <button type="submit"
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded text-sm font-semibold hover:bg-blue-700 transition-colors">
-            <Save size={16} /> Save Purchase
+            <Save size={16} /> {isEditMode ? 'Update Purchase' : 'Save Purchase'}
           </button>
         </div>
 

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarX, Search, Download, Printer, Filter } from 'lucide-react';
+import { CalendarX, Search, Download, Printer, Filter, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 
 const ExpiredStock = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,8 +27,8 @@ const ExpiredStock = () => {
     }
   };
 
-  const filteredItems = data.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredItems = data.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (item.batchNo && item.batchNo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -37,11 +39,16 @@ const ExpiredStock = () => {
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-            <CalendarX className="text-rose-600" size={24} /> Expired & Near Expiry Stock
-          </h1>
-          <p className="text-[11px] sm:text-xs text-gray-500 mt-1">Track inventory items that have expired or are nearing their expiration date.</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            <ArrowLeft size={16} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+              <CalendarX className="text-rose-600" size={24} /> Expired & Near Expiry Stock
+            </h1>
+            <p className="text-[11px] sm:text-xs text-gray-500 mt-1">Track inventory items that have expired or are nearing their expiration date.</p>
+          </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-semibold hover:bg-slate-50 transition-colors">
@@ -70,7 +77,7 @@ const ExpiredStock = () => {
             Total Value at Risk: ₹ {totalValue.toLocaleString()}
           </div>
         </div>
-        
+
         <div className="relative w-full md:w-64">
           <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
           <input
@@ -109,7 +116,7 @@ const ExpiredStock = () => {
             ) : filteredItems.length > 0 ? (
               filteredItems.map((item, idx) => {
                 const isExpired = item.status === 'Expired';
-                
+
                 return (
                   <tr key={idx} className="hover:bg-rose-50/30">
                     <td className="p-3 font-mono text-gray-500">{item.sku}</td>

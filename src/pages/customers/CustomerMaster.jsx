@@ -8,8 +8,10 @@ import api from '../../api';
 import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const CustomerMaster = () => {
+  const { can } = usePermissions();
   const [customers, setCustomers] = useState([]);
   
   // Dynamic Data States
@@ -87,8 +89,6 @@ const CustomerMaster = () => {
     creditPeriod: 0,
     openingBalance: 0,
     balanceType: 'Dr',
-    priceList: '',
-    discount: 0,
     warehouseAddress: '',
     stockLocation: '',
     assignedRegion: '',
@@ -121,9 +121,12 @@ const CustomerMaster = () => {
 
   // Filter Logic
   const filteredCustomers = customers.filter(cust => {
-    const matchesSearch = cust.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cust.customerCode || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cust.phone || '').includes(searchTerm);
+    const customerName = cust.name || cust.customerName || '';
+    const customerCode = cust.customerCode || '';
+    const phone = cust.phone || '';
+    const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customerCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      phone.includes(searchTerm);
     const matchesType = filterType ? cust.type === filterType : true;
     const matchesCategory = filterCategory ? cust.category === filterCategory : true;
     const matchesStatus = filterStatus ? (filterStatus === 'Active' ? cust.status === true : cust.status === false) : true;
@@ -239,7 +242,7 @@ const CustomerMaster = () => {
       'Customer ID', 'Name', 'Owner Name', 'Business Name', 'Type', 'Category', 'Phone', 'Email', 'PAN',
       'Billing Street', 'Billing City', 'Billing State', 'Billing Zip',
       'Shipping Street', 'Shipping City', 'Shipping State', 'Shipping Zip',
-      'Credit Limit', 'Credit Period', 'Opening Balance', 'Balance Type', 'Price List', 'Discount',
+      'Credit Limit', 'Credit Period', 'Opening Balance', 'Balance Type',
       'Warehouse Address', 'Stock Location', 'Assigned Region', 'Commission',
       'Logistics Warehouse', 'Delivery Vehicle', 'Delivery Person', 'Delivery Charges',
       'Bank Name', 'Bank Account', 'Bank IFSC', 'Active'
@@ -266,8 +269,6 @@ const CustomerMaster = () => {
       c.creditPeriod || 0,
       c.openingBalance || 0,
       c.balanceType || 'Dr',
-      c.priceList || '',
-      c.discount || 0,
       `"${c.warehouseAddress || ''}"`,
       `"${c.stockLocation || ''}"`,
       `"${c.assignedRegion || ''}"`,
@@ -322,8 +323,6 @@ const CustomerMaster = () => {
               creditPeriod: Number(cols[18]) || 0,
               openingBalance: Number(cols[19]) || 0,
               balanceType: cols[20] || 'Dr',
-              priceList: cols[21] || '',
-              discount: Number(cols[22]) || 0,
               warehouseAddress: cols[23] || '',
               stockLocation: cols[24] || '',
               assignedRegion: cols[25] || '',
@@ -486,36 +485,42 @@ const CustomerMaster = () => {
 
         {/* Global Toolbar buttons */}
         <div className="flex flex-nowrap items-center gap-2 w-full md:w-auto no-print overflow-x-auto whitespace-nowrap no-scrollbar">
-          <button
-            onClick={() => document.getElementById('customer-csv-import').click()}
-            className="flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors"
-          >
-            <Upload size={13} /> Import CSV
-          </button>
+          {can(['create_contacts', 'manage_contacts']) && (
+            <button
+              onClick={() => document.getElementById('customer-csv-import').click()}
+              className="flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors"
+            >
+              <Upload size={13} /> Import CSV
+            </button>
+          )}
           <button
             onClick={handleExport}
             className="flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-semibold border border-slate-300 rounded hover:bg-slate-50 transition-colors"
           >
             <Download size={13} /> Export CSV
           </button>
-          <button
-            onClick={handleDownloadSample}
-            className="flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-semibold border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors"
-          >
-            <FileText size={13} /> Sample Sheet
-          </button>
+          {can(['create_contacts', 'manage_contacts']) && (
+            <button
+              onClick={handleDownloadSample}
+              className="flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-semibold border border-emerald-300 bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors"
+            >
+              <FileText size={13} /> Sample Sheet
+            </button>
+          )}
           <button
             onClick={handleDownloadPDF}
             className="flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
           >
             <Printer size={13} /> Download PDF
           </button>
-          <button
-            onClick={handleOpenAdd}
-            className="flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 text-[10px] sm:text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
-          >
-            <Plus size={13} /> Add Customer
-          </button>
+          {can(['create_contacts', 'manage_contacts']) && (
+            <button
+              onClick={handleOpenAdd}
+              className="flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 text-[10px] sm:text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+            >
+              <Plus size={13} /> Add Customer
+            </button>
+          )}
         </div>
       </div>
 
@@ -589,14 +594,14 @@ const CustomerMaster = () => {
                 const balance = calculateDue(cust);
                 return (
                   <tr key={cust._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-2 sm:p-3 font-semibold text-indigo-600">{cust.customerCode}</td>
+                    <td className="p-2 sm:p-3 font-semibold text-indigo-600">{cust.customerCode || '-'}</td>
                     <td className="p-2 sm:p-3">
-                      <div className="font-medium text-gray-900">{cust.name}</div>
-                      <div className="text-[9px] sm:text-[10px] text-gray-500 break-all">{cust.email}</div>
+                      <div className="font-medium text-gray-900">{cust.name || cust.customerName || 'Unnamed Customer'}</div>
+                      <div className="text-[9px] sm:text-[10px] text-gray-500 break-all">{cust.email || '-'}</div>
                     </td>
                     <td className="p-2 sm:p-3">
                       <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-medium bg-slate-100 text-slate-700">
-                        {cust.type}
+                        {cust.type || 'Standard'}
                       </span>
                     </td>
                     <td className="p-2 sm:p-3">
@@ -604,45 +609,63 @@ const CustomerMaster = () => {
                           cust.category === 'Corporate' ? 'bg-purple-100 text-purple-800' :
                             'bg-blue-100 text-blue-800'
                         }`}>
-                        {cust.category}
+                        {cust.category || 'General'}
                       </span>
                     </td>
                     <td className="p-2 sm:p-3">
-                      <div className="text-[10px] sm:text-xs text-gray-800">{cust.phone}</div>
-                      <div className="text-[9px] sm:text-[10px] text-gray-500">{cust.billingAddress.city}, {cust.billingAddress.state}</div>
+                      <div className="text-[10px] sm:text-xs text-gray-800">{cust.phone || '-'}</div>
+                      <div className="text-[9px] sm:text-[10px] text-gray-500">
+                        {cust.billingAddress ? `${cust.billingAddress.city || ''}${cust.billingAddress.city && cust.billingAddress.state ? ', ' : ''}${cust.billingAddress.state || ''}` : '-'}
+                      </div>
                     </td>
                     <td className={`p-2 sm:p-3 text-right font-medium ${balance >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                       ₹ {Math.abs(balance).toLocaleString()} {balance >= 0 ? 'Dr' : 'Cr'}
                     </td>
                     <td className="p-2 sm:p-3 text-center no-print">
-                      <button
-                        onClick={() => handleToggleStatus(cust._id)}
-                        className={`px-2 py-0.5 rounded-full font-semibold text-[9px] sm:text-[10px] transition-colors ${cust.status ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                      >
-                        {cust.status ? 'Active' : 'Inactive'}
-                      </button>
+                      {can(['edit_contacts', 'manage_contacts']) ? (
+                        <button
+                          onClick={() => handleToggleStatus(cust._id)}
+                          className={`px-2 py-0.5 rounded-full font-semibold text-[9px] sm:text-[10px] transition-colors ${cust.status ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                            }`}
+                        >
+                          {cust.status ? 'Active' : 'Inactive'}
+                        </button>
+                      ) : (
+                        <span
+                          className={`px-2 py-0.5 rounded-full font-semibold text-[9px] sm:text-[10px] ${cust.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}
+                        >
+                          {cust.status ? 'Active' : 'Inactive'}
+                        </span>
+                      )}
                     </td>
                     <td className="p-2 sm:p-3 text-center no-print">
                       <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                         <button
                           onClick={() => handleOpenView(cust)}
                           className="p-1 text-indigo-600 hover:bg-blue-50 rounded"
+                          title="View Details"
                         >
                           <Eye size={14} />
                         </button>
-                        <button
-                          onClick={() => handleOpenEdit(cust)}
-                          className="p-1 text-amber-600 hover:bg-amber-50 rounded"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCustomer(cust._id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {can(['edit_contacts', 'manage_contacts']) && (
+                          <button
+                            onClick={() => handleOpenEdit(cust)}
+                            className="p-1 text-amber-600 hover:bg-amber-50 rounded"
+                            title="Edit Customer"
+                          >
+                            <Edit size={14} />
+                          </button>
+                        )}
+                        {can(['delete_contacts', 'manage_contacts']) && (
+                          <button
+                            onClick={() => handleDeleteCustomer(cust._id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Delete Customer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -704,8 +727,7 @@ const CustomerMaster = () => {
               {[
                 { id: 'basic', label: 'Basic Info', icon: User },
                 { id: 'address', label: 'Address', icon: MapPin },
-                { id: 'business', label: 'Business Details', icon: DollarSign },
-                { id: 'specific', label: customerForm.type === 'Retailer' ? 'Documents' : customerForm.type === 'Wholesaler' ? 'Warehouse' : 'Logistics', icon: FileText }
+                { id: 'business', label: 'Business & Documents', icon: DollarSign }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -830,19 +852,6 @@ const CustomerMaster = () => {
                         </select>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">{customerForm.type} Price List</label>
-                      <select value={customerForm.priceList} onChange={(e) => setCustomerForm({ ...customerForm, priceList: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm bg-white focus:outline-none">
-                        <option value="">Select Price List</option>
-                        {priceLists.map(pl => (
-                          <option key={pl._id} value={pl.name}>{pl.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Discount %</label>
-                      <input type="number" value={customerForm.discount} onChange={(e) => setCustomerForm({ ...customerForm, discount: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                    </div>
 
 
                     {customerForm.type === 'Distributor' && (
@@ -858,80 +867,34 @@ const CustomerMaster = () => {
                       </>
                     )}
                   </div>
-                </div>
-              )}
 
-              {activeFormTab === 'specific' && (
-                <div className="space-y-4 sm:space-y-6">
-                  {customerForm.type === 'Retailer' && (
-                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                      <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><FileText size={14} className="text-indigo-600" /> Documents Upload</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
-                          <p className="text-xs font-medium text-slate-700 mb-1">GST Certificate</p>
-                          {customerForm.gstCertificate ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
-                          <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'gstCertificate')} />
-                        </label>
-                        <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
-                          <p className="text-xs font-medium text-slate-700 mb-1">PAN Card</p>
-                          {customerForm.panCard ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
-                          <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'panCard')} />
-                        </label>
-                        <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
-                          <p className="text-xs font-medium text-slate-700 mb-1">Shop License</p>
-                          {customerForm.shopLicense ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
-                          <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'shopLicense')} />
-                        </label>
-                        <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
-                          <p className="text-xs font-medium text-slate-700 mb-1">Other Documents</p>
-                          {customerForm.otherDocuments ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
-                          <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'otherDocuments')} />
-                        </label>
-                      </div>
+                  {/* Documents Upload Section (Always available) */}
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4">
+                    <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><FileText size={14} className="text-indigo-600" /> Documents Upload</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
+                        <p className="text-xs font-medium text-slate-700 mb-1">GST Certificate</p>
+                        {customerForm.gstCertificate ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
+                        <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'gstCertificate')} />
+                      </label>
+                      <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
+                        <p className="text-xs font-medium text-slate-700 mb-1">PAN Card</p>
+                        {customerForm.panCard ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
+                        <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'panCard')} />
+                      </label>
+                      <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
+                        <p className="text-xs font-medium text-slate-700 mb-1">Shop License</p>
+                        {customerForm.shopLicense ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
+                        <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'shopLicense')} />
+                      </label>
+                      <label className="border border-dashed border-slate-300 p-4 text-center rounded bg-white hover:bg-slate-50 transition-colors cursor-pointer block">
+                        <p className="text-xs font-medium text-slate-700 mb-1">Other Documents</p>
+                        {customerForm.otherDocuments ? <p className="text-[10px] text-green-600 font-semibold"><Check size={12} className="inline mr-1"/>Uploaded</p> : <p className="text-[10px] text-slate-500">Click to upload (PDF, JPG)</p>}
+                        <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'otherDocuments')} />
+                      </label>
                     </div>
-                  )}
+                  </div>
 
-                  {customerForm.type === 'Wholesaler' && (
-                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                      <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><Building size={14} className="text-indigo-600" /> Warehouse Details</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                        <div className="sm:col-span-2">
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Warehouse Address</label>
-                          <textarea rows="2" placeholder="Full address" value={customerForm.warehouseAddress} onChange={(e) => setCustomerForm({ ...customerForm, warehouseAddress: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Stock Location</label>
-                          <input type="text" placeholder="Zone A, Rack 2" value={customerForm.stockLocation} onChange={(e) => setCustomerForm({ ...customerForm, stockLocation: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {customerForm.type === 'Distributor' && (
-                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                      <h4 className="font-semibold text-xs sm:text-sm text-slate-800 mb-4 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-600" /> Logistics Details</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Linked Warehouse</label>
-                          <input type="text" placeholder="Warehouse Name" value={customerForm.logisticsWarehouse} onChange={(e) => setCustomerForm({ ...customerForm, logisticsWarehouse: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Delivery Vehicle</label>
-                          <input type="text" placeholder="Truck / Van Number" value={customerForm.deliveryVehicle} onChange={(e) => setCustomerForm({ ...customerForm, deliveryVehicle: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Delivery Person</label>
-                          <input type="text" placeholder="Driver Name / Contact" value={customerForm.deliveryPerson} onChange={(e) => setCustomerForm({ ...customerForm, deliveryPerson: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Delivery Charges (₹)</label>
-                          <input type="number" value={customerForm.deliveryCharges} onChange={(e) => setCustomerForm({ ...customerForm, deliveryCharges: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none bg-white" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </form>
@@ -951,14 +914,13 @@ const CustomerMaster = () => {
                   onClick={() => {
                     if (activeFormTab === 'address') setActiveFormTab('basic');
                     else if (activeFormTab === 'business') setActiveFormTab('address');
-                    else if (activeFormTab === 'specific') setActiveFormTab('business');
                   }}
                   className="px-4 py-2 border border-slate-300 rounded text-xs sm:text-sm hover:bg-slate-100 transition-colors"
                 >
                   Back
                 </button>
               )}
-              {activeFormTab === 'specific' ? (
+              {activeFormTab === 'business' ? (
                 <button
                   onClick={handleFormSubmit}
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs sm:text-sm font-semibold transition-colors"
@@ -971,11 +933,10 @@ const CustomerMaster = () => {
                   onClick={() => {
                     if (activeFormTab === 'basic') setActiveFormTab('address');
                     else if (activeFormTab === 'address') setActiveFormTab('business');
-                    else if (activeFormTab === 'business') setActiveFormTab('specific');
                   }}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs sm:text-sm font-semibold transition-colors"
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs sm:text-sm font-semibold transition-colors"
                 >
-                  Save & Next
+                  Next
                 </button>
               )}
             </div>
@@ -1114,13 +1075,13 @@ const CustomerMaster = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                       <div className="p-4 sm:p-5 border-b border-slate-100">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500 mb-2 block flex items-center gap-1.5"><Building size={12}/> Billing Address</span>
-                        <p className="text-xs sm:text-sm text-gray-700 font-medium leading-relaxed">{viewCustomer.billingAddress.street}, {viewCustomer.billingAddress.city}</p>
-                        <p className="text-xs sm:text-sm text-gray-500">{viewCustomer.billingAddress.state} - {viewCustomer.billingAddress.zip}</p>
+                        <p className="text-xs sm:text-sm text-gray-700 font-medium leading-relaxed">{viewCustomer.billingAddress?.street || ''}, {viewCustomer.billingAddress?.city || ''}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{viewCustomer.billingAddress?.state || ''} {viewCustomer.billingAddress?.zip ? `- ${viewCustomer.billingAddress.zip}` : ''}</p>
                       </div>
                       <div className="p-4 sm:p-5 bg-slate-50">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500 mb-2 block flex items-center gap-1.5"><MapPin size={12}/> Shipping Address</span>
-                        <p className="text-xs sm:text-sm text-gray-700 font-medium leading-relaxed">{viewCustomer.shippingAddress.street}, {viewCustomer.shippingAddress.city}</p>
-                        <p className="text-xs sm:text-sm text-gray-500">{viewCustomer.shippingAddress.state} - {viewCustomer.shippingAddress.zip}</p>
+                        <p className="text-xs sm:text-sm text-gray-700 font-medium leading-relaxed">{viewCustomer.shippingAddress?.street || ''}, {viewCustomer.shippingAddress?.city || ''}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{viewCustomer.shippingAddress?.state || ''} {viewCustomer.shippingAddress?.zip ? `- ${viewCustomer.shippingAddress.zip}` : ''}</p>
                       </div>
                     </div>
                   </div>

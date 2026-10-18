@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Download, Printer, Filter } from 'lucide-react';
+import { Layers, Download, Printer, Filter, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 
 const CurrentStock = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,21 +27,26 @@ const CurrentStock = () => {
     }
   };
 
-  const filteredData = searchTerm.trim() === '' 
-    ? data 
-    : data.filter(item => 
-        (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  const filteredData = searchTerm.trim() === ''
+    ? data
+    : data.filter(item =>
+      (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Layers className="text-emerald-600" size={22} /> Current Stock Status
-          </h1>
-          <p className="text-[11px] sm:text-xs text-gray-500">Realtime lookup on inventory stocks, physical counts, and committed vs available stock.</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            <ArrowLeft size={16} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Layers className="text-emerald-600" size={22} /> Current Stock Status
+            </h1>
+            <p className="text-[11px] sm:text-xs text-gray-500">Realtime lookup on inventory stocks, physical counts, and committed vs available stock.</p>
+          </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-semibold hover:bg-slate-50 transition-colors">
@@ -54,10 +61,10 @@ const CurrentStock = () => {
       <div className="bg-slate-50 p-4 border border-emerald-200 rounded-lg flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-emerald-600" />
         <span className="text-gray-500">Search Item / SKU:</span>
-        <input 
-          type="text" 
-          className="border p-1.5 rounded min-w-[200px]" 
-          placeholder="e.g. ELC-TV-55" 
+        <input
+          type="text"
+          className="border p-1.5 rounded min-w-[200px]"
+          placeholder="e.g. ELC-TV-55"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -78,13 +85,13 @@ const CurrentStock = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-               <tr>
-                 <td colSpan="6" className="p-4 text-center text-gray-500 italic">Fetching current stock...</td>
-               </tr>
+              <tr>
+                <td colSpan="6" className="p-4 text-center text-gray-500 italic">Fetching current stock...</td>
+              </tr>
             ) : filteredData.length === 0 ? (
-               <tr>
-                 <td colSpan="6" className="p-4 text-center text-gray-500 italic">No products found.</td>
-               </tr>
+              <tr>
+                <td colSpan="6" className="p-4 text-center text-gray-500 italic">No products found.</td>
+              </tr>
             ) : (
               filteredData.map((item, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">

@@ -1,77 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, UploadCloud, UserPlus, Image as ImageIcon, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  ArrowLeft, CheckCircle, UploadCloud, UserPlus, Image as ImageIcon, Trash2,
+  Plus, Shield, ShieldCheck, CheckSquare, Square, Search, X, ChevronDown, ChevronUp,
+  Layers, Lock, Sparkles, RefreshCw, Check
+} from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
 import DynamicSelect from '../../components/DynamicSelect';
+import Swal from 'sweetalert2';
+import { PERMISSION_GROUPS, ALL_CORE_MODULES } from '../setup/UserMaster';
 
 const EmployeeProfile = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
   // Form State
-  const [form, setForm] = useState({
-    // Personal Information
-    employeeId: `EMP-${Date.now()}`,
-    employeeName: '',
-    dob: '',
-    gender: '',
-    maritalStatus: '',
-    mobile: '',
-    email: '',
-    
-    // Employment Details
-    company: '',
-    branch: '',
-    department: '',
-    designation: '',
-    employeeType: 'Permanent',
-    joiningDate: '',
-    status: 'Active',
-    reportingManager: '',
-    shift: '',
+  const [form, setForm] = useState(() => {
+    let defaultCompany = '';
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        defaultCompany = u.company?.name || (typeof u.company === 'string' ? u.company : '');
+      }
+    } catch {
+      defaultCompany = '';
+    }
+    if (!defaultCompany) {
+      defaultCompany = localStorage.getItem('companyName') || localStorage.getItem('erp_company') || '';
+    }
 
-    // Address
-    currentAddress: '',
-    currentState: '',
-    currentCity: '',
-    currentPincode: '',
-    sameAsCurrent: false,
-    permanentAddress: '',
-    
-    // Identity & Compliance
-    pan: '',
-    uan: '',
-    pfNo: '',
-    esicNo: '',
-    
-    // Bank & Salary
-    bank: '',
-    accountNo: '',
-    ifsc: '',
-    salaryType: 'Monthly',
-    basicSalary: 0,
-    hra: 0,
-    allowance: 0,
-    grossSalary: 0,
-    netSalary: 0, // In real world, Net Salary = Gross - Deductions (PF, ESIC, TDS), keeping it as input or simple calculation
-    
-    // Emergency Contact
-    emergencyName: '',
-    emergencyRelationship: '',
-    emergencyMobile: '',
+    return {
+      // Personal Information
+      employeeId: `EMP-${Date.now()}`,
+      employeeName: '',
+      dob: '',
+      gender: '',
+      maritalStatus: '',
+      mobile: '',
+      email: '',
+      
+      // Employment Details
+      company: defaultCompany,
+      branch: '',
+      department: '',
+      role: '',
+      employeeType: 'Permanent',
+      joiningDate: '',
+      status: 'Active',
+      reportingManager: '',
+      shift: '',
 
-    // ERP Login
-    createLogin: 'No',
-    username: '',
-    role: '',
-    loginStatus: 'Active',
-    
-    // Profile Photo
-    profilePhotoFile: null,
+      // Address
+      currentAddress: '',
+      currentState: '',
+      currentCity: '',
+      currentPincode: '',
+      sameAsCurrent: false,
+      permanentAddress: '',
+      
+      // Identity & Compliance
+      pan: '',
+      uan: '',
+      pfNo: '',
+      esicNo: '',
+      
+      // Bank & Salary
+      bank: '',
+      accountNo: '',
+      ifsc: '',
+      salaryType: 'Monthly',
+      basicSalary: 0,
+      hra: 0,
+      allowance: 0,
+      grossSalary: 0,
+      netSalary: 0,
+      
+      // Emergency Contact (optional)
+      emergencyName: '',
+      emergencyRelationship: '',
+      emergencyMobile: '',
 
-    // Remarks
-    remarks: ''
+      // ERP Login
+      createLogin: 'Yes',
+      username: '',
+      password: '',
+      role: '',
+      loginStatus: 'Active',
+      
+      // Profile Photo
+      profilePhotoFile: null,
+
+      // Remarks
+      remarks: ''
+    };
   });
+
+  // Fetch company profile from API if company name is still empty
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const { data } = await api.get('/companies/profile');
+        if (data && data.name) {
+          setForm(prev => ({
+            ...prev,
+            company: prev.company || data.name
+          }));
+        }
+      } catch (err) {
+        // Fallback silently if not available
+      }
+    };
+    if (!form.company) {
+      fetchCompanyInfo();
+    }
+  }, []);
 
   // Fetch employee if id exists
   useEffect(() => {
@@ -80,7 +123,10 @@ const EmployeeProfile = () => {
         try {
           const { data } = await api.get(`/employees/${id}`);
           if (data.success) {
-            setForm(data.data);
+            setForm(prev => ({
+              ...prev,
+              ...data.data
+            }));
           }
         } catch (error) {
           console.error("Error fetching employee data", error);
@@ -90,20 +136,297 @@ const EmployeeProfile = () => {
     }
   }, [id]);
 
-  // Calculate Gross Salary whenever salary components change
+  // Role Master & Permission Full-Page Screen States
+  const [rolesList, setRolesList] = useState([]);
+  const [isRolesLoading, setIsRolesLoading] = useState(false);
+  const [isAddingRole, setIsAddingRole] = useState(false);
+  const [newRoleForm, setNewRoleForm] = useState({
+    name: '',
+    roleCode: '',
+    status: 'Active'
+  });
+  const [selectedRolePerms, setSelectedRolePerms] = useState({});
+  const [permSearch, setPermSearch] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [isSavingRole, setIsSavingRole] = useState(false);
+
+  // Fetch Roles from Backend API
+  const fetchRoles = async () => {
+    setIsRolesLoading(true);
+    try {
+      const res = await api.get('/roles');
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setRolesList(data);
+      return data;
+    } catch (err) {
+      console.error("Error fetching roles:", err);
+      return [];
+    } finally {
+      setIsRolesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const basic = Number(form.basicSalary) || 0;
-    const hraAmount = Number(form.hra) || 0;
-    const allow = Number(form.allowance) || 0;
-    const gross = basic + hraAmount + allow;
-    
-    setForm(prev => ({
+    fetchRoles();
+  }, []);
+
+  // Auto-generate strictly unique next Role Code (e.g. ROL-001, ROL-002, ...)
+  const generateRoleCode = (existingRoles) => {
+    const list = existingRoles || rolesList || [];
+    const usedCodes = new Set(
+      list
+        .map(r => (r.roleCode || '').toUpperCase().trim())
+        .filter(Boolean)
+    );
+
+    let maxNum = 0;
+    list.forEach(r => {
+      const match = (r.roleCode || '').match(/(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+      }
+    });
+
+    let nextNum = Math.max(maxNum, list.length) + 1;
+    let nextCode = `ROL-${String(nextNum).padStart(3, '0')}`;
+
+    // Loop until we find a code that has never been used
+    while (usedCodes.has(nextCode.toUpperCase())) {
+      nextNum++;
+      nextCode = `ROL-${String(nextNum).padStart(3, '0')}`;
+    }
+
+    return nextCode;
+  };
+
+  // Fetch next role code from backend or fallback to calculation (never reusing existing codes)
+  const handleRefreshRoleCode = async () => {
+    try {
+      const currentList = await fetchRoles();
+      const usedCodes = new Set(
+        (currentList || rolesList).map(r => (r.roleCode || '').toUpperCase().trim()).filter(Boolean)
+      );
+
+      const res = await api.get('/roles/next-code');
+      if (res.data?.nextCode) {
+        let code = res.data.nextCode;
+        if (!usedCodes.has(code.toUpperCase())) {
+          setNewRoleForm(prev => ({ ...prev, roleCode: code }));
+          return;
+        }
+      }
+      setNewRoleForm(prev => ({ ...prev, roleCode: generateRoleCode(currentList || rolesList) }));
+    } catch {
+      setNewRoleForm(prev => ({ ...prev, roleCode: generateRoleCode(rolesList) }));
+    }
+  };
+
+  // Open User Master / Role Management Screen (http://localhost:5173/setup/user-master)
+  const handleOpenAddRolePage = () => {
+    navigate('/setup/user-master', { state: { openAddRoleModal: true } });
+  };
+
+  // Permissions Matrix Handlers
+  const handleTogglePerm = (permKey) => {
+    setSelectedRolePerms(prev => ({
       ...prev,
-      grossSalary: gross,
-      // For demonstration, defaulting net to gross unless user manually edits
-      netSalary: prev.netSalary === prev.grossSalary || prev.netSalary === 0 ? gross : prev.netSalary
+      [permKey]: !prev[permKey]
     }));
-  }, [form.basicSalary, form.hra, form.allowance]);
+  };
+
+  const handleToggleResource = (resource) => {
+    const keys = Object.values(resource.actions);
+    const allChecked = keys.every(k => !!selectedRolePerms[k]);
+    const newState = !allChecked;
+    setSelectedRolePerms(prev => {
+      const next = { ...prev };
+      keys.forEach(k => { next[k] = newState; });
+      return next;
+    });
+  };
+
+  const handleToggleGroup = (group) => {
+    const keys = [];
+    group.resources.forEach(r => {
+      Object.values(r.actions).forEach(k => keys.push(k));
+    });
+    const allChecked = keys.every(k => !!selectedRolePerms[k]);
+    const newState = !allChecked;
+    setSelectedRolePerms(prev => {
+      const next = { ...prev };
+      keys.forEach(k => { next[k] = newState; });
+      return next;
+    });
+  };
+
+  const handleToggleAllPerms = (targetState) => {
+    const next = {};
+    if (targetState) {
+      PERMISSION_GROUPS.forEach(g => {
+        g.resources.forEach(r => {
+          Object.values(r.actions).forEach(k => { next[k] = true; });
+        });
+      });
+    }
+    setSelectedRolePerms(next);
+  };
+
+  const handlePresetViewOnly = () => {
+    const next = {};
+    PERMISSION_GROUPS.forEach(g => {
+      g.resources.forEach(r => {
+        if (r.actions.view) next[r.actions.view] = true;
+      });
+    });
+    setSelectedRolePerms(next);
+  };
+
+  const toggleCollapseGroup = (groupId) => {
+    setCollapsedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
+
+  // Filter groups in search
+  const filteredPermGroups = useMemo(() => {
+    if (!permSearch.trim()) return PERMISSION_GROUPS;
+    const query = permSearch.toLowerCase();
+    return PERMISSION_GROUPS.map(group => {
+      const groupMatches = group.name.toLowerCase().includes(query) || group.description.toLowerCase().includes(query);
+      const filteredResources = group.resources.filter(r =>
+        groupMatches ||
+        r.name.toLowerCase().includes(query) ||
+        r.description.toLowerCase().includes(query) ||
+        Object.values(r.actions).some(k => k.toLowerCase().includes(query))
+      );
+      if (filteredResources.length > 0) {
+        return {
+          ...group,
+          resources: filteredResources
+        };
+      }
+      return null;
+    }).filter(Boolean);
+  }, [permSearch]);
+
+  const totalSelectedPermsCount = useMemo(() => {
+    return Object.values(selectedRolePerms).filter(Boolean).length;
+  }, [selectedRolePerms]);
+
+  // Save Role API
+  const handleSaveRole = async () => {
+    if (!newRoleForm.name.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Role Name Required',
+        text: 'कृपया Role का नाम दर्ज करें!',
+        confirmButtonColor: '#4f46e5'
+      });
+      setRoleModalStep(1);
+      return;
+    }
+
+    const trimmedCode = (newRoleForm.roleCode || '').trim();
+    if (!trimmedCode) {
+      const generated = generateRoleCode(rolesList);
+      newRoleForm.roleCode = generated;
+    } else {
+      const isDuplicate = rolesList.some(
+        r => (r.roleCode || '').toUpperCase().trim() === trimmedCode.toUpperCase()
+      );
+      if (isDuplicate) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Duplicate Role Code',
+          text: `Role Code "${trimmedCode}" already exists. Please generate or enter a unique code.`,
+          confirmButtonColor: '#4f46e5'
+        });
+        return;
+      }
+    }
+
+    setIsSavingRole(true);
+    try {
+      const permsSet = new Set();
+      Object.entries(selectedRolePerms).forEach(([key, isChecked]) => {
+        if (isChecked) permsSet.add(key);
+      });
+
+      ALL_CORE_MODULES.forEach(mod => {
+        const modLower = mod.toLowerCase();
+        const group = PERMISSION_GROUPS.find(g => g.module === mod);
+        if (group) {
+          const hasView = group.resources.some(r => !!selectedRolePerms[r.actions.view]);
+          const hasCreate = group.resources.some(r => !!selectedRolePerms[r.actions.create]);
+          const hasEdit = group.resources.some(r => !!selectedRolePerms[r.actions.edit]);
+          const hasDelete = group.resources.some(r => !!selectedRolePerms[r.actions.delete]);
+
+          if (hasView) permsSet.add(`view_${modLower}`);
+          if (hasCreate) permsSet.add(`create_${modLower}`);
+          if (hasEdit) permsSet.add(`edit_${modLower}`);
+          if (hasDelete) permsSet.add(`delete_${modLower}`);
+        }
+      });
+
+      const formattedModulePermissions = ALL_CORE_MODULES.map(modName => {
+        const group = PERMISSION_GROUPS.find(g => g.module === modName);
+        if (!group) {
+          return { module: modName, view: false, create: false, edit: false, delete: false };
+        }
+        return {
+          module: modName,
+          view: group.resources.some(r => !!selectedRolePerms[r.actions.view]),
+          create: group.resources.some(r => !!selectedRolePerms[r.actions.create]),
+          edit: group.resources.some(r => !!selectedRolePerms[r.actions.edit]),
+          delete: group.resources.some(r => !!selectedRolePerms[r.actions.delete])
+        };
+      });
+
+      const payload = {
+        name: newRoleForm.name.trim(),
+        roleCode: (newRoleForm.roleCode || '').trim(),
+        status: newRoleForm.status || 'Active',
+        permissions: Array.from(permsSet),
+        modulePermissions: formattedModulePermissions
+      };
+
+      const res = await api.post('/roles', payload);
+      const createdRole = res.data;
+
+      // Refresh list
+      await fetchRoles();
+
+      // Auto-assign new role to current employee form
+      const assignedRoleName = createdRole.name || newRoleForm.name.trim();
+      setForm(prev => ({
+        ...prev,
+        role: assignedRoleName
+      }));
+
+      setIsAddingRole(false);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Role Created & Assigned!',
+        text: `Role "${assignedRoleName}" successfully created and assigned to this employee!`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      console.error("Failed to create role:", err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Create Role',
+        text: err.response?.data?.message || err.message || 'Error occurred while saving role',
+        confirmButtonColor: '#e11d48'
+      });
+    } finally {
+      setIsSavingRole(false);
+    }
+  };
+
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -126,7 +449,20 @@ const EmployeeProfile = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!form.employeeName.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Validation Error',
+        text: 'Please enter Employee Name!',
+        confirmButtonColor: '#4f46e5'
+      });
+      return;
+    }
+
     try {
+      // Build FormData for multipart upload including local profile photo
+      const formData = new FormData();
+      
       const payload = {
         ...form,
         basicSalary: Number(form.basicSalary) || 0,
@@ -136,24 +472,432 @@ const EmployeeProfile = () => {
         netSalary: Number(form.netSalary) || 0
       };
 
-      // Remove File object before sending as JSON payload
+      // Exclude files from text loop
       delete payload.profilePhotoFile;
       delete payload.documentFiles;
-      
-      if (id) {
-        await api.put(`/employees/${id}`, payload);
-        alert('Employee Profile Updated successfully!');
-      } else {
-        await api.post('/employees', payload);
-        alert('Employee Profile Created successfully!');
+
+      // Append all text/number fields to FormData
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value);
+        }
+      });
+
+      // Append profile photo if selected
+      if (form.profilePhotoFile) {
+        formData.append('profilePhoto', form.profilePhotoFile);
       }
-      navigate('/employees/records');
+
+      if (id) {
+        await api.put(`/employees/${id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        await Swal.fire({
+          icon: 'success',
+          title: 'Updated!',
+          text: 'Employee profile updated successfully!',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } else {
+        await api.post('/employees', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        await Swal.fire({
+          icon: 'success',
+          title: 'Created!',
+          text: 'Employee profile created successfully with photo!',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      }
+      navigate('/employees/list');
     } catch (error) {
       console.error('Error saving employee', error);
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
-      alert('Failed to save employee. Error: ' + errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Save',
+        text: errorMessage,
+        confirmButtonColor: '#e11d48'
+      });
     }
   };
+
+  // FULL-PAGE SCREEN VIEW FOR ADDING A ROLE & CONFIGURING PERMISSIONS
+  if (isAddingRole) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-6 font-sans text-slate-800 space-y-6">
+        {/* Top Header Navigation */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsAddingRole(false)}
+              className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-indigo-600 transition-colors"
+              title="Back to Employee Form"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="text-indigo-600" size={24} /> Create New Role & Permissions Matrix
+                </h1>
+                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  {newRoleForm.roleCode}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Role का नाम दर्ज करें, अनुमतियाँ (Permissions) सेट करें और Save करके सीधे कर्मचारी फॉर्म पर लौटें।
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => setIsAddingRole(false)}
+              className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 transition shadow-xs"
+            >
+              Cancel & Return
+            </button>
+            <button
+              type="button"
+              disabled={isSavingRole}
+              onClick={handleSaveRole}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg text-xs sm:text-sm font-bold shadow-md transition flex items-center gap-2"
+            >
+              {isSavingRole ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  Saving Role...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={16} />
+                  Save Role & Assign to Employee
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 1: ROLE BASIC DETAILS */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800">
+                1. Role Information Master
+              </h2>
+            </div>
+            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              ✓ Auto Code Generated
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>Role Code *</span>
+                <span className="text-[10px] text-slate-400 font-normal">Auto-Sequence</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={newRoleForm.roleCode}
+                  onChange={(e) => setNewRoleForm(prev => ({ ...prev, roleCode: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono font-bold text-slate-800 focus:bg-white focus:border-indigo-500 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleRefreshRoleCode}
+                  className="absolute right-2 top-2 text-slate-400 hover:text-indigo-600 p-1"
+                  title="Regenerate Code"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Role Name *
+              </label>
+              <input
+                type="text"
+                value={newRoleForm.name}
+                onChange={(e) => setNewRoleForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g. Senior Accountant, Sales Manager, Store Keeper..."
+                autoFocus
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-indigo-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Status
+              </label>
+              <select
+                value={newRoleForm.status}
+                onChange={(e) => setNewRoleForm(prev => ({ ...prev, status: e.target.value }))}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-medium focus:border-indigo-500 outline-none"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 2: GRANULAR PERMISSIONS MATRIX */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center pb-4 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800">
+                  2. System Permissions & Access Matrix
+                </h2>
+                <span className="text-xs font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                  {totalSelectedPermsCount} Permissions Selected
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                मॉड्यूल अनुसार View, Create, Edit, Delete चेकबॉक्स से अनुमतियाँ चुनें।
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+              <div className="relative flex-1 sm:w-64">
+                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={permSearch}
+                  onChange={(e) => setPermSearch(e.target.value)}
+                  placeholder="Search module or permission..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:border-indigo-500 outline-none"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleToggleAllPerms(true)}
+                className="px-3 py-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition"
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                onClick={handlePresetViewOnly}
+                className="px-3 py-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition"
+              >
+                View Only
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleAllPerms(false)}
+                className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* Module Cards Grid */}
+          <div className="space-y-4">
+            {filteredPermGroups.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                <Search size={28} className="mx-auto text-slate-400 mb-2" />
+                <p className="text-sm font-semibold">No permissions match "{permSearch}"</p>
+              </div>
+            ) : (
+              filteredPermGroups.map((group) => {
+                const isCollapsed = !!collapsedGroups[group.groupId];
+                const groupKeys = [];
+                group.resources.forEach(r => {
+                  Object.values(r.actions).forEach(k => groupKeys.push(k));
+                });
+                const groupSelectedCount = groupKeys.filter(k => !!selectedRolePerms[k]).length;
+                const isGroupAllSelected = groupKeys.length > 0 && groupSelectedCount === groupKeys.length;
+
+                return (
+                  <div key={group.groupId} className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-xs">
+                    {/* Header */}
+                    <div className="p-3.5 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                      <div
+                        className="flex items-center gap-2.5 cursor-pointer select-none"
+                        onClick={() => toggleCollapseGroup(group.groupId)}
+                      >
+                        <span className={`w-3 h-3 rounded-full ${
+                          group.color === 'emerald' ? 'bg-emerald-500' :
+                          group.color === 'blue' ? 'bg-blue-500' :
+                          group.color === 'amber' ? 'bg-amber-500' :
+                          group.color === 'violet' ? 'bg-violet-500' :
+                          group.color === 'teal' ? 'bg-teal-500' :
+                          group.color === 'purple' ? 'bg-purple-500' :
+                          group.color === 'orange' ? 'bg-orange-500' : 'bg-indigo-500'
+                        }`} />
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                          {group.name}
+                        </h3>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          ({groupSelectedCount}/{groupKeys.length} selected)
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleGroup(group)}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded border transition ${
+                            isGroupAllSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+                          }`}
+                        >
+                          {isGroupAllSelected ? 'Deselect Module' : 'Select Module'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapseGroup(group.groupId)}
+                          className="text-slate-400 hover:text-slate-600 p-1"
+                        >
+                          {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    {!isCollapsed && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-100/60 text-slate-500 font-semibold border-b border-slate-200">
+                            <tr>
+                              <th className="py-2.5 px-4 w-2/5">Feature / Resource</th>
+                              <th className="py-2.5 px-2 text-center w-14">View</th>
+                              <th className="py-2.5 px-2 text-center w-14">Create</th>
+                              <th className="py-2.5 px-2 text-center w-14">Edit</th>
+                              <th className="py-2.5 px-2 text-center w-14">Delete</th>
+                              <th className="py-2.5 px-3 text-right">Quick</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {group.resources.map((resource) => {
+                              const resKeys = Object.values(resource.actions);
+                              const isRowAll = resKeys.every(k => !!selectedRolePerms[k]);
+
+                              return (
+                                <tr key={resource.id} className="hover:bg-slate-50/60 transition-colors">
+                                  <td className="py-2.5 px-4">
+                                    <div className="font-semibold text-slate-800">{resource.name}</div>
+                                    <div className="text-[11px] text-slate-400">{resource.description}</div>
+                                  </td>
+
+                                  <td className="py-2.5 px-2 text-center">
+                                    {resource.actions.view ? (
+                                      <input
+                                        type="checkbox"
+                                        checked={!!selectedRolePerms[resource.actions.view]}
+                                        onChange={() => handleTogglePerm(resource.actions.view)}
+                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-pointer focus:ring-indigo-500"
+                                      />
+                                    ) : <span className="text-slate-300">—</span>}
+                                  </td>
+
+                                  <td className="py-2.5 px-2 text-center">
+                                    {resource.actions.create ? (
+                                      <input
+                                        type="checkbox"
+                                        checked={!!selectedRolePerms[resource.actions.create]}
+                                        onChange={() => handleTogglePerm(resource.actions.create)}
+                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-pointer focus:ring-indigo-500"
+                                      />
+                                    ) : <span className="text-slate-300">—</span>}
+                                  </td>
+
+                                  <td className="py-2.5 px-2 text-center">
+                                    {resource.actions.edit ? (
+                                      <input
+                                        type="checkbox"
+                                        checked={!!selectedRolePerms[resource.actions.edit]}
+                                        onChange={() => handleTogglePerm(resource.actions.edit)}
+                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-pointer focus:ring-indigo-500"
+                                      />
+                                    ) : <span className="text-slate-300">—</span>}
+                                  </td>
+
+                                  <td className="py-2.5 px-2 text-center">
+                                    {resource.actions.delete ? (
+                                      <input
+                                        type="checkbox"
+                                        checked={!!selectedRolePerms[resource.actions.delete]}
+                                        onChange={() => handleTogglePerm(resource.actions.delete)}
+                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-pointer focus:ring-indigo-500"
+                                      />
+                                    ) : <span className="text-slate-300">—</span>}
+                                  </td>
+
+                                  <td className="py-2.5 px-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleResource(resource)}
+                                      className={`text-[10px] font-semibold px-2 py-0.5 rounded transition ${
+                                        isRowAll
+                                          ? 'text-indigo-600 bg-indigo-50 border border-indigo-200'
+                                          : 'text-slate-500 hover:text-slate-800'
+                                      }`}
+                                    >
+                                      {isRowAll ? 'All ✓' : 'Select'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Actions Bar */}
+        <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <button
+            type="button"
+            onClick={() => setIsAddingRole(false)}
+            className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 rounded-lg text-sm font-semibold text-slate-700 transition"
+          >
+            ← Back to Employee Form
+          </button>
+
+          <button
+            type="button"
+            disabled={isSavingRole}
+            onClick={handleSaveRole}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg text-sm font-bold shadow-md transition flex items-center gap-2"
+          >
+            {isSavingRole ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" />
+                Saving Role...
+              </>
+            ) : (
+              <>
+                <CheckCircle size={16} />
+                Save Role & Assign to Employee
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 font-sans text-slate-800">
@@ -169,9 +913,6 @@ const EmployeeProfile = () => {
         <div className="flex gap-2">
            <button type="button" onClick={() => navigate('/employees/list')} className="px-4 py-2 border border-slate-300 bg-white rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
              Cancel
-           </button>
-           <button type="button" className="px-4 py-2 bg-indigo-100 border border-indigo-200 text-indigo-700 rounded text-sm font-semibold hover:bg-indigo-200 transition-colors shadow-sm">
-             Save Draft
            </button>
            <button onClick={handleSave} type="button" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold shadow-md transition-colors">
              <CheckCircle size={16} /> Save Employee
@@ -207,17 +948,37 @@ const EmployeeProfile = () => {
                    {/* Photo Upload Area */}
                    <div className="flex flex-col gap-2">
                      <label className="w-32 h-32 flex-shrink-0 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-violet-400 hover:text-violet-500 transition-colors cursor-pointer relative overflow-hidden group">
-                        <ImageIcon size={32} className="mb-2" />
-                        <span className="text-xs font-medium px-2 text-center truncate w-full">
-                          {form.profilePhotoFile ? form.profilePhotoFile.name : 'Upload Photo'}
-                        </span>
-                        <input type="file" className="hidden" accept="image/*" onChange={(e) => setForm(prev => ({...prev, profilePhotoFile: e.target.files[0]}))} />
+                        {form.profilePhotoFile ? (
+                          <img 
+                            src={URL.createObjectURL(form.profilePhotoFile)} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : form.profilePhoto ? (
+                          <img 
+                            src={form.profilePhoto.startsWith('http') ? form.profilePhoto : `http://localhost:5000${form.profilePhoto}`} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <>
+                            <ImageIcon size={32} className="mb-2" />
+                            <span className="text-xs font-medium px-2 text-center truncate w-full">
+                              Upload Photo
+                            </span>
+                          </>
+                        )}
+                        <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setForm(prev => ({...prev, profilePhotoFile: e.target.files[0]}));
+                          }
+                        }} />
                         <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs font-bold">
                            Click to Change
                         </div>
                      </label>
-                     {form.profilePhotoFile && (
-                       <button type="button" onClick={() => setForm(prev => ({...prev, profilePhotoFile: null}))} className="w-32 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-xs font-semibold flex items-center justify-center gap-1">
+                     {(form.profilePhotoFile || form.profilePhoto) && (
+                       <button type="button" onClick={() => setForm(prev => ({...prev, profilePhotoFile: null, profilePhoto: ''}))} className="w-32 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-xs font-semibold flex items-center justify-center gap-1">
                          <Trash2 size={12} /> Remove
                        </button>
                      )}
@@ -272,8 +1033,15 @@ const EmployeeProfile = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Employment Details</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                    <input type="text" name="company" value={form.company} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" placeholder="Enter Company" />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Company</label>
+                    <input 
+                      type="text" 
+                      name="company" 
+                      value={form.company || 'Loading...'} 
+                      readOnly 
+                      title="Company is automatically assigned based on your active organization"
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-slate-100 font-semibold text-slate-700 cursor-not-allowed outline-none select-none" 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
@@ -282,7 +1050,8 @@ const EmployeeProfile = () => {
                       name="branch"
                       value={form.branch}
                       onChange={handleChange}
-                      defaultOptions={['HQ']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
@@ -293,20 +1062,39 @@ const EmployeeProfile = () => {
                       name="department"
                       value={form.department}
                       onChange={handleChange}
-                      defaultOptions={['IT', 'Sales', 'HR']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Designation *</label>
-                    <DynamicSelect
-                      category="Designation"
-                      name="designation"
-                      value={form.designation}
-                      onChange={handleChange}
-                      defaultOptions={['Manager', 'Developer']}
-                      className="w-full text-sm"
-                    />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Role *</label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        name="role"
+                        value={form.role}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white font-medium"
+                      >
+                        <option value="">Select Role ({rolesList.length})</option>
+                        {form.role && !rolesList.some(r => r.name === form.role) && (
+                          <option value={form.role}>{form.role}</option>
+                        )}
+                        {rolesList.map((r, idx) => (
+                          <option key={r._id || idx} value={r.name}>
+                            {r.name} {r.roleCode ? `(${r.roleCode})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleOpenAddRolePage}
+                        className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded text-xs font-semibold flex items-center gap-1 transition-colors whitespace-nowrap shadow-sm"
+                        title="Create New Role & Assign Permissions"
+                      >
+                        <Plus size={15} /> Add Role
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Employee Type</label>
@@ -330,11 +1118,13 @@ const EmployeeProfile = () => {
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Reporting Manager</label>
                     <DynamicSelect
-                      category="Manager"
+                      category="Employee"
+                      label="Reporting Manager"
                       name="reportingManager"
                       value={form.reportingManager}
                       onChange={handleChange}
-                      defaultOptions={['John Doe']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
@@ -345,10 +1135,36 @@ const EmployeeProfile = () => {
                       name="shift"
                       value={form.shift}
                       onChange={handleChange}
-                      defaultOptions={['General', 'Night']}
+                      hideAddButton={true}
+                      defaultOptions={[]}
                       className="w-full text-sm"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Allow ERP Login Access?</label>
+                    <select 
+                      name="createLogin" 
+                      value={form.createLogin} 
+                      onChange={handleChange} 
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white font-medium"
+                    >
+                      <option value="Yes">Yes (Can Login to ERP)</option>
+                      <option value="No">No (HR Record Only)</option>
+                    </select>
+                  </div>
+                  {form.createLogin === 'Yes' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Login Password (Default: Mobile No. or Emp@123)</label>
+                      <input 
+                        type="text" 
+                        name="password" 
+                        value={form.password} 
+                        onChange={handleChange} 
+                        placeholder={form.mobile || 'Emp@123'} 
+                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white placeholder-slate-400 font-medium"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -390,137 +1206,39 @@ const EmployeeProfile = () => {
             {/* RIGHT COLUMN: Identity, Bank, Emergency, etc. */}
             <div className="space-y-6">
               
-              {/* SECTION: IDENTITY & COMPLIANCE */}
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Identity & Compliance</h3>
+              {/* SECTION: IDENTITY & BANK DETAILS */}
+              <div className="border border-slate-200 rounded-lg p-5 bg-white">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Identity & Bank Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">PAN</label>
-                    <input type="text" name="pan" value={form.pan} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none uppercase" />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">PAN Number</label>
+                    <input type="text" name="pan" value={form.pan} onChange={handleChange} placeholder="e.g. ABCDE1234F" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none uppercase" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">UAN</label>
-                    <input type="text" name="uan" value={form.uan} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">PF No.</label>
-                    <input type="text" name="pfNo" value={form.pfNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">ESIC No.</label>
-                    <input type="text" name="esicNo" value={form.esicNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION: BANK & SALARY */}
-              <div className="border border-slate-200 rounded-lg p-5 bg-slate-50">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-200">Bank & Salary</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Bank</label>
-                    <input type="text" name="bank" value={form.bank} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Bank Name</label>
+                    <input type="text" name="bank" value={form.bank} onChange={handleChange} placeholder="e.g. HDFC Bank" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Account No.</label>
-                    <input type="text" name="accountNo" value={form.accountNo} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
+                    <input type="text" name="accountNo" value={form.accountNo} onChange={handleChange} placeholder="Account Number" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">IFSC</label>
-                    <input type="text" name="ifsc" value={form.ifsc} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Salary Type</label>
-                    <select name="salaryType" value={form.salaryType} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option>Monthly</option>
-                      <option>Daily Wage</option>
-                      <option>Hourly</option>
-                    </select>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">IFSC Code</label>
+                    <input type="text" name="ifsc" value={form.ifsc} onChange={handleChange} placeholder="e.g. HDFC0001234" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white uppercase" />
                   </div>
                 </div>
-                
-                <div className="space-y-3 pt-2 border-t border-slate-200">
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-semibold text-slate-600">Basic Salary</span>
-                      <input type="number" name="basicSalary" value={form.basicSalary} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none bg-white" />
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-semibold text-slate-600">HRA</span>
-                      <input type="number" name="hra" value={form.hra} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none bg-white" />
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-semibold text-slate-600">Allowance</span>
-                      <input type="number" name="allowance" value={form.allowance} onChange={handleChange} className="w-24 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none bg-white" />
-                   </div>
-                   
-                   <div className="pt-3 flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-800">Gross Salary</span>
-                      <span className="text-lg font-bold text-violet-700">₹{form.grossSalary.toLocaleString()}</span>
-                   </div>
-                   
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="font-bold text-slate-800">Net Salary</span>
-                      <input type="number" name="netSalary" value={form.netSalary} onChange={handleChange} className="w-32 border border-slate-300 rounded px-2 py-1 text-right focus:border-violet-500 outline-none font-bold text-green-700 bg-white" />
-                   </div>
-                </div>
-              </div>
 
-              {/* SECTION: EMERGENCY CONTACT */}
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Emergency Contact</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Name</label>
-                    <input type="text" name="emergencyName" value={form.emergencyName} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
+                <div className="mt-4 p-3 bg-indigo-50/60 border border-indigo-100 rounded-lg flex items-center justify-between text-xs text-indigo-900">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Relationship</label>
-                    <input type="text" name="emergencyRelationship" value={form.emergencyRelationship} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Mobile</label>
-                    <input type="text" name="emergencyMobile" value={form.emergencyMobile} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
+                    <span className="font-bold text-indigo-800">💡 Salary & PF/ESI Management:</span>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      कर्मचारी की सैलरी और PF/ESI कटौतियाँ सीधे <strong>HRMS &gt; Payroll &gt; Salary Structure</strong> से मैनेज की जाती हैं।
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION: ERP LOGIN */}
-              <div className="border border-slate-200 rounded-lg p-5">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">ERP Login</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Create Login</label>
-                    <select name="createLogin" value={form.createLogin} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                      <option>No</option>
-                      <option>Yes</option>
-                    </select>
-                  </div>
-                  {form.createLogin === 'Yes' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
-                        <input type="text" name="username" value={form.username} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Role</label>
-                        <select name="role" value={form.role} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                          <option value="">Select</option>
-                          <option>Admin</option>
-                          <option>Manager</option>
-                          <option>Staff</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                        <select name="loginStatus" value={form.loginStatus} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-violet-500 outline-none bg-white">
-                          <option>Active</option>
-                          <option>Inactive</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+
 
               {/* SECTION: DOCUMENTS & REMARKS */}
               <div className="border border-slate-200 rounded-lg p-5">
@@ -555,6 +1273,8 @@ const EmployeeProfile = () => {
           </div>
         </form>
       </div>
+
+
     </div>
   );
 };

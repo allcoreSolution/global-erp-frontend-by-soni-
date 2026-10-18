@@ -3,8 +3,10 @@ import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit, FileDown 
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const BankPaymentList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
   const [bankPayments, setBankPayments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -124,30 +126,36 @@ const BankPaymentList = () => {
           <p className="text-[12px] text-gray-500 mt-1">Manage bank payout records and clearance data.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={() => fileInputRef.current.click()}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <Upload size={14} /> Import CSV
-          </button>
-          <button 
-            onClick={handleDownloadSample}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_bank_payments', 'create_vouchers', 'create_accounts']) && (
+            <button 
+              onClick={() => fileInputRef.current.click()}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <Upload size={14} /> Import CSV
+            </button>
+          )}
+          {can(['create_bank_payments', 'create_vouchers', 'create_accounts']) && (
+            <button 
+              onClick={handleDownloadSample}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button 
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
-          <button 
-            onClick={() => navigate('/bank-payment/new')} 
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
-          >
-            <Edit size={14} /> New Bank Payment
-          </button>
+          {can(['create_bank_payments', 'create_vouchers', 'create_accounts']) && (
+            <button 
+              onClick={() => navigate('/bank-payment/new')} 
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
+            >
+              <Edit size={14} /> New Bank Payment
+            </button>
+          )}
         </div>
       </div>
 
@@ -201,20 +209,30 @@ const BankPaymentList = () => {
                     <td className="p-2 font-mono text-gray-600">{p.utrNo || p.chequeNo || '-'}</td>
                     <td className="p-2 text-right text-gray-550">₹ {p.bankCharges || 0}</td>
                     <td className="p-2 text-center no-print">
-                      <button
-                        onClick={() => handleToggleReconciliation(p._id, p.reconciled)}
-                        className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${p.reconciled ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
-                      >
-                        {p.reconciled ? 'Reconciled' : 'Unreconciled'}
-                      </button>
+                      {can(['edit_bank_payments', 'edit_vouchers', 'edit_accounts']) ? (
+                        <button
+                          onClick={() => handleToggleReconciliation(p._id, p.reconciled)}
+                          className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${p.reconciled ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                        >
+                          {p.reconciled ? 'Reconciled' : 'Unreconciled'}
+                        </button>
+                      ) : (
+                        <span className={`px-2 py-0.5 rounded font-bold text-[9px] sm:text-[10px] ${p.reconciled ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {p.reconciled ? 'Reconciled' : 'Unreconciled'}
+                        </span>
+                      )}
                     </td>
                     <td className="p-2 text-center no-print flex justify-center items-center gap-2">
-                      <button onClick={() => navigate(`/bank-payment/edit/${p._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600">
-                        <Edit size={13} />
-                      </button>
-                      <button onClick={() => handleDelete(p._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
-                        <Trash2 size={13} />
-                      </button>
+                      {can(['edit_bank_payments', 'edit_vouchers', 'edit_accounts']) && (
+                        <button onClick={() => navigate(`/bank-payment/edit/${p._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600" title="Edit">
+                          <Edit size={13} />
+                        </button>
+                      )}
+                      {can(['delete_bank_payments', 'delete_vouchers', 'delete_accounts']) && (
+                        <button onClick={() => handleDelete(p._id)} className="p-1 hover:bg-red-50 rounded text-red-600" title="Delete">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

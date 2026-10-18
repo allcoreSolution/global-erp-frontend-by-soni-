@@ -18,6 +18,7 @@ const AddSaleExchange = () => {
     warehouse: '',
     status: 'Draft',
     invoiceNo: '',
+    sale: '',
     salesOrder: '',
     saleDate: '',
     customer: '',
@@ -33,12 +34,68 @@ const AddSaleExchange = () => {
   });
 
   // Items State
-  const [returnItems, setReturnItems] = useState([
-    { id: 1, product: '', batch: '', soldQty: 1, returnQty: 1, rate: 0, amount: 0, reason: 'Size Issue', condition: 'Good' }
-  ]);
+  const [returnItems, setReturnItems] = useState([]);
   const [replacementItems, setReplacementItems] = useState([
     { id: 1, product: '', batch: '', qty: 1, unit: 'PCS', rate: 0, discount: 0, tax: 0, total: 0 }
   ]);
+
+  const [customers, setCustomers] = useState([]);
+  const [sales, setSales] = useState([]);
+
+  // Fetch Customers on Load
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const { data } = await api.get('/customers');
+        if (data.success) {
+          setCustomers(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching customers', error);
+      }
+    };
+    fetchCustomers();
+  }, []);
+
+  // Fetch Sales when Customer is Selected
+  useEffect(() => {
+    if (form.customer) {
+      const fetchSales = async () => {
+        try {
+          const { data } = await api.get(`/sales?customer=${form.customer}`);
+          if (data.success) {
+            setSales(data.data || []);
+          }
+        } catch (error) {
+          console.error('Error fetching sales for customer', error);
+        }
+      };
+      fetchSales();
+    } else {
+      setSales([]);
+    }
+  }, [form.customer]);
+
+  // Auto-populate Return Items when Sale is Selected
+  useEffect(() => {
+    if (form.sale && sales.length > 0) {
+      const selectedSale = sales.find(s => s._id === form.sale);
+      if (selectedSale && selectedSale.orderItems) {
+        setForm(prev => ({ ...prev, invoiceNo: selectedSale.invoiceNo, saleDate: selectedSale.saleDate || '' }));
+        setReturnItems(selectedSale.orderItems.map((item, idx) => ({
+          id: idx + 1,
+          product: item.name || '',
+          batch: item.code || '',
+          soldQty: item.quantity || 1,
+          returnQty: item.quantity || 1,
+          rate: item.netUnitPrice || 0,
+          amount: (item.quantity || 1) * (item.netUnitPrice || 0),
+          reason: 'Size Issue',
+          condition: 'Good'
+        })));
+      }
+    }
+  }, [form.sale, sales]);
 
   // Totals State
   const [totals, setTotals] = useState({
@@ -70,15 +127,8 @@ const AddSaleExchange = () => {
     }));
   };
 
-  const addReturnItem = () => {
-    const newId = returnItems.length > 0 ? Math.max(...returnItems.map(i => i.id)) + 1 : 1;
-    setReturnItems([...returnItems, { id: newId, product: '', batch: '', soldQty: 1, returnQty: 1, rate: 0, amount: 0, reason: 'Size Issue', condition: 'Good' }]);
-  };
-
   const removeReturnItem = (id) => {
-    if (returnItems.length > 1) {
-      setReturnItems(returnItems.filter(item => item.id !== id));
-    }
+    setReturnItems(returnItems.filter(item => item.id !== id));
   };
 
   const handleReplacementItemChange = (id, field, value) => {
@@ -139,10 +189,11 @@ const AddSaleExchange = () => {
               branch: ex.branch || '',
               warehouse: ex.warehouse || '',
               status: ex.status || 'Draft',
+              sale: ex.sale?._id || ex.sale || '',
               invoiceNo: ex.invoiceNo || '',
               salesOrder: ex.salesOrder || '',
               saleDate: ex.saleDate || '',
-              customer: ex.customer || '',
+              customer: ex.customer?._id || ex.customer || '',
               salesperson: ex.salesperson || '',
               paymentMethod: ex.paymentMethod || 'UPI',
               transactionRef: ex.transactionRef || '',
@@ -203,6 +254,7 @@ const AddSaleExchange = () => {
         branch: form.branch,
         warehouse: form.warehouse,
         status: form.status,
+        sale: form.sale,
         invoiceNo: form.invoiceNo,
         salesOrder: form.salesOrder,
         saleDate: form.saleDate,
@@ -309,26 +361,25 @@ const AddSaleExchange = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Exchange Type</label>
-                  <DynamicSelect category="ExchangeType" name="exchangeType" value={form.exchangeType} onChange={handleChange} />
+                  <DynamicSelect category="ExchangeType" name="exchangeType" value={form.exchangeType} onChange={handleChange} hideAddButton={true} />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
-                  <select name="company" value={form.company} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
-                    <option value="">Select Company</option>
-                    <option>Main Corp</option>
-                  </select>
-                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Branch *</label>
-                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} />
+                  <DynamicSelect category="Branch" name="branch" value={form.branch} onChange={handleChange} hideAddButton={true} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Warehouse *</label>
-                  <DynamicSelect category="Warehouse" name="warehouse" value={form.warehouse} onChange={handleChange} />
+                  <DynamicSelect category="Warehouse" name="warehouse" value={form.warehouse} onChange={handleChange} hideAddButton={true} disabled={!form.branch} />
                 </div>
                 <div className="col-span-2 lg:col-span-3">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                  <DynamicSelect category="Status" name="status" value={form.status} onChange={handleChange} />
+                  <select name="status" value={form.status} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all">
+                    <option value="Draft">Draft</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -338,27 +389,35 @@ const AddSaleExchange = () => {
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Original Sale Details</h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="col-span-2 lg:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Customer *</label>
+                  <select name="customer" value={form.customer} onChange={handleChange} required disabled={!form.warehouse} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <option value="">Select Customer</option>
+                    {customers.map(c => (
+                      <option key={c._id} value={c._id}>{c.customerName || c.name || c.contactPerson || 'Unknown'}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice No. *</label>
-                  <div className="relative">
-                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-                    <input type="text" name="invoiceNo" value={form.invoiceNo} onChange={handleChange} required placeholder="Select Invoice" className="w-full border border-slate-300 rounded pl-8 pr-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
-                  </div>
+                  <select name="sale" value={form.sale} onChange={handleChange} required disabled={!form.customer} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <option value="">Select Invoice</option>
+                    {sales.map(s => (
+                      <option key={s._id} value={s._id}>{s.invoiceNo} ({s.saleDate}) - ₹{s.grandTotal}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Sales Order</label>
-                  <DynamicSelect category="SalesOrder" name="salesOrder" value={form.salesOrder} onChange={handleChange} />
+                  <DynamicSelect category="SalesOrder" name="salesOrder" value={form.salesOrder} onChange={handleChange} hideAddButton={true} />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Sale Date</label>
                   <input type="text" value={form.saleDate} readOnly placeholder="Auto" className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none" />
                 </div>
-                <div className="col-span-2 lg:col-span-1">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Customer *</label>
-                  <input type="text" name="customer" value={form.customer} onChange={handleChange} required placeholder="Customer Name" className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
-                </div>
+
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Salesperson</label>
-                  <DynamicSelect category="Salesperson" name="salesperson" value={form.salesperson} onChange={handleChange} />
+                  <DynamicSelect category="Salesperson" name="salesperson" value={form.salesperson} onChange={handleChange} hideAddButton={true} />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
@@ -371,10 +430,7 @@ const AddSaleExchange = () => {
           {/* SECTION: RETURN ITEM DETAILS */}
           <div className="border border-slate-200 rounded-lg p-5 bg-orange-50/30">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-orange-200">
-              <h3 className="text-xs font-bold text-orange-700 uppercase tracking-wider">Return Item Details (From Customer)</h3>
-              <button type="button" onClick={addReturnItem} className="flex items-center gap-1 text-xs font-semibold text-orange-600 hover:text-orange-800 transition-colors">
-                <Plus size={14} /> Add Item
-              </button>
+              <h3 className="text-xs font-bold text-orange-700 uppercase tracking-wider">Return Item Details (Auto-filled from Invoice)</h3>
             </div>
             
             <div className="overflow-x-auto mb-3">
@@ -412,7 +468,7 @@ const AddSaleExchange = () => {
                         <input type="number" readOnly value={item.amount} className="w-full border border-transparent bg-transparent px-2 py-1.5 text-sm font-semibold text-orange-900 outline-none cursor-not-allowed" />
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <button type="button" onClick={() => removeReturnItem(item.id)} disabled={returnItems.length === 1} className="text-red-400 hover:text-red-600 disabled:opacity-30 transition-colors">
+                        <button type="button" onClick={() => removeReturnItem(item.id)} className="text-red-400 hover:text-red-600 transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </td>
@@ -422,20 +478,22 @@ const AddSaleExchange = () => {
               </table>
             </div>
 
-            <div className="flex gap-4 p-3 bg-orange-100/50 rounded-lg">
-               <div>
-                  <label className="text-xs font-semibold text-orange-800 mr-2">Return Reason:</label>
-                  <div className="inline-block min-w-[120px]">
-                    <DynamicSelect category="ReturnReason" name="reason" value={returnItems[0].reason} onChange={(e) => handleReturnItemChange(returnItems[0].id, e.target.name, e.target.value)} />
-                  </div>
-               </div>
-               <div>
-                  <label className="text-xs font-semibold text-orange-800 mr-2">Condition:</label>
-                  <div className="inline-block min-w-[120px]">
-                    <DynamicSelect category="ItemCondition" name="condition" value={returnItems[0].condition} onChange={(e) => handleReturnItemChange(returnItems[0].id, e.target.name, e.target.value)} />
-                  </div>
-               </div>
-            </div>
+            {returnItems.length > 0 && (
+              <div className="flex gap-4 p-3 bg-orange-100/50 rounded-lg">
+                 <div>
+                    <label className="text-xs font-semibold text-orange-800 mr-2">Return Reason:</label>
+                    <div className="inline-block min-w-[120px]">
+                      <DynamicSelect category="ReturnReason" name="reason" value={returnItems[0].reason} onChange={(e) => handleReturnItemChange(returnItems[0].id, e.target.name, e.target.value)} hideAddButton={true} />
+                    </div>
+                 </div>
+                 <div>
+                    <label className="text-xs font-semibold text-orange-800 mr-2">Condition:</label>
+                    <div className="inline-block min-w-[120px]">
+                      <DynamicSelect category="ItemCondition" name="condition" value={returnItems[0].condition} onChange={(e) => handleReturnItemChange(returnItems[0].id, e.target.name, e.target.value)} hideAddButton={true} />
+                    </div>
+                 </div>
+              </div>
+            )}
           </div>
 
           {/* SECTION: REPLACEMENT ITEM DETAILS */}
@@ -490,7 +548,7 @@ const AddSaleExchange = () => {
                         <input type="number" readOnly value={item.total} className="w-full border border-transparent bg-transparent px-2 py-1.5 text-sm font-semibold text-emerald-900 outline-none cursor-not-allowed" />
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <button type="button" onClick={() => removeReplacementItem(item.id)} disabled={replacementItems.length === 1} className="text-red-400 hover:text-red-600 disabled:opacity-30 transition-colors">
+                        <button type="button" onClick={() => removeReplacementItem(item.id)} className="text-red-400 hover:text-red-600 transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </td>
@@ -534,7 +592,7 @@ const AddSaleExchange = () => {
                   <div className="grid grid-cols-2 gap-4 items-end">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Return Warehouse</label>
-                      <DynamicSelect category="Warehouse" name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} />
+                      <DynamicSelect category="Warehouse" name="returnWarehouse" value={form.returnWarehouse} onChange={handleChange} hideAddButton={true} />
                     </div>
                     <div className="flex items-center gap-2 mb-2">
                       <input type="checkbox" name="restockItem" checked={form.restockItem} onChange={handleChange} className="w-4 h-4 text-indigo-600 rounded" />
@@ -542,7 +600,7 @@ const AddSaleExchange = () => {
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Replacement Warehouse</label>
-                      <DynamicSelect category="Warehouse" name="replacementWarehouse" value={form.replacementWarehouse} onChange={handleChange} />
+                      <DynamicSelect category="Warehouse" name="replacementWarehouse" value={form.replacementWarehouse} onChange={handleChange} hideAddButton={true} />
                     </div>
                   </div>
                 </div>
@@ -553,11 +611,11 @@ const AddSaleExchange = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Requested By</label>
-                      <DynamicSelect category="Salesperson" name="requestedBy" value={form.requestedBy} onChange={handleChange} />
+                      <DynamicSelect category="Salesperson" name="requestedBy" value={form.requestedBy} onChange={handleChange} hideAddButton={true} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Approved By</label>
-                      <DynamicSelect category="Salesperson" name="approvedBy" value={form.approvedBy} onChange={handleChange} />
+                      <DynamicSelect category="Salesperson" name="approvedBy" value={form.approvedBy} onChange={handleChange} hideAddButton={true} />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Remarks</label>

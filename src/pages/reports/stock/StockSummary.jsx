@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Download, Printer, Filter } from 'lucide-react';
+import { Package, Download, Printer, Filter, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 
 const StockSummary = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState({
     totalProducts: 0,
@@ -31,8 +33,8 @@ const StockSummary = () => {
     }
   };
 
-  const filteredData = filterGroup === 'All Groups' 
-    ? data 
+  const filteredData = filterGroup === 'All Groups'
+    ? data
     : data.filter(item => item.category === filterGroup);
 
   const totalQty = filteredData.reduce((acc, curr) => acc + (curr.currentStock || 0), 0);
@@ -41,17 +43,54 @@ const StockSummary = () => {
   // Extract unique categories for filter dropdown
   const categories = ['All Groups', ...new Set(data.map(item => item.category))];
 
+  const exportCSV = () => {
+    if (filteredData.length === 0) return;
+
+    const headers = ['Stock Group', 'Item Name', 'SKU', 'Available Qty', 'Avg Cost Rate (Rs)', 'Total Value (Rs)'];
+    const rows = filteredData.map(item => [
+      item.category || '',
+      item.name || '',
+      item.sku || '',
+      item.currentStock || 0,
+      item.purchasePrice || 0,
+      item.stockValue || 0
+    ]);
+
+    // Footer row
+    rows.push(['', '', '', totalQty, '', totalValue]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(c => `"${c}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `stock_summary_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-slate-200/70 shadow-sm min-h-screen space-y-6 font-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Package className="text-indigo-600" size={22} /> Stock Summary
-          </h1>
-          <p className="text-[11px] sm:text-xs text-gray-500">Overall summaries of all inventory category units and asset valuation.</p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            <ArrowLeft size={16} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Package className="text-indigo-600" size={22} /> Stock Summary
+            </h1>
+            <p className="text-[11px] sm:text-xs text-gray-500">Overall summaries of all inventory category units and asset valuation.</p>
+          </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-semibold hover:bg-slate-50 transition-colors">
+          <button onClick={exportCSV} className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-semibold hover:bg-slate-50 transition-colors">
             <Download size={14} /> Export CSV
           </button>
           <button onClick={() => window.print()} className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-colors">
@@ -63,7 +102,7 @@ const StockSummary = () => {
       <div className="bg-slate-50 p-4 border border-blue-200 rounded-lg flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-700 mb-4">
         <Filter size={16} className="text-indigo-600" />
         <span className="text-gray-500">Stock Group:</span>
-        <select 
+        <select
           className="border p-1.5 rounded min-w-[200px]"
           value={filterGroup}
           onChange={(e) => setFilterGroup(e.target.value)}
@@ -99,13 +138,13 @@ const StockSummary = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-               <tr>
-                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">Fetching stock summary...</td>
-               </tr>
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-gray-500 italic">Fetching stock summary...</td>
+              </tr>
             ) : filteredData.length === 0 ? (
-               <tr>
-                 <td colSpan="5" className="p-4 text-center text-gray-500 italic">No products found.</td>
-               </tr>
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-gray-500 italic">No products found.</td>
+              </tr>
             ) : (
               filteredData.map((item, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">

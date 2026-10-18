@@ -3,8 +3,10 @@ import { Search, Download, Upload, Printer, CheckCircle, Trash2, Edit, Plus, Fil
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const ReceiptList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -110,30 +112,36 @@ const ReceiptList = () => {
           <p className="text-[12px] text-gray-500 mt-1">Manage customer receipt vouchers and settlement details.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={() => fileInputRef.current.click()}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <Upload size={14} /> Import CSV
-          </button>
-          <button 
-            onClick={handleDownloadSample}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_vouchers', 'create_sales', 'create_receipts']) && (
+            <button 
+              onClick={() => fileInputRef.current.click()}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <Upload size={14} /> Import CSV
+            </button>
+          )}
+          {can(['create_vouchers', 'create_sales', 'create_receipts']) && (
+            <button 
+              onClick={handleDownloadSample}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button 
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
-          <button 
-            onClick={() => navigate('/receipt/new')} 
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
-          >
-            <Plus size={14} /> New Receipt
-          </button>
+          {can(['create_vouchers', 'create_sales', 'create_receipts']) && (
+            <button 
+              onClick={() => navigate('/receipt/new')} 
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
+            >
+              <Plus size={14} /> New Receipt
+            </button>
+          )}
         </div>
       </div>
 
@@ -192,12 +200,16 @@ const ReceiptList = () => {
                       </span>
                     </td>
                     <td className="p-2 text-center no-print flex justify-center items-center gap-2">
-                      <button onClick={() => navigate(`/receipt/edit/${r._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600">
-                        <Edit size={13} />
-                      </button>
-                      <button onClick={() => handleDelete(r._id)} className="p-1 hover:bg-red-50 rounded text-red-600">
-                        <Trash2 size={13} />
-                      </button>
+                      {can(['edit_vouchers', 'edit_sales', 'edit_receipts']) && (
+                        <button onClick={() => navigate(`/receipt/edit/${r._id}`)} className="p-1 hover:bg-indigo-50 rounded text-indigo-600" title="Edit">
+                          <Edit size={13} />
+                        </button>
+                      )}
+                      {can(['delete_vouchers', 'delete_sales', 'delete_receipts']) && (
+                        <button onClick={() => handleDelete(r._id)} className="p-1 hover:bg-red-50 rounded text-red-600" title="Delete">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

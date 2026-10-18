@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Briefcase, MapPin, CreditCard, Phone, Mail, Edit } from 'lucide-react';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const EmployeeView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,12 +57,14 @@ const EmployeeView = () => {
         >
           <ArrowLeft size={18} /> Back to Employee List
         </button>
-        <button 
-          onClick={() => navigate(`/employees/profile/${id}`)}
-          className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all"
-        >
-          <Edit size={16} /> Edit Employee
-        </button>
+        {can('edit_employees') && (
+          <button 
+            onClick={() => navigate(`/employees/profile/${id}`)}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md transition-all"
+          >
+            <Edit size={16} /> Edit Employee
+          </button>
+        )}
       </div>
 
       <div className="max-w-6xl mx-auto space-y-6">
@@ -68,16 +72,25 @@ const EmployeeView = () => {
         {/* Profile Header Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-              <div className="w-24 h-24 rounded-full border-2 border-slate-200 bg-indigo-50 flex items-center justify-center text-2xl font-bold text-indigo-700 overflow-hidden">
+              <div className="w-24 h-24 rounded-full border-2 border-slate-200 bg-indigo-50 flex items-center justify-center text-2xl font-bold text-indigo-700 overflow-hidden relative">
                 {employee.profilePhoto ? (
-                   <img src={`http://localhost:5000/${employee.profilePhoto}`} alt={employee.employeeName} className="w-full h-full object-cover" />
-                ) : (
+                   <img 
+                     src={employee.profilePhoto.startsWith('http') ? employee.profilePhoto : `http://localhost:5000${employee.profilePhoto.startsWith('/') ? employee.profilePhoto : `/${employee.profilePhoto}`}`} 
+                     alt={employee.employeeName} 
+                     className="w-full h-full object-cover"
+                     onError={(e) => {
+                       e.currentTarget.onerror = null;
+                       e.currentTarget.style.display = 'none';
+                     }}
+                   />
+                ) : null}
+                {(!employee.profilePhoto) && (
                    employee.employeeName?.charAt(0)?.toUpperCase() || 'E'
                 )}
               </div>
               <div className="flex-1 text-center md:text-left mt-2 md:mt-0">
                 <h1 className="text-xl font-bold text-slate-800">{employee.employeeName}</h1>
-                <p className="text-indigo-600 font-medium text-sm mt-1">{employee.designation || 'No Designation'} • {employee.department || 'No Department'}</p>
+                <p className="text-indigo-600 font-medium text-sm mt-1">{employee.role || employee.designation || 'Staff'} • {employee.department || 'General'}</p>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3 text-xs text-slate-500 font-medium">
                    <div className="flex items-center gap-1.5"><Briefcase size={14} className="text-slate-400"/> EMP ID: {employee.employeeId}</div>
                    <div className="flex items-center gap-1.5"><Mail size={14} className="text-slate-400"/> {employee.email || 'N/A'}</div>
@@ -107,11 +120,19 @@ const EmployeeView = () => {
                <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
                   <div>
                     <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Company</span>
-                    <span className="font-medium text-slate-800">{employee.company || 'N/A'}</span>
+                    <span className="font-medium text-slate-800">{employee.companyName || employee.company || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Branch</span>
                     <span className="font-medium text-slate-800">{employee.branch || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Department</span>
+                    <span className="font-medium text-slate-800">{employee.department || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Role</span>
+                    <span className="font-medium text-indigo-700 font-semibold">{employee.role || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Employee Type</span>
@@ -151,38 +172,31 @@ const EmployeeView = () => {
                </div>
             </div>
 
-            {/* Salary Information */}
+            {/* Salary & Payroll Information */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
-                 <CreditCard size={20} className="text-emerald-500" /> Salary Details
+               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+                 <span className="flex items-center gap-2">
+                   <CreditCard size={20} className="text-indigo-600" /> Salary & Payroll
+                 </span>
+                 <button 
+                   onClick={() => navigate('/hrms/payroll/salary-structure')}
+                   className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full border border-indigo-100 transition-colors"
+                 >
+                   Manage in Payroll &rarr;
+                 </button>
                </h3>
-               <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm bg-slate-50 p-4 rounded-lg border border-slate-100">
-                  <div>
-                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Basic Salary</span>
-                    <span className="font-medium text-slate-800">₹{employee.basicSalary?.toLocaleString() || '0'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">HRA</span>
-                    <span className="font-medium text-slate-800">₹{employee.hra?.toLocaleString() || '0'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Allowance</span>
-                    <span className="font-medium text-slate-800">₹{employee.allowance?.toLocaleString() || '0'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">Salary Type</span>
-                    <span className="font-medium text-slate-800">{employee.salaryType || 'N/A'}</span>
-                  </div>
-               </div>
-               <div className="mt-4 flex justify-between items-center p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
-                  <div>
-                    <span className="block text-emerald-700 text-xs font-bold uppercase mb-1">Gross Salary</span>
-                    <span className="text-xl font-bold text-emerald-900">₹{employee.grossSalary?.toLocaleString() || '0'}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="block text-emerald-700 text-xs font-bold uppercase mb-1">Net Salary</span>
-                    <span className="text-2xl font-black text-emerald-700">₹{employee.netSalary?.toLocaleString() || '0'}</span>
-                  </div>
+               <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg text-sm space-y-2">
+                 <p className="text-xs text-slate-600">
+                   इस कर्मचारी की सैलरी संरचना, Basic, HRA, अलाउंस और PF/ESI कटौतियाँ सीधे <strong>HRMS &gt; Payroll &gt; Salary Structure</strong> से ऑटोमैटिक लागू होती हैं।
+                 </p>
+                 <div className="flex gap-2 pt-2">
+                   <button 
+                     onClick={() => navigate('/hrms/payroll/salary-slips')} 
+                     className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs hover:bg-slate-50"
+                   >
+                     View Salary Slips
+                   </button>
+                 </div>
                </div>
             </div>
 
@@ -221,23 +235,11 @@ const EmployeeView = () => {
 
             {/* Identity & Compliance */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-               <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">Identity & Compliance</h3>
+               <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">Identity Information</h3>
                <div className="space-y-4 text-sm">
                   <div>
                     <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">PAN Number</span>
                     <span className="font-medium text-slate-800">{employee.pan || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">UAN</span>
-                    <span className="font-medium text-slate-800">{employee.uan || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">PF No.</span>
-                    <span className="font-medium text-slate-800">{employee.pfNo || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-slate-500 text-xs font-semibold uppercase mb-1">ESIC No.</span>
-                    <span className="font-medium text-slate-800">{employee.esicNo || 'N/A'}</span>
                   </div>
                </div>
             </div>

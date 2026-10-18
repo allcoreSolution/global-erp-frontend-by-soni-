@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Users, ShoppingCart, Package, Building2, Landmark, UsersRound, FileCheck, FileBox, FileArchive, ArrowRight,
-  TrendingUp, TrendingDown, Percent, ListPlus, Banknote, FileText, X
+import {
+  Users, ShoppingCart, Package, Building2, Landmark, UsersRound, FileCheck, ArrowRight,
+  TrendingUp, TrendingDown, Percent, Banknote, FileText
 } from 'lucide-react';
+import { usePermissions } from '../utils/permissionUtils';
 
 export const QuickLinks = () => {
   const navigate = useNavigate();
+  const { canRoute, isSuperAdmin, isAdmin } = usePermissions();
 
   const links = [
     { icon: Users, title: 'CRM', subtitle: 'Leads & Customers', to: '/customers/customer-master', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-950/40' },
@@ -15,18 +17,23 @@ export const QuickLinks = () => {
     { icon: Building2, title: 'INVENTORY', subtitle: 'Stock, Items', to: '/products/product-list', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-950/40' },
     { icon: Landmark, title: 'ACCOUNTS', subtitle: 'Ledger, Journal', to: '/reports/accounts/ledger-voucher', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-100 dark:bg-indigo-950/40' },
     { icon: Banknote, title: 'BANKING', subtitle: 'Banking, Reconcile', to: '/reports/mis/management-dashboard', color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-950/40' },
-    { icon: UsersRound, title: 'HRM', subtitle: 'Employees, Payroll', to: '/employees/profile', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-950/40' },
-    { icon: FileCheck, title: 'PAYROLL', subtitle: 'Salary, TDS, PF', to: '/employees/financial-docs', color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-950/40' },
-    { icon: FileBox, title: 'PROJECTS', subtitle: 'Asset Milestone', to: '/coming-soon', color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-100 dark:bg-cyan-950/40' },
-    { icon: FileArchive, title: 'DOCUMENTS', subtitle: 'Files, Notes', to: '/coming-soon', color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-950/40' }
+    { icon: UsersRound, title: 'HRM', subtitle: 'Employees, Staff', to: '/employees/list', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-950/40' },
+    { icon: FileCheck, title: 'PAYROLL', subtitle: 'Salary, TDS, PF', to: '/hrms/payroll/slips', color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-950/40' },
   ];
+
+  const visibleLinks = links.filter(item => {
+    if (isSuperAdmin || isAdmin) return true;
+    return canRoute(item.to);
+  });
+
+  if (visibleLinks.length === 0) return null;
 
   return (
     <div>
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2 no-scrollbar">
-        {links.map((item, idx) => (
-          <div 
-            key={idx} 
+        {visibleLinks.map((item, idx) => (
+          <div
+            key={idx}
             onClick={() => navigate(item.to)}
             className="flex items-center gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-gray-100 dark:border-slate-800/80 shadow-sm cursor-pointer hover:shadow-md transition-all min-w-[140px] flex-shrink-0"
           >
@@ -46,7 +53,7 @@ export const QuickLinks = () => {
 
 export const SummaryCards = ({ data, loading }) => {
   const navigate = useNavigate();
-  const userRole = localStorage.getItem('userRole');
+  const { canRoute, isSuperAdmin, isAdmin, role: userRole } = usePermissions();
 
   // Fallbacks for data coming from the backend
   const sales = data?.sales || { amount: '₹1.25 Cr', percent: '18.65%', up: true };
@@ -69,11 +76,18 @@ export const SummaryCards = ({ data, loading }) => {
     cards.unshift({ title: 'TOTAL COMPANIES', amount: '12', link: 'Manage Companies', icon: Building2, to: '/super-admin/companies', color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-100 dark:bg-pink-950/40' });
   }
 
+  const visibleCards = cards.filter(card => {
+    if (isSuperAdmin || isAdmin) return true;
+    return canRoute(card.to);
+  });
+
+  if (visibleCards.length === 0) return null;
+
   return (
     <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
-      {cards.map((card, idx) => (
-        <div 
-          key={idx} 
+      {visibleCards.map((card, idx) => (
+        <div
+          key={idx}
           onClick={() => navigate(card.to)}
           className="bg-white dark:bg-slate-900 rounded-lg p-3 border border-gray-100 dark:border-slate-800/80 shadow-sm flex items-center justify-between transition-colors cursor-pointer hover:shadow-md min-w-[240px] flex-shrink-0"
         >

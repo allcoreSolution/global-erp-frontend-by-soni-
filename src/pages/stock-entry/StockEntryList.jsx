@@ -7,8 +7,10 @@ import {
 import Swal from 'sweetalert2';
 
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const StockEntryList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
 
   const [stockEntries, setStockEntries] = useState([]);
@@ -72,15 +74,7 @@ const StockEntryList = () => {
     }
   };
 
-  const handleApprove = async (id, newStatus) => {
-    try {
-      await api.put(`/stock-entries/${id}`, { status: newStatus });
-      setStockEntries(stockEntries.map(se => se._id === id ? { ...se, status: newStatus } : se));
-    } catch (err) {
-      console.error('Failed to change status', err);
-      alert('Failed to change status');
-    }
-  };
+  // Status and Approve logic removed as per user request
 
   // Export Filtered List to CSV
   const handleExportCSV = () => {
@@ -134,30 +128,36 @@ const StockEntryList = () => {
           <p className="text-[12px] text-gray-500 mt-1">Track and adjust stock levels, inter-warehouse transfers, and damage losses.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={() => fileInputRef.current.click()}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <Upload size={14} /> Import CSV
-          </button>
-          <button 
-            onClick={handleDownloadSample}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
-          >
-            <FileDown size={14} /> Sample
-          </button>
+          {can(['create_stock_adjustments', 'manage_stock', 'create_inventory']) && (
+            <button 
+              onClick={() => fileInputRef.current.click()}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <Upload size={14} /> Import CSV
+            </button>
+          )}
+          {can(['create_stock_adjustments', 'manage_stock', 'create_inventory']) && (
+            <button 
+              onClick={handleDownloadSample}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
+            >
+              <FileDown size={14} /> Sample
+            </button>
+          )}
           <button 
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-slate-50 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
-          <button 
-            onClick={() => navigate('/stock-entry/new')} 
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
-          >
-            <Plus size={14} /> New Stock Entry
-          </button>
+          {can(['create_stock_adjustments', 'manage_stock', 'create_inventory']) && (
+            <button 
+              onClick={() => navigate('/stock-entry/new')} 
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm transition-colors"
+            >
+              <Plus size={14} /> New Stock Entry
+            </button>
+          )}
         </div>
       </div>
 
@@ -202,18 +202,7 @@ const StockEntryList = () => {
             <option value="East Side Storage">East Side Storage</option>
           </select>
 
-          {/* Status */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full py-2 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="Approved">Approved</option>
-            <option value="Pending">Pending</option>
-            <option value="Draft">Draft</option>
-          </select>
-
+          {/* Status Filter Removed */}
           {/* Start Date */}
           <input
             type="date"
@@ -238,7 +227,6 @@ const StockEntryList = () => {
                 <th className="py-3 px-4">Adjustment Reason</th>
                 <th className="py-3 px-4 text-center">Total Qty</th>
                 <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center no-print">Approvals</th>
                 <th className="py-3 px-4 text-right no-print">Actions</th>
               </tr>
             </thead>
@@ -264,52 +252,30 @@ const StockEntryList = () => {
                     <td className="py-3 px-4 max-w-xs truncate" title={se.remarks}>{se.remarks}</td>
                     <td className="py-3 px-4 text-center font-bold">{se.summary?.totalQty || 0}</td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase
-                        ${se.status === 'Approved' ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 
-                          se.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400' : 
-                          'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-400'}`}
-                      >
-                        {se.status || 'Pending'}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                        POSTED
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-center no-print">
-                      <div className="flex items-center justify-center gap-1">
-                        {se.status !== 'Approved' && (
-                          <button
-                            onClick={() => handleApprove(se._id, 'Approved')}
-                            title="Approve Voucher"
-                            className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 rounded transition-colors"
-                          >
-                            <Check size={14} />
-                          </button>
-                        )}
-                        {se.status === 'Approved' && (
-                          <button
-                            onClick={() => handleApprove(se._id, 'Pending')}
-                            title="Revert to Pending"
-                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
-                      </div>
                     </td>
                     <td className="py-3 px-4 text-right no-print">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => navigate(`/stock-entry/edit/${se._id}`)}
-                          title="Edit Entry"
-                          className="p-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded"
-                        >
-                          <Edit size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(se._id)}
-                          title="Delete Entry"
-                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {can(['edit_stock_adjustments', 'manage_stock', 'edit_inventory']) && (
+                          <button
+                            onClick={() => navigate(`/stock-entry/edit/${se._id}`)}
+                            title="Edit Entry"
+                            className="p-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded"
+                          >
+                            <Edit size={15} />
+                          </button>
+                        )}
+                        {can(['delete_stock_adjustments', 'manage_stock', 'delete_inventory']) && (
+                          <button
+                            onClick={() => handleDelete(se._id)}
+                            title="Delete Entry"
+                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

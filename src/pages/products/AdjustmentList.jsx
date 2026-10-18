@@ -5,8 +5,10 @@ import {
   ChevronLeft, ChevronRight, AlertCircle, X, Calendar
 } from 'lucide-react';
 import api from '../../api';
+import { usePermissions } from '../../utils/permissionUtils';
 
 const AdjustmentList = () => {
+  const { can } = usePermissions();
   const navigate = useNavigate();
 
   // State for Adjustments Data
@@ -151,37 +153,43 @@ const AdjustmentList = () => {
         {/* Global Toolbar buttons */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Hidden file input for import */}
-          <input
-            type="file"
-            accept=".csv"
-            id="import-csv"
-            className="hidden"
-            onChange={handleImport}
-          />
-          <label
-            htmlFor="import-csv"
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors cursor-pointer"
-          >
-            <Upload size={14} /> Import
-          </label>
-          <button
-            onClick={handleDownloadSample}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
-          >
-            <FileText size={14} /> Sample
-          </button>
+          {can(['create_adjustments', 'create_stock_adjustments', 'manage_stock']) && (
+            <>
+              <input
+                type="file"
+                accept=".csv"
+                id="import-csv"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <label
+                htmlFor="import-csv"
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                <Upload size={14} /> Import
+              </label>
+              <button
+                onClick={handleDownloadSample}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
+              >
+                <FileText size={14} /> Sample
+              </button>
+            </>
+          )}
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
           >
             <Download size={14} /> Export
           </button>
-          <button
-            onClick={() => navigate('/products/add-adjustment')}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
-          >
-            <Plus size={14} /> Add Adjustment
-          </button>
+          {can(['create_adjustments', 'create_stock_adjustments', 'manage_stock']) && (
+            <button
+              onClick={() => navigate('/products/add-adjustment')}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+            >
+              <Plus size={14} /> Add Adjustment
+            </button>
+          )}
         </div>
       </div>
 
@@ -277,26 +285,30 @@ const AdjustmentList = () => {
                         <Eye size={16} />
                       </button>
 
-                      {/* Edit Action (redirect/alert mockup) */}
-                      <button
-                        onClick={() => {
-                          alert(`Redirecting to edit adjustment: ${adj.reference}`);
-                          navigate('/products/add-adjustment');
-                        }}
-                        className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
-                        title="Edit Adjustment"
-                      >
-                        <Edit size={16} />
-                      </button>
+                      {/* Edit Action */}
+                      {can(['edit_adjustments', 'edit_stock_adjustments', 'manage_stock']) && (
+                        <button
+                          onClick={() => {
+                            alert(`Redirecting to edit adjustment: ${adj.reference}`);
+                            navigate('/products/add-adjustment');
+                          }}
+                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          title="Edit Adjustment"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
 
                       {/* Delete Action */}
-                      <button
-                        onClick={() => handleDeleteAdjustment(adj.id)}
-                        className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Adjustment"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {can(['delete_adjustments', 'delete_stock_adjustments', 'manage_stock']) && (
+                        <button
+                          onClick={() => handleDeleteAdjustment(adj.id)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Adjustment"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
