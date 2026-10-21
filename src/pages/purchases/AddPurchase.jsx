@@ -50,6 +50,9 @@ const AddPurchase = () => {
           hsnNumber: p.hsnNumber || '',
           brand: typeof p.brand === 'object' ? p.brand?._id : p.brand,
           category: typeof p.category === 'object' ? p.category?._id : p.category,
+          batch: p.batchNo || '',
+          mfgDate: p.mfgDate ? new Date(p.mfgDate).toISOString().split('T')[0] : '',
+          expDate: p.expDate ? new Date(p.expDate).toISOString().split('T')[0] : '',
         })));
       } catch (err) {
         console.error('Dropdown fetch error:', err);
@@ -84,6 +87,10 @@ const AddPurchase = () => {
                 productPrice: item.productPrice || 0,
                 discount: item.discount || 0,
                 taxPercent: item.taxPercent || 0,
+                batch: item.batch || '',
+                freeQty: item.freeQty || 0,
+                mfgDate: item.mfgDate ? new Date(item.mfgDate).toISOString().split('T')[0] : '',
+                expDate: item.expDate ? new Date(item.expDate).toISOString().split('T')[0] : '',
                 hsnNumber: item.hsnNumber || '',
                 brand: item.brand || '',
                 category: item.category || '',
@@ -121,6 +128,7 @@ const AddPurchase = () => {
     name: '', code: '', quantity: 1,
     netUnitCost: 0, productPrice: 0,
     taxPercent: 0, discount: 0,
+    batch: '', freeQty: 0, mfgDate: '', expDate: '',
     // Product extra details
     hsnNumber: '', brand: '', category: '',
     customBrand: '', customCategory: '',
@@ -160,6 +168,9 @@ const AddPurchase = () => {
         productPrice: prod.price,
         taxPercent: prod.tax,
         discount: 0,
+        batch: prod.batch || '',
+        mfgDate: prod.mfgDate || '',
+        expDate: prod.expDate || '',
         hsnNumber: prod.hsnNumber || '',
         brand: prod.brand || '',
         category: prod.category || '',
@@ -233,6 +244,10 @@ const AddPurchase = () => {
           productPrice:   parseFloat(item.productPrice),
           discount:       parseFloat(item.discount)   || 0,
           taxPercent:     parseFloat(item.taxPercent)  || 0,
+          batch:          item.batch          || '',
+          freeQty:        parseInt(item.freeQty)      || 0,
+          mfgDate:        item.mfgDate        || null,
+          expDate:        item.expDate        || null,
           // Product registration details
           hsnNumber:      item.hsnNumber      || '',
           brand:          item.brand === 'Other' ? (item.customBrand || '') : (item.brand || ''),
@@ -427,12 +442,15 @@ const AddPurchase = () => {
                   <th className="p-2 text-left min-w-36">Product Name *</th>
                   <th className="p-2 text-left min-w-24">Code *</th>
                   <th className="p-2 text-left min-w-24">HSN</th>
+                  <th className="p-2 text-left min-w-28">Batch No</th>
+                  <th className="p-2 text-left min-w-28">Exp Date</th>
                   <th className="p-2 text-left min-w-32">Brand</th>
                   <th className="p-2 text-left min-w-32">Category</th>
                   <th className="p-2 text-center min-w-20">Alert Qty</th>
                   <th className="p-2 text-left min-w-32">Warranty</th>
                   <th className="p-2 text-left min-w-32">Guarantee</th>
                   <th className="p-2 text-center">Qty *</th>
+                  <th className="p-2 text-center min-w-16">Free Qty</th>
                   <th className="p-2 text-right">Cost (₹) *</th>
                   <th className="p-2 text-right">Tax %</th>
                   <th className="p-2 text-right">Disc (₹)</th>
@@ -463,6 +481,20 @@ const AddPurchase = () => {
                     <td className="p-2">
                       <input type="text" value={item.hsnNumber} placeholder="e.g. 0101"
                         onChange={e => updateItem(idx, 'hsnNumber', e.target.value)}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400" />
+                    </td>
+
+                    {/* Batch No */}
+                    <td className="p-2 min-w-28">
+                      <input type="text" value={item.batch} placeholder="e.g. B-0426-01"
+                        onChange={e => updateItem(idx, 'batch', e.target.value)}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400" />
+                    </td>
+
+                    {/* Exp Date */}
+                    <td className="p-2 min-w-28">
+                      <input type="date" value={item.expDate}
+                        onChange={e => updateItem(idx, 'expDate', e.target.value)}
                         className="w-full border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-blue-400" />
                     </td>
 
@@ -538,6 +570,13 @@ const AddPurchase = () => {
                       <input type="number" min="1" value={item.quantity} required
                         onChange={e => updateItem(idx, 'quantity', e.target.value)}
                         className="w-16 border border-gray-300 rounded px-2 py-1 text-sm text-center outline-none focus:border-blue-400" />
+                    </td>
+
+                    {/* Free Qty */}
+                    <td className="p-2">
+                      <input type="number" min="0" value={item.freeQty || 0} placeholder="0"
+                        onChange={e => updateItem(idx, 'freeQty', e.target.value)}
+                        className="w-16 border border-gray-300 rounded px-1.5 py-1 text-sm text-center outline-none focus:border-blue-400" />
                     </td>
 
                     {/* Cost */}

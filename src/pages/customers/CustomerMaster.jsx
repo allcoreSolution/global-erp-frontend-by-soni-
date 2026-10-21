@@ -79,6 +79,9 @@ const CustomerMaster = () => {
     phone: '',
     email: '',
     pan: '',
+    gstin: '',
+    drugLicenceNo: '',
+    drugLicenceValidity: '',
     gstCertificate: '',
     panCard: '',
     shopLicense: '',
@@ -838,6 +841,22 @@ const CustomerMaster = () => {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Credit Limit (₹)</label>
                       <input type="number" value={customerForm.creditLimit} onChange={(e) => setCustomerForm({ ...customerForm, creditLimit: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Credit Period (Days)</label>
+                      <input type="number" placeholder="e.g. 15 or 30" value={customerForm.creditPeriod} onChange={(e) => setCustomerForm({ ...customerForm, creditPeriod: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">GSTIN Number</label>
+                      <input type="text" placeholder="e.g. 09AABCU3333C1Z3" value={customerForm.gstin || ''} onChange={(e) => setCustomerForm({ ...customerForm, gstin: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Drug Licence Number (D.L.)</label>
+                      <input type="text" placeholder="e.g. DL-20B-56789/21B-12345" value={customerForm.drugLicenceNo || ''} onChange={(e) => setCustomerForm({ ...customerForm, drugLicenceNo: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Drug Licence Validity</label>
+                      <input type="date" value={customerForm.drugLicenceValidity || ''} onChange={(e) => setCustomerForm({ ...customerForm, drugLicenceValidity: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
                     </div>
                     <div className="flex gap-2">
                       <div className="flex-1">

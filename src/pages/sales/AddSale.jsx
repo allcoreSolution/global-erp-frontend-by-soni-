@@ -58,11 +58,14 @@ const AddSale = () => {
             id: p._id,
             name: p.productName || p.name,
             code: p.productCode || p.sku || p.code,
-            price: appliedPrice,
+            price: appliedPrice || p.productPrice || 0,
             wholesalePrice: appliedWholesalePrice,
             tax: p.productTax || p.taxRate || 0,
             stock: p.currentStock || 0,
-            warehouseStocks: p.warehouseStocks || []
+            warehouseStocks: p.warehouseStocks || [],
+            batch: p.batchNo || '',
+            batches: p.batches || [],
+            expDate: p.expDate ? new Date(p.expDate).toISOString().split('T')[0] : ''
           };
         }));
 
@@ -193,6 +196,19 @@ const AddSale = () => {
       const isWholesaler = selectedCust.type === 'Wholesaler';
       const appliedPrice = isWholesaler && prod.wholesalePrice > 0 ? prod.wholesalePrice : prod.price;
 
+      // FEFO (First Expiry First Out) auto-pick
+      let chosenBatch = prod.batch || '';
+      let chosenExp = prod.expDate || '';
+      if (prod.batches && prod.batches.length > 0) {
+        const sortedBatches = [...prod.batches]
+          .filter(b => ((b.remainingQty !== undefined ? b.remainingQty : b.stock) || 0) > 0)
+          .sort((a,b) => new Date(a.expDate || '9999-12-31') - new Date(b.expDate || '9999-12-31'));
+        if (sortedBatches.length > 0) {
+          chosenBatch = sortedBatches[0].batchNo;
+          chosenExp = sortedBatches[0].expDate ? new Date(sortedBatches[0].expDate).toISOString().split('T')[0] : '';
+        }
+      }
+
       setOrderItems([...orderItems, {
         name: prod.name,
         code: prod.code,
@@ -200,7 +216,10 @@ const AddSale = () => {
         quantity: 1,
         netUnitPrice: appliedPrice,
         discount: 0,
-        taxPercent: parseInt(prod.tax) || 0
+        taxPercent: parseInt(prod.tax) || 0,
+        batch: chosenBatch,
+        expDate: chosenExp,
+        batches: prod.batches || []
       }]);
     }
     setProductSearch('');
@@ -236,6 +255,12 @@ const AddSale = () => {
     const disc = Math.max(0, Number(val) || 0);
     setOrderItems(orderItems.map(item =>
       item.code === code ? { ...item, discount: disc } : item
+    ));
+  };
+
+  const handleItemFieldChange = (code, field, val) => {
+    setOrderItems(orderItems.map(item =>
+      item.code === code ? { ...item, [field]: val } : item
     ));
   };
 
@@ -336,6 +361,8 @@ const AddSale = () => {
           netUnitPrice: item.netUnitPrice,
           discount: item.discount,
           taxPercent: item.taxPercent,
+          batch: item.batch || '',
+          expDate: item.expDate || null,
           total: getSubtotal(item)
         })),
         orderTax,
@@ -552,6 +579,8 @@ const AddSale = () => {
               <thead>
                 <tr className="bg-gray-50 border-b border-blue-500">
                   <th className="px-4 py-3 text-xs font-bold uppercase text-gray-700">Product</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase text-gray-700 w-28">Batch No</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase text-gray-700 w-28">Exp Date</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase text-gray-700 w-24 text-center">Quantity</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase text-gray-700 w-32">Net Unit Price</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase text-gray-700 w-28">Discount</th>
@@ -568,6 +597,48 @@ const AddSale = () => {
                       <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                         <div>{item.name}</div>
                         <div className="text-[10px] text-gray-500 font-mono">{item.code}</div>
+                      </td>
+                      {/* Batch No with FEFO selector */}
+                      <td className="px-4 py-3 min-w-36">
+                        {item.batches && item.batches.length > 0 ? (
+                          <select
+                            value={item.batch || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const selBatch = item.batches.find(b => b.batchNo === val);
+                              setOrderItems(orderItems.map(it => it.code === item.code ? {
+                                ...it,
+                                batch: val,
+                                expDate: selBatch?.expDate ? new Date(selBatch.expDate).toISOString().split('T')[0] : it.expDate
+                              } : it));
+                            }}
+                            className="w-full border border-blue-500 rounded px-1.5 py-1 text-xs bg-white text-black font-semibold outline-none"
+                          >
+                            <option value="">Select Batch (FEFO)...</option>
+                            {item.batches.map((b, bi) => (
+                              <option key={bi} value={b.batchNo}>
+                                {b.batchNo} ({b.remainingQty !== undefined ? b.remainingQty : (b.stock || 0)} BOX)
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={item.batch || ''}
+                            placeholder="e.g. PTA-001"
+                            onChange={(e) => handleItemFieldChange(item.code, 'batch', e.target.value)}
+                            className="w-full border border-blue-500 rounded px-1.5 py-1 text-sm bg-white text-black"
+                          />
+                        )}
+                      </td>
+                      {/* Exp Date */}
+                      <td className="px-4 py-3">
+                        <input
+                          type="date"
+                          value={item.expDate || ''}
+                          onChange={(e) => handleItemFieldChange(item.code, 'expDate', e.target.value)}
+                          className="w-full border border-blue-500 rounded px-1.5 py-1 text-sm bg-white text-black"
+                        />
                       </td>
                       {/* Quantity */}
                       <td className="px-4 py-3">
@@ -631,7 +702,7 @@ const AddSale = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-6 py-8 text-center text-xs text-gray-500 font-medium bg-white">
+                    <td colSpan="9" className="px-6 py-8 text-center text-xs text-gray-500 font-medium bg-white">
                       <div className="flex flex-col items-center justify-center gap-1.5">
                         <Info size={20} className="text-gray-400" />
                         <span>No products added to invoice list. Search above to add items.</span>
@@ -643,6 +714,8 @@ const AddSale = () => {
                 {/* Table Footer Total Summary */}
                 <tr className="bg-gray-50/90 font-bold border-t border-blue-500">
                   <td className="px-4 py-3 text-xs text-gray-800">Total</td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3"></td>
                   <td className="px-4 py-3 text-center text-sm text-gray-900">{totalQuantity}</td>
                   <td className="px-4 py-3"></td>
                   <td className="px-4 py-3 text-sm text-gray-900">INR {rawSubTotal.toFixed(2)}</td>

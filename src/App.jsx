@@ -39,6 +39,7 @@ import PriceList from './pages/pricelist/PriceList';
 import PricingRules from './pages/pricelist/PricingRules';
 import TaxConfig from './pages/tax/TaxConfig';
 import CompanyProfile from './pages/company/CompanyProfile';
+import PharmaOperations from './pages/pharma/PharmaOperations';
 import BusinessSettings from './pages/company/BusinessSettings';
 import BranchInfo from './pages/branch/BranchInfo';
 import DepartmentList from './pages/department/DepartmentList';
@@ -568,6 +569,13 @@ function App() {
           <Route path="reports/tds/reconciliation" element={<TdsReconciliation />} />
           <Route path="day-book" element={<DayBook />} />
           <Route path="warehouse/master" element={<WarehouseMaster />} />
+          {/* Advanced Pharma Compliance & Operations */}
+          <Route path="pharma/operations" element={<PharmaOperations />} />
+          <Route path="pharma/hub" element={<PharmaOperations />} />
+          <Route path="pharma/quarantine" element={<PharmaOperations />} />
+          <Route path="pharma/batch-recall" element={<PharmaOperations />} />
+          <Route path="pharma/near-expiry" element={<PharmaOperations />} />
+          <Route path="pharma/write-off" element={<PharmaOperations />} />
           <Route path="sales/add-sale" element={<AddSale />} />
           <Route path="sales/sale-list" element={<SaleList />} />
           <Route path="sales/view-invoice" element={<ViewSaleInvoice />} />

@@ -30,8 +30,11 @@ export const initialFormState = {
   banks: [], 
   
   paymentTerms: 'Net 30',
+  creditPeriod: 30,
   creditLimit: 0,
   currency: 'INR',
+  drugLicenceNo: '',
+  drugLicenceValidity: '',
   purchasePriceList: '',
   discount: 0,
   additionalDiscount: 0,
@@ -378,6 +381,22 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
                 <select value={supplierForm.paymentTerms} onChange={(e) => setSupplierForm({ ...supplierForm, paymentTerms: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white">
                   {paymentTermsList.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Credit Period (Days)</label>
+                <input type="number" placeholder="e.g. 30" value={supplierForm.creditPeriod || 30} onChange={(e) => setSupplierForm({ ...supplierForm, creditPeriod: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 bg-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Credit Limit (₹)</label>
+                <input type="number" placeholder="e.g. 100000" value={supplierForm.creditLimit || 0} onChange={(e) => setSupplierForm({ ...supplierForm, creditLimit: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 bg-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Drug Licence Number (D.L.)</label>
+                <input type="text" placeholder="e.g. DL-20B-78901/21B-23456" value={supplierForm.drugLicenceNo || ''} onChange={(e) => setSupplierForm({ ...supplierForm, drugLicenceNo: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Drug Licence Validity</label>
+                <input type="date" value={supplierForm.drugLicenceValidity || ''} onChange={(e) => setSupplierForm({ ...supplierForm, drugLicenceValidity: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Currency</label>

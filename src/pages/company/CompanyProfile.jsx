@@ -7,7 +7,11 @@ const CompanyProfile = () => {
   const { can } = usePermissions();
   const [activeCo, setActiveCo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', code: '', address: '', phone: '', email: '', website: '' });
+  const [editForm, setEditForm] = useState({
+    name: '', code: '', address: '', phone: '', email: '', website: '',
+    ownerName: '', constitution: 'Proprietorship', drugLicenceNo: '', drugLicenceValidity: '',
+    valuationMethod: 'FIFO', dispatchMethod: 'FEFO'
+  });
 
   const fetchProfile = async () => {
     try {
@@ -20,6 +24,12 @@ const CompanyProfile = () => {
           phone: res.data.phone || '',
           email: res.data.email || '',
           website: res.data.website || '',
+          ownerName: res.data.ownerName || '',
+          constitution: res.data.constitution || 'Proprietorship',
+          drugLicenceNo: res.data.drugLicenceNo || '',
+          drugLicenceValidity: res.data.drugLicenceValidity || '',
+          valuationMethod: res.data.valuationMethod || 'FIFO',
+          dispatchMethod: res.data.dispatchMethod || 'FEFO',
           logo: '🏢'
         });
       }
@@ -39,7 +49,13 @@ const CompanyProfile = () => {
       address: activeCo.address || '',
       phone: activeCo.phone || '',
       email: activeCo.email || '',
-      website: activeCo.website || ''
+      website: activeCo.website || '',
+      ownerName: activeCo.ownerName || '',
+      constitution: activeCo.constitution || 'Proprietorship',
+      drugLicenceNo: activeCo.drugLicenceNo || '',
+      drugLicenceValidity: activeCo.drugLicenceValidity || '',
+      valuationMethod: activeCo.valuationMethod || 'FIFO',
+      dispatchMethod: activeCo.dispatchMethod || 'FEFO'
     });
     setIsEditing(true);
   };
@@ -157,6 +173,72 @@ const CompanyProfile = () => {
                     className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800"
                   />
                 </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Constitution / Business Type</label>
+                  <select
+                    value={editForm.constitution}
+                    onChange={(e) => setEditForm({ ...editForm, constitution: e.target.value })}
+                    className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800"
+                  >
+                    <option value="Proprietorship">Proprietorship</option>
+                    <option value="Partnership">Partnership</option>
+                    <option value="Private Limited">Private Limited</option>
+                    <option value="LLP">LLP</option>
+                    <option value="Public Limited">Public Limited</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Owner / Contact Person</label>
+                  <input
+                    type="text"
+                    placeholder="Owner Name"
+                    value={editForm.ownerName}
+                    onChange={(e) => setEditForm({ ...editForm, ownerName: e.target.value })}
+                    className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Drug Licence Number (D.L. No.)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. DL-20B-12345/21B-67890"
+                    value={editForm.drugLicenceNo}
+                    onChange={(e) => setEditForm({ ...editForm, drugLicenceNo: e.target.value })}
+                    className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Drug Licence Validity</label>
+                  <input
+                    type="date"
+                    value={editForm.drugLicenceValidity}
+                    onChange={(e) => setEditForm({ ...editForm, drugLicenceValidity: e.target.value })}
+                    className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Stock Valuation Method</label>
+                  <select
+                    value={editForm.valuationMethod}
+                    onChange={(e) => setEditForm({ ...editForm, valuationMethod: e.target.value })}
+                    className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800"
+                  >
+                    <option value="FIFO">FIFO (First In First Out)</option>
+                    <option value="Average">Weighted Average</option>
+                    <option value="LIFO">LIFO</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Dispatch Rule (Pharma)</label>
+                  <select
+                    value={editForm.dispatchMethod}
+                    onChange={(e) => setEditForm({ ...editForm, dispatchMethod: e.target.value })}
+                    className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800"
+                  >
+                    <option value="FEFO">FEFO (First Expiry First Out)</option>
+                    <option value="FIFO">FIFO (First In First Out)</option>
+                  </select>
+                </div>
                 <div className="sm:col-span-2">
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Full Office Address</label>
                   <textarea
@@ -257,6 +339,38 @@ const CompanyProfile = () => {
                         <p className="text-xs font-bold text-slate-800">N/A</p>
                       )}
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pharma & Legal Compliance Card */}
+              <div className="md:col-span-2 group bg-white p-5 rounded-2xl border border-slate-200 hover:border-emerald-200 transition-all duration-300">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 shadow-inner">
+                    <CheckCircle size={18} strokeWidth={2} />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-800">Pharma Compliance & Business Setup</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Constitution & Owner</p>
+                    <p className="text-xs font-bold text-slate-800">{activeCo.constitution || 'Proprietorship'} {activeCo.ownerName ? `(${activeCo.ownerName})` : ''}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Drug Licence No. (D.L.)</p>
+                    <p className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded inline-block border border-emerald-100">{activeCo.drugLicenceNo || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Licence Validity</p>
+                    <p className="text-xs font-bold text-slate-800">{activeCo.drugLicenceValidity || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Valuation Method</p>
+                    <p className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded inline-block border border-indigo-100">{activeCo.valuationMethod || 'FIFO'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Dispatch Priority</p>
+                    <p className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded inline-block border border-purple-100">{activeCo.dispatchMethod || 'FEFO'}</p>
                   </div>
                 </div>
               </div>

@@ -22,6 +22,12 @@ const AddProduct = () => {
     profitMargin: '25.00',
     productPrice: '0.00',
     wholesalePrice: '',
+    mrp: '',
+    packingDetails: '',
+    negativeStockAllowed: false,
+    batchNo: '',
+    mfgDate: '',
+    expDate: '',
     dailySaleObjective: '',
     alertQuantity: '',
     productTax: 'No Tax',
@@ -471,8 +477,38 @@ const AddProduct = () => {
                   step="0.01"
                   className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md pl-8 pr-3 py-2 text-sm text-black placeholder:text-black/60 outline-none"
                 />
-                <span className="absolute left-3 top-2.5 text-xs text-black/70 font-semibold">$</span>
+                <span className="absolute left-3 top-2.5 text-xs text-black/70 font-semibold">₹</span>
               </div>
+            </div>
+
+            {/* MRP (Maximum Retail Price) */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-black mb-2">MRP (Tax Inclusive)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  name="mrp"
+                  value={formData.mrp}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md pl-8 pr-3 py-2 text-sm text-black placeholder:text-black/60 outline-none"
+                />
+                <span className="absolute left-3 top-2.5 text-xs text-black/70 font-semibold">₹</span>
+              </div>
+            </div>
+
+            {/* Packaging Details */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-black mb-2">Packaging Details</label>
+              <input
+                type="text"
+                name="packingDetails"
+                value={formData.packingDetails}
+                onChange={handleChange}
+                placeholder="e.g. 10 strips x 10 tablets per BOX"
+                className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md px-3 py-2 text-sm text-black placeholder:text-black/60 outline-none"
+              />
             </div>
 
             {/* Alert Quantity */}
@@ -836,6 +872,56 @@ const AddProduct = () => {
               <span className="text-sm text-black/90 group-hover:text-black transition-colors">Add Promotional Price</span>
             </label>
 
+            <label className="flex items-start gap-3 cursor-pointer group py-1">
+              <input
+                type="checkbox"
+                name="negativeStockAllowed"
+                checked={formData.negativeStockAllowed}
+                onChange={handleChange}
+                className="mt-1 w-4 h-4 rounded text-indigo-600 bg-slate-100 border-slate-400 focus:ring-blue-500"
+              />
+              <div>
+                <span className="text-sm text-black/90 group-hover:text-black transition-colors">Allow Negative Stock</span>
+                <span className="block text-xs text-black/70">Uncheck to block sales when physical stock falls below zero</span>
+              </div>
+            </label>
+
+            {/* Conditional Batch & Expiry Fields */}
+            {formData.hasBatchAndExpiry && (
+              <div className="col-span-1 md:col-span-2 p-4 bg-transparent rounded-lg border border-blue-500 mt-2 grid grid-cols-1 md:grid-cols-3 gap-4 transition-all duration-300">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-black mb-2">Default Batch No.</label>
+                  <input
+                    type="text"
+                    name="batchNo"
+                    value={formData.batchNo}
+                    onChange={handleChange}
+                    placeholder="e.g. B-0426-01"
+                    className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md px-3 py-2 text-sm text-black placeholder:text-black/60 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-black mb-2">Mfg Date</label>
+                  <input
+                    type="date"
+                    name="mfgDate"
+                    value={formData.mfgDate}
+                    onChange={handleChange}
+                    className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md px-3 py-2 text-sm text-black outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-black mb-2">Exp Date</label>
+                  <input
+                    type="date"
+                    name="expDate"
+                    value={formData.expDate}
+                    onChange={handleChange}
+                    className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md px-3 py-2 text-sm text-black outline-none"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

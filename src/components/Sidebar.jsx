@@ -709,6 +709,16 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
                 { text: 'New Credit Note', to: '/credit-note/new', permission: ['create_credit_notes', 'create_sales'] }
               ]}
             />
+            <MenuItem
+              icon={ShieldCheck}
+              text="Pharma Compliance Hub"
+              subItems={[
+                { text: 'Quarantine & Inspection', to: '/pharma/operations?tab=quarantine' },
+                { text: 'Batch Recall & Traceability', to: '/pharma/operations?tab=traceability' },
+                { text: 'Near-Expiry FEFO Alerts', to: '/pharma/operations?tab=near-expiry' },
+                { text: 'Damage & Expiry Write-Off', to: '/pharma/operations?tab=write-off' }
+              ]}
+            />
             <MenuItem icon={FileText} text="Day Book" to="/day-book" permission={['view_vouchers', 'view_accounts']} />
           </MenuSection>
 
