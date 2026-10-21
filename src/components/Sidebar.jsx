@@ -873,7 +873,7 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
           >
             <MenuItem
               icon={Building}
-              text="Company Master"
+              text="Company Profile"
               permission="view_company"
               subItems={[
                 { text: 'Company Profile', to: '/company/profile', permission: 'view_company' },
