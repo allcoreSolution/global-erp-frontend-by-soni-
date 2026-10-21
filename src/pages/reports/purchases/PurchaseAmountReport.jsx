@@ -128,7 +128,7 @@ const PurchaseAmountReport = () => {
                   <td className="p-4 font-mono text-indigo-700 font-medium">{item.invoice}</td>
                   <td className="p-4 font-semibold text-slate-700">{new Date(item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                   <td className="p-4 font-semibold text-slate-800">
-                    {item.supplier}
+                    {typeof item.supplier === 'object' && item.supplier ? (item.supplier.companyName || item.supplier.name || item.supplier.supplierCode || 'N/A') : (item.supplier || 'N/A')}
                   </td>
                   <td className="p-4 text-right font-bold text-slate-800">{formatCurrency(item.amount)}</td>
                   <td className="p-4 text-center">

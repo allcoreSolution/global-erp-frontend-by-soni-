@@ -65,7 +65,9 @@ const PayableAging = () => {
                 const total = item.current + item.days30 + item.days60 + item.older;
                 return (
                   <tr key={idx} className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-gray-800 border-r">{item.supplier}</td>
+                    <td className="p-3 font-bold text-gray-800 border-r">
+                      {typeof item.supplier === 'object' && item.supplier ? (item.supplier.companyName || item.supplier.name || item.supplier.supplierCode || 'N/A') : (item.supplier || 'N/A')}
+                    </td>
                     <td className="p-3 text-right text-gray-700">{item.current > 0 ? item.current.toLocaleString() : '-'}</td>
                     <td className="p-3 text-right text-amber-700">{item.days30 > 0 ? item.days30.toLocaleString() : '-'}</td>
                     <td className="p-3 text-right text-orange-700">{item.days60 > 0 ? item.days60.toLocaleString() : '-'}</td>

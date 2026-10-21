@@ -57,10 +57,27 @@ const PurchaseList = () => {
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
+  const getSupplierName = (supp) => {
+    if (!supp) return 'N/A';
+    if (typeof supp === 'object') {
+      return supp.companyName || supp.name || supp.supplierCode || 'N/A';
+    }
+    return String(supp);
+  };
+
+  const getWarehouseName = (wh) => {
+    if (!wh) return 'N/A';
+    if (typeof wh === 'object') {
+      return wh.name || wh.code || 'N/A';
+    }
+    return String(wh);
+  };
+
   // Search Filter
   const filteredPurchases = purchases.filter(p => {
+    const suppName = getSupplierName(p.supplier);
     const matchesSearch = (p.referenceNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (p.supplier || '').toLowerCase().includes(searchTerm.toLowerCase());
+                          suppName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'All' || p.purchaseStatus === selectedStatus || p.paymentStatus === selectedStatus;
     return matchesSearch && matchesStatus;
   });
@@ -99,7 +116,7 @@ const PurchaseList = () => {
         `"${p.purchaseDate || ''}"`,
         `"${p.referenceNo || ''}"`,
         `"Admin"`,
-        `"${p.supplier || ''}"`,
+        `"${getSupplierName(p.supplier)}"`,
         `"${p.purchaseStatus || ''}"`,
         `"${grandTotal.toFixed(2)}"`,
         `"0.00"`,
@@ -311,9 +328,7 @@ const PurchaseList = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.referenceNo}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">Admin</td>
                   <td className="px-4 py-3 text-sm text-gray-800 font-medium">
-                    {typeof p.supplier === 'object' && p.supplier 
-                      ? (p.supplier.companyName || p.supplier.name || p.supplier.supplierCode || 'Unknown') 
-                      : (p.supplier || 'N/A')}
+                    {getSupplierName(p.supplier)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-800 font-semibold min-w-[120px]">
                     <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
@@ -478,11 +493,11 @@ const PurchaseList = () => {
                 </div>
                 <div className="flex justify-between border-b border-gray-100 pb-1">
                   <span className="font-semibold text-gray-600">Supplier:</span>
-                  <span className="text-gray-900 font-semibold">{selectedPurchase.supplier || 'N/A'}</span>
+                  <span className="text-gray-900 font-semibold">{getSupplierName(selectedPurchase.supplier)}</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-100 pb-1">
                   <span className="font-semibold text-gray-600">Warehouse:</span>
-                  <span className="text-gray-900">{selectedPurchase.warehouse || 'N/A'}</span>
+                  <span className="text-gray-900">{getWarehouseName(selectedPurchase.warehouse)}</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-100 pb-1">
                   <span className="font-semibold text-gray-600">Purchase Status:</span>

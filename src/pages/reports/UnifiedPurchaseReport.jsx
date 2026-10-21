@@ -400,7 +400,9 @@ const UnifiedPurchaseReport = () => {
                             <tr key={inv._id || idx} className="hover:bg-slate-50/60 transition">
                               <td className="py-3 px-4 font-black text-blue-600">{inv.purchaseNo}</td>
                               <td className="py-3 px-4 text-slate-500">{inv.date}</td>
-                              <td className="py-3 px-4 font-semibold text-slate-800">{inv.supplier}</td>
+                              <td className="py-3 px-4 font-semibold text-slate-800">
+                                {typeof inv.supplier === 'object' && inv.supplier ? (inv.supplier.companyName || inv.supplier.name || inv.supplier.supplierCode || 'N/A') : (inv.supplier || 'N/A')}
+                              </td>
                               <td className="py-3 px-4 text-slate-500">{inv.warehouse}</td>
                               <td className="py-3 px-4 text-right font-medium text-slate-500">{formatINR(inv.taxAmount)}</td>
                               <td className="py-3 px-4 text-right font-black text-slate-800">{formatINR(inv.totalAmount)}</td>
@@ -529,7 +531,9 @@ const UnifiedPurchaseReport = () => {
                             <span className="text-xs font-semibold text-slate-500">{s.orders || s.billsCount || 1} Bills</span>
                           </div>
                           <div className="mt-2">
-                            <div className="text-sm font-bold text-slate-800 truncate">{s.name || s.supplier}</div>
+                            <div className="text-sm font-bold text-slate-800 truncate">
+                              {typeof (s.name || s.supplier) === 'object' && (s.name || s.supplier) ? ((s.name || s.supplier).companyName || (s.name || s.supplier).name || 'N/A') : (s.name || s.supplier || 'N/A')}
+                            </div>
                             <div className="text-base font-black text-blue-600 mt-0.5">{formatINR(s.amount || s.totalAmount || s.volume || 0)}</div>
                           </div>
                         </div>
@@ -554,7 +558,9 @@ const UnifiedPurchaseReport = () => {
                           {supplierPurchases.length > 0 ? (
                             supplierPurchases.map((s, i) => (
                               <tr key={i} className="hover:bg-slate-50/60">
-                                <td className="py-3 px-4 font-bold text-slate-800">{s.name || s.supplier}</td>
+                                <td className="py-3 px-4 font-bold text-slate-800">
+                                  {typeof (s.name || s.supplier) === 'object' && (s.name || s.supplier) ? ((s.name || s.supplier).companyName || (s.name || s.supplier).name || 'N/A') : (s.name || s.supplier || 'N/A')}
+                                </td>
                                 <td className="py-3 px-4 text-center font-semibold text-blue-600">{s.orders || s.billsCount || 1} Bills</td>
                                 <td className="py-3 px-4 text-right font-black text-slate-800">{formatINR(s.volume || s.totalPurchases || s.totalAmount || 0)}</td>
                                 <td className="py-3 px-4 text-center">
@@ -745,7 +751,9 @@ const UnifiedPurchaseReport = () => {
                             <tr key={i} className="hover:bg-slate-50/60">
                               <td className="py-3 px-4 font-bold text-rose-600">{ret.debitNote || ret.returnNo || 'RET-001'}</td>
                               <td className="py-3 px-4 text-slate-500">{ret.date}</td>
-                              <td className="py-3 px-4 font-semibold text-slate-800">{ret.supplier}</td>
+                              <td className="py-3 px-4 font-semibold text-slate-800">
+                                {typeof ret.supplier === 'object' && ret.supplier ? (ret.supplier.companyName || ret.supplier.name || ret.supplier.supplierCode || 'N/A') : (ret.supplier || 'N/A')}
+                              </td>
                               <td className="py-3 px-4 text-slate-500">{ret.reason || 'Goods returned / defective'}</td>
                               <td className="py-3 px-4 text-right font-black text-rose-600">{formatINR(ret.amount || ret.returnAmount || 0)}</td>
                               <td className="py-3 px-4 text-center">
@@ -791,7 +799,9 @@ const UnifiedPurchaseReport = () => {
                           {taxReport.length > 0 ? (
                             taxReport.map((t, i) => (
                               <tr key={i} className="hover:bg-slate-50/60">
-                                <td className="py-3 px-4 font-bold text-slate-800">{t.vendor || t.supplier || 'Vendor'}</td>
+                                <td className="py-3 px-4 font-bold text-slate-800">
+                                  {typeof (t.vendor || t.supplier) === 'object' && (t.vendor || t.supplier) ? ((t.vendor || t.supplier).companyName || (t.vendor || t.supplier).name || 'Vendor') : (t.vendor || t.supplier || 'Vendor')}
+                                </td>
                                 <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">{t.gstin || '27AABCS1234R1ZX'}</td>
                                 <td className="py-3 px-4 text-right font-medium text-slate-500">{formatINR(t.taxableAmount)}</td>
                                 <td className="py-3 px-4 text-right font-medium text-slate-500">{formatINR(t.cgst)}</td>

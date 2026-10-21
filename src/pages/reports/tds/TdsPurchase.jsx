@@ -126,7 +126,9 @@ const TdsPurchase = () => {
             <tbody className="divide-y divide-gray-100">
               {purchaseRecords.map((r, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/30">
-                  <td className="p-3 font-semibold text-gray-800">{r.supplier}</td>
+                  <td className="p-3 font-semibold text-gray-800">
+                    {typeof r.supplier === 'object' && r.supplier ? (r.supplier.companyName || r.supplier.name || r.supplier.supplierCode || 'N/A') : (r.supplier || 'N/A')}
+                  </td>
                   <td className="p-3 text-gray-600">{r.sec}</td>
                   <td className="p-3 text-gray-700">₹{r.totalVal.toLocaleString()}</td>
                   <td className="p-3 text-gray-600">{r.tdsRate}</td>

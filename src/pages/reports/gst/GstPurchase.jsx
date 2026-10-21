@@ -244,7 +244,9 @@ const GstPurchase = () => {
                   {filteredSuppliers.length > 0 ? (
                     filteredSuppliers.map((s, idx) => (
                       <tr key={idx} className="hover:bg-slate-50/60 transition">
-                        <td className="py-3 px-4 font-bold text-slate-800">{s.supplier}</td>
+                        <td className="py-3 px-4 font-bold text-slate-800">
+                          {typeof s.supplier === 'object' && s.supplier ? (s.supplier.companyName || s.supplier.name || s.supplier.supplierCode || 'N/A') : (s.supplier || 'N/A')}
+                        </td>
                         <td className="py-3 px-4 font-mono text-[11px] text-slate-500">{s.gstNo}</td>
                         <td className="py-3 px-4 text-right font-black text-slate-800">₹{Number(s.taxableVal || 0).toLocaleString()}</td>
                         <td className="py-3 px-4 text-right font-medium text-slate-600">₹{Number(s.cgst || 0).toLocaleString()}</td>

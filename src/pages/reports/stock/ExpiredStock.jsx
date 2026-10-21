@@ -128,7 +128,9 @@ const ExpiredStock = () => {
                       </span>
                     </td>
                     <td className="p-3 text-center font-bold text-gray-700">{item.qty} <span className="text-xs font-normal text-gray-500">{item.unit || 'Nos'}</span></td>
-                    <td className="p-3 text-gray-600 text-xs">{item.supplier || 'N/A'}</td>
+                    <td className="p-3 text-gray-600 text-xs">
+                      {typeof item.supplier === 'object' && item.supplier ? (item.supplier.companyName || item.supplier.name || 'N/A') : (item.supplier || 'N/A')}
+                    </td>
                     <td className="p-3 text-right font-bold text-rose-700">₹ {(item.value || 0).toLocaleString()}</td>
                   </tr>
                 );

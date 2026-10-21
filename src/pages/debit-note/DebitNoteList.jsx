@@ -262,7 +262,9 @@ const DebitNoteList = () => {
                   return (
                   <tr key={d._id} className="hover:bg-slate-50">
                     <td className="p-2 font-mono font-bold text-indigo-600 whitespace-nowrap">{d.debitNoteNo}</td>
-                    <td className="p-2 font-medium text-gray-800">{d.supplier}</td>
+                    <td className="p-2 font-medium text-gray-800">
+                      {typeof d.supplier === 'object' && d.supplier ? (d.supplier.companyName || d.supplier.name || d.supplier.supplierCode || 'N/A') : (d.supplier || 'N/A')}
+                    </td>
                     <td className="p-2 font-mono text-gray-600">{d.originalInvoiceNo}</td>
                     <td className="p-2 text-gray-550 whitespace-nowrap">{d.date}</td>
                     <td className="p-2 text-right font-semibold text-slate-700">₹ {(d.summary?.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
@@ -352,7 +354,9 @@ const DebitNoteList = () => {
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-slate-50 p-4 rounded border border-slate-100">
                   <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Supplier Details</h4>
-                  <p className="font-bold text-gray-800">{viewModalData.supplier}</p>
+                  <p className="font-bold text-gray-800">
+                    {typeof viewModalData.supplier === 'object' && viewModalData.supplier ? (viewModalData.supplier.companyName || viewModalData.supplier.name || viewModalData.supplier.supplierCode || 'N/A') : (viewModalData.supplier || 'N/A')}
+                  </p>
                   <p className="text-sm text-gray-600 mt-1">Branch: {viewModalData.branch || 'HQ'}</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded border border-slate-100">

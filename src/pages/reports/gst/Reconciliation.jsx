@@ -192,7 +192,9 @@ const Reconciliation = () => {
                 <tr key={idx} className="hover:bg-slate-50/30">
                   <td className="p-3 font-semibold text-gray-800">{m.invNo}</td>
                   <td className="p-3 text-gray-500">{m.type}</td>
-                  <td className="p-3 text-gray-700 font-medium">{m.supplier || m.client}</td>
+                  <td className="p-3 text-gray-700 font-medium">
+                    {typeof (m.supplier || m.client) === 'object' && (m.supplier || m.client) ? ((m.supplier || m.client).companyName || (m.supplier || m.client).name || 'N/A') : (m.supplier || m.client || 'N/A')}
+                  </td>
                   <td className="p-3 text-gray-600">{m.bookTax}</td>
                   <td className="p-3 text-gray-600">{m.portal2B}</td>
                   <td className="p-3 text-rose-600 font-bold">₹{m.diff}</td>
