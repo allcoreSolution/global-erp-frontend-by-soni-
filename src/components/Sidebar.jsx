@@ -601,15 +601,6 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
             />
 
             <MenuItem
-              icon={Building}
-              text="Company Master"
-              permission="view_company"
-              subItems={[
-                { text: 'Company Profile', to: '/company/profile', permission: 'view_company' },
-                { text: 'Business Settings', to: '/company/business-settings', permission: 'view_company' }
-              ]}
-            />
-            <MenuItem
               icon={Layers}
               text="Branch Master"
               permission="view_branches"
@@ -878,8 +869,17 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
           <MenuSection
             title="SETUP"
             defaultOpen={true}
-            permission={['manage_settings', 'view_roles', 'view_users']}
+            permission={['manage_settings', 'view_roles', 'view_users', 'view_company']}
           >
+            <MenuItem
+              icon={Building}
+              text="Company Master"
+              permission="view_company"
+              subItems={[
+                { text: 'Company Profile', to: '/company/profile', permission: 'view_company' },
+                { text: 'Business Settings', to: '/company/business-settings', permission: 'view_company' }
+              ]}
+            />
             <MenuItem icon={Settings} text="System Settings" to="/setup/system-settings" permission="manage_settings" />
             <MenuItem icon={Bell} text="Notifications & Broadcast" to="/setup/notifications" />
             <MenuItem icon={Repeat} text="Backup & Restore" to="/setup/backup-restore" permission="manage_settings" />
