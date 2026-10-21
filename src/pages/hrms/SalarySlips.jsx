@@ -19,7 +19,9 @@ import {
   Layers,
   ChevronRight,
   TrendingUp,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Edit,
+  X
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
@@ -261,6 +263,46 @@ const SalarySlips = () => {
 
     return { totalGross, totalDeductions, totalNet, completedCount, draftCount };
   }, [filteredPayslips]);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSlip, setEditingSlip] = useState(null);
+
+  const openEditModal = (slip) => {
+    setEditingSlip({
+      ...slip,
+      advanceDeduction: slip.advanceDeduction || 0,
+      otherDeduction: slip.otherDeduction || 0,
+      otherDeductionTitle: slip.otherDeductionTitle || 'Other Salary Deduction Payable'
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveSlipAdjustments = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.put(`/payslips/${editingSlip._id}`, {
+        advanceDeduction: Number(editingSlip.advanceDeduction) || 0,
+        otherDeduction: Number(editingSlip.otherDeduction) || 0,
+        otherDeductionTitle: editingSlip.otherDeductionTitle || ''
+      });
+      if (res.data?.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved!',
+          text: 'Salary deductions updated successfully.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        setIsEditModalOpen(false);
+        fetchPayslips();
+        if (activeSlip && activeSlip._id === editingSlip._id) {
+          setActiveSlip(res.data.data);
+        }
+      }
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Save Failed', text: err.response?.data?.message || err.message });
+    }
+  };
 
   const openSlipPreview = (slip) => {
     setActiveSlip(slip);
@@ -508,6 +550,13 @@ const SalarySlips = () => {
                           </td>
                           <td className="p-3 text-right pr-4 space-x-1">
                             <button 
+                              onClick={() => openEditModal(slip)}
+                              title="Adjust Advance & Custom Deductions"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-full transition"
+                            >
+                              <Edit size={15} />
+                            </button>
+                            <button 
                               onClick={() => openSlipPreview(slip)}
                               title="View & Print Official Payslip"
                               className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition"
@@ -680,8 +729,20 @@ const SalarySlips = () => {
                     </div>
                     {activeSlip.loanDeduction > 0 && (
                       <div className="flex justify-between text-slate-600">
-                        <span>Loan / Advance Cut:</span>
+                        <span>Loan / Installment:</span>
                         <span className="font-semibold text-slate-800">₹{activeSlip.loanDeduction?.toLocaleString() || 0}</span>
+                      </div>
+                    )}
+                    {activeSlip.advanceDeduction > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>Employee Advance Recovery:</span>
+                        <span className="font-semibold text-rose-600">-₹{activeSlip.advanceDeduction?.toLocaleString() || 0}</span>
+                      </div>
+                    )}
+                    {activeSlip.otherDeduction > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>{activeSlip.otherDeductionTitle || 'Other Salary Deduction'}:</span>
+                        <span className="font-semibold text-rose-600">-₹{activeSlip.otherDeduction?.toLocaleString() || 0}</span>
                       </div>
                     )}
                     <div className="pt-2 border-t border-rose-100 flex justify-between font-bold text-rose-900">
@@ -720,6 +781,109 @@ const SalarySlips = () => {
               </div>
 
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT / ADJUST DEDUCTIONS MODAL */}
+      {isEditModalOpen && editingSlip && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Adjust Salary & Deductions</h3>
+                <p className="text-xs text-slate-500 font-medium">{editingSlip.employee?.employeeName || editingSlip.employee?.username} ({editingSlip.month} {editingSlip.year})</p>
+              </div>
+              <button onClick={() => setIsEditModalOpen(false)} className="p-1.5 hover:bg-slate-200 rounded-full text-slate-500 transition">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSlipAdjustments} className="p-5 space-y-4 text-xs">
+              <div className="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
+                <div>
+                  <span className="text-slate-500 block font-semibold text-[11px]">Gross Salary</span>
+                  <span className="font-bold text-slate-800 text-sm">₹{editingSlip.grossEarnings?.toLocaleString()}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 block font-semibold text-[11px]">Standard PF + ESI</span>
+                  <span className="font-bold text-rose-600 text-sm">-₹{((editingSlip.pfDeduction || 0) + (editingSlip.esiDeduction || 0)).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  Employee Advance Auto-Recovery (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editingSlip.advanceDeduction}
+                  onChange={(e) => setEditingSlip({ ...editingSlip, advanceDeduction: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:bg-white focus:border-indigo-500 outline-none"
+                  placeholder="e.g. 5000"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Deducts prior salary advances granted to employee</p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  Custom Deduction Head / Title
+                </label>
+                <input
+                  type="text"
+                  value={editingSlip.otherDeductionTitle}
+                  onChange={(e) => setEditingSlip({ ...editingSlip, otherDeductionTitle: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:bg-white focus:border-indigo-500 outline-none"
+                  placeholder="e.g. Other Salary Deduction Payable"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  Custom Deduction Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editingSlip.otherDeduction}
+                  onChange={(e) => setEditingSlip({ ...editingSlip, otherDeduction: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:bg-white focus:border-indigo-500 outline-none"
+                  placeholder="e.g. 2000"
+                />
+              </div>
+
+              {/* Calculated Net Preview */}
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex justify-between items-center font-bold">
+                <span className="text-emerald-800">New Net Payable:</span>
+                <span className="text-emerald-700 text-base">
+                  ₹{(
+                    (editingSlip.grossEarnings || 0) -
+                    ((editingSlip.pfDeduction || 0) +
+                      (editingSlip.esiDeduction || 0) +
+                      (editingSlip.loanDeduction || 0) +
+                      (Number(editingSlip.advanceDeduction) || 0) +
+                      (Number(editingSlip.otherDeduction) || 0))
+                  ).toLocaleString()}
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-semibold text-xs hover:bg-slate-100 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-sm transition"
+                >
+                  Save Adjustments
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

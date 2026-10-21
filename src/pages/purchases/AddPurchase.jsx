@@ -70,6 +70,7 @@ const AddPurchase = () => {
           if (res.data.success) {
             const data = res.data.data;
             setPurchaseDate(data.purchaseDate || new Date().toISOString().split('T')[0]);
+            setPurchaseType(data.purchaseType || 'Trading Goods');
             setReferenceNo(data.referenceNo || '');
             setBranch(data.branch?._id || data.branch || '');
             setWarehouse(data.warehouse?._id || data.warehouse || '');
@@ -115,6 +116,7 @@ const AddPurchase = () => {
 
   // ── Purchase Header ────────────────────────────
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [purchaseType, setPurchaseType] = useState('Trading Goods');
   const [referenceNo, setReferenceNo]   = useState('');
   const [branch, setBranch]             = useState('');
   const [warehouse, setWarehouse]       = useState('');
@@ -227,6 +229,7 @@ const AddPurchase = () => {
     try {
       const payload = {
         purchaseDate,
+        purchaseType,
         referenceNo,
         branch:        branch    || null,
         warehouse:     warehouse || null,
@@ -310,8 +313,55 @@ const AddPurchase = () => {
           <h2 className="text-base font-semibold text-blue-700 border-b border-blue-200 pb-2">
             📋 Purchase Details
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
+          {/* Purchase Type Selector */}
+          <div className="bg-blue-50/60 border border-blue-200 rounded-lg p-3.5">
+            <label className="block text-xs font-bold uppercase text-slate-700 mb-2">
+              Purchase Classification *
+            </label>
+            <div className="flex flex-wrap items-center gap-5">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                <input
+                  type="radio"
+                  name="purchaseType"
+                  value="Trading Goods"
+                  checked={purchaseType === 'Trading Goods'}
+                  onChange={e => setPurchaseType(e.target.value)}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                📦 Trading Goods (Inventory Stock)
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                <input
+                  type="radio"
+                  name="purchaseType"
+                  value="Fixed Asset"
+                  checked={purchaseType === 'Fixed Asset'}
+                  onChange={e => setPurchaseType(e.target.value)}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                🏢 Fixed Asset (Furniture, Computer, Equipment - No Stock Inflation)
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                <input
+                  type="radio"
+                  name="purchaseType"
+                  value="Expense"
+                  checked={purchaseType === 'Expense'}
+                  onChange={e => setPurchaseType(e.target.value)}
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                />
+                🧾 Operating Expense / Consumables
+              </label>
+            </div>
+            {purchaseType === 'Fixed Asset' && (
+              <p className="mt-2 text-xs text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 font-semibold">
+                ⚠️ Fixed Asset Mode Active: This purchase will be booked directly to Balance Sheet Fixed Assets and will NOT inflate saleable product stock.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">Purchase Date *</label>
               <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} required

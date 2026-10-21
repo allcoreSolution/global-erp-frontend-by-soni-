@@ -10,7 +10,7 @@ const CompanyProfile = () => {
   const [editForm, setEditForm] = useState({
     name: '', code: '', address: '', phone: '', email: '', website: '',
     ownerName: '', constitution: 'Proprietorship', drugLicenceNo: '', drugLicenceValidity: '',
-    valuationMethod: 'FIFO', dispatchMethod: 'FEFO'
+    valuationMethod: 'FIFO', dispatchMethod: 'FEFO', negativeStockAllowed: false
   });
 
   const fetchProfile = async () => {
@@ -30,6 +30,7 @@ const CompanyProfile = () => {
           drugLicenceValidity: res.data.drugLicenceValidity || '',
           valuationMethod: res.data.valuationMethod || 'FIFO',
           dispatchMethod: res.data.dispatchMethod || 'FEFO',
+          negativeStockAllowed: Boolean(res.data.negativeStockAllowed),
           logo: '🏢'
         });
       }
@@ -55,7 +56,8 @@ const CompanyProfile = () => {
       drugLicenceNo: activeCo.drugLicenceNo || '',
       drugLicenceValidity: activeCo.drugLicenceValidity || '',
       valuationMethod: activeCo.valuationMethod || 'FIFO',
-      dispatchMethod: activeCo.dispatchMethod || 'FEFO'
+      dispatchMethod: activeCo.dispatchMethod || 'FEFO',
+      negativeStockAllowed: Boolean(activeCo.negativeStockAllowed)
     });
     setIsEditing(true);
   };
@@ -248,6 +250,18 @@ const CompanyProfile = () => {
                     className="w-full border border-slate-200 bg-slate-50 p-2 text-sm rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none font-semibold text-slate-800 resize-none"
                   />
                 </div>
+                <div className="sm:col-span-2 flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="edit_neg_stock"
+                    checked={editForm.negativeStockAllowed}
+                    onChange={(e) => setEditForm({ ...editForm, negativeStockAllowed: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                  />
+                  <label htmlFor="edit_neg_stock" className="text-xs font-bold text-slate-700 cursor-pointer">
+                    Allow Negative Stock Billing (Unchecked = Strict negative stock prevention enabled)
+                  </label>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
@@ -371,6 +385,12 @@ const CompanyProfile = () => {
                   <div>
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Dispatch Priority</p>
                     <p className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded inline-block border border-purple-100">{activeCo.dispatchMethod || 'FEFO'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Negative Stock Rule</p>
+                    <p className={`text-xs font-bold px-2 py-0.5 rounded inline-block border ${activeCo.negativeStockAllowed ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200'}`}>
+                      {activeCo.negativeStockAllowed ? 'Negative Stock Allowed' : 'Strict Prevention (Blocked)'}
+                    </p>
                   </div>
                 </div>
               </div>

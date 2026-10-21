@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Filter, Download, Printer, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Layers, Filter, Download, Printer, CheckCircle, AlertTriangle, ArrowRight, Sparkles, X } from 'lucide-react';
+import Swal from 'sweetalert2';
 import api from '../../../api';
 
 const Reconciliation = () => {
@@ -10,6 +11,52 @@ const Reconciliation = () => {
     invoices: []
   });
   const [loading, setLoading] = useState(true);
+
+  // 1-Click GST Set-Off Wizard State
+  const [isSetOffModalOpen, setIsSetOffModalOpen] = useState(false);
+  const [setOffForm, setSetOffForm] = useState({
+    cgstAmount: 11745,
+    sgstAmount: 11745,
+    igstAmount: 0,
+    monthYear: 'April 2026'
+  });
+
+  const handlePostGstSetOff = async (e) => {
+    e.preventDefault();
+    const cgst = Number(setOffForm.cgstAmount) || 0;
+    const sgst = Number(setOffForm.sgstAmount) || 0;
+    const igst = Number(setOffForm.igstAmount) || 0;
+    const totalSetOff = cgst + sgst + igst;
+
+    try {
+      const payload = {
+        journalNo: `JV-GSTSETOFF-${Date.now().toString().slice(-6)}`,
+        journalDate: new Date().toISOString().split('T')[0],
+        financialYear: '2026-27',
+        referenceNo: `GST-SETOFF-${setOffForm.monthYear}`,
+        narration: `Month-end GST Input vs Output tax set-off under Section 49 (${setOffForm.monthYear})`,
+        status: 'Approved',
+        entries: [
+          { account: 'Output CGST A/c', debit: cgst, credit: 0, description: 'Set-off Output CGST Liability' },
+          { account: 'Input CGST A/c', debit: 0, credit: cgst, description: 'Utilize Input CGST Credit' },
+          { account: 'Output SGST A/c', debit: sgst, credit: 0, description: 'Set-off Output SGST Liability' },
+          { account: 'Input SGST A/c', debit: 0, credit: sgst, description: 'Utilize Input SGST Credit' }
+        ],
+        totals: { debit: totalSetOff, credit: totalSetOff }
+      };
+
+      await api.post('/journals', payload);
+      Swal.fire({
+        icon: 'success',
+        title: 'GST Set-Off Journal Posted! ✓',
+        text: `Voucher posted: CGST ₹${cgst.toLocaleString()} & SGST ₹${sgst.toLocaleString()} set-off successfully.`,
+        confirmButtonColor: '#4f46e5'
+      });
+      setIsSetOffModalOpen(false);
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Set-Off Failed', text: err.message });
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,6 +106,12 @@ const Reconciliation = () => {
         </div>
         <div className="flex items-center gap-2 no-print">
           <button 
+            onClick={() => setIsSetOffModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded shadow-xs transition"
+          >
+            <Sparkles size={14} /> 1-Click GST Set-Off Wizard
+          </button>
+          <button 
             onClick={handleExportCSV}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border rounded transition"
           >
@@ -100,9 +153,18 @@ const Reconciliation = () => {
           <span className="text-[10px] text-gray-500 font-bold uppercase block">Total Input GST (ITC Reconciled)</span>
           <span className="text-xl font-extrabold text-emerald-600">{reconciliationData.netPosition.inputTax}</span>
         </div>
-        <div className="p-4 border rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-500/20">
-          <span className="text-[10px] text-gray-500 font-bold uppercase block">Net GST Cash Payable</span>
-          <span className="text-xl font-extrabold text-indigo-600">{reconciliationData.netPosition.netPayable}</span>
+        <div className="p-4 border rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-500/20 flex flex-col justify-between">
+          <div>
+            <span className="text-[10px] text-gray-500 font-bold uppercase block">Net GST Cash Payable</span>
+            <span className="text-xl font-extrabold text-indigo-600">{reconciliationData.netPosition.netPayable}</span>
+          </div>
+          <button
+            onClick={() => setIsSetOffModalOpen(true)}
+            className="mt-3 text-[11px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 shadow-xs flex items-center justify-between transition"
+          >
+            <span>⚡ Set-Off & Post Journal</span>
+            <ArrowRight size={13} />
+          </button>
         </div>
       </div>
 
@@ -184,6 +246,96 @@ const Reconciliation = () => {
           </table>
         </div>
       </div>
+      {/* 1-Click GST Set-Off Modal */}
+      {isSetOffModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-yellow-300" /> 1-Click GST Set-Off Wizard
+                </h3>
+                <p className="text-xs text-indigo-100 mt-1">Rule 88A / Section 49 Month-End Input vs Output Adjustment</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsSetOffModalOpen(false)} 
+                className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePostGstSetOff} className="p-6 space-y-4">
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-900">
+                <strong>Standard Rule:</strong> Output liability is set-off against available eligible Input Tax Credit (ITC). Excess ITC carries forward, or remaining liability is paid via cash ledger.
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Set-Off Period / Month</label>
+                <input 
+                  type="text" 
+                  value={setOffForm.monthYear} 
+                  onChange={(e) => setSetOffForm({ ...setOffForm, monthYear: e.target.value })}
+                  placeholder="e.g. April 2026"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">CGST Set-Off (₹)</label>
+                  <input 
+                    type="number" 
+                    value={setOffForm.cgstAmount} 
+                    onChange={(e) => setSetOffForm({ ...setOffForm, cgstAmount: Number(e.target.value) })}
+                    placeholder="11745"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 font-bold"
+                    required
+                  />
+                  <span className="text-[10px] text-gray-500">Output CGST Dr / Input CGST Cr</span>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">SGST Set-Off (₹)</label>
+                  <input 
+                    type="number" 
+                    value={setOffForm.sgstAmount} 
+                    onChange={(e) => setSetOffForm({ ...setOffForm, sgstAmount: Number(e.target.value) })}
+                    placeholder="11745"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 font-bold"
+                    required
+                  />
+                  <span className="text-[10px] text-gray-500">Output SGST Dr / Input SGST Cr</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex justify-between items-center font-bold">
+                <span className="text-slate-600">Total Set-Off Value:</span>
+                <span className="text-emerald-700 text-sm">
+                  ₹{((Number(setOffForm.cgstAmount) || 0) + (Number(setOffForm.sgstAmount) || 0) + (Number(setOffForm.igstAmount) || 0)).toLocaleString()}
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t">
+                <button 
+                  type="button" 
+                  onClick={() => setIsSetOffModalOpen(false)} 
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg text-sm font-semibold shadow-md flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-4 h-4" /> Post JV Voucher
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

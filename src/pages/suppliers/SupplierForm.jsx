@@ -11,6 +11,7 @@ export const initialFormState = {
   type: 'Manufacturer',
   companyName: '',
   contactPerson: '',
+  contactPersonDesignation: '',
   phone: '',
   email: '',
   category: 'Raw Materials',
@@ -220,6 +221,10 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
                 <div>
                   <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Contact Person *</label>
                   <input type="text" required value={supplierForm.contactPerson} onChange={(e) => setSupplierForm({ ...supplierForm, contactPerson: e.target.value })} className="w-full border border-slate-300 rounded p-2" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Contact Person Designation</label>
+                  <input type="text" placeholder="e.g. Sales Manager / Director" value={supplierForm.contactPersonDesignation || ''} onChange={(e) => setSupplierForm({ ...supplierForm, contactPersonDesignation: e.target.value })} className="w-full border border-slate-300 rounded p-2" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Mobile Number *</label>

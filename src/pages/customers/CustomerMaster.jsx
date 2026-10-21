@@ -72,6 +72,7 @@ const CustomerMaster = () => {
     customerCode: '',
     name: '',
     ownerName: '',
+    contactPersonDesignation: '',
     businessName: '',
     type: 'Retailer',
     category: 'Regular',
@@ -759,6 +760,10 @@ const CustomerMaster = () => {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Owner / Contact Person</label>
                       <input type="text" placeholder="Owner Name" value={customerForm.ownerName} onChange={(e) => setCustomerForm({ ...customerForm, ownerName: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Contact Person Designation</label>
+                      <input type="text" placeholder="e.g. Purchase Head / Manager" value={customerForm.contactPersonDesignation || ''} onChange={(e) => setCustomerForm({ ...customerForm, contactPersonDesignation: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
                     </div>
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Business / Company Name</label>

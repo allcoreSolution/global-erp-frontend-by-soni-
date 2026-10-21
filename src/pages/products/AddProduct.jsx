@@ -25,6 +25,8 @@ const AddProduct = () => {
     mrp: '',
     packingDetails: '',
     negativeStockAllowed: false,
+    valuation: 'FIFO',
+    dispatchRule: 'FIFO',
     batchNo: '',
     mfgDate: '',
     expDate: '',
@@ -535,6 +537,21 @@ const AddProduct = () => {
                 placeholder="Target units sold per day"
                 className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md px-3 py-2 text-sm text-black placeholder:text-black/60 outline-none"
               />
+            </div>
+
+            {/* Valuation Method */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-black mb-2">Valuation Method</label>
+              <select
+                name="valuation"
+                value={formData.valuation}
+                onChange={handleChange}
+                className="w-full bg-transparent border border-blue-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 rounded-md px-3 py-2 text-sm text-black outline-none"
+              >
+                <option value="FIFO" className="text-black bg-white">FIFO (First In First Out)</option>
+                <option value="Average" className="text-black bg-white">Weighted Average</option>
+                <option value="LIFO" className="text-black bg-white">LIFO (Last In First Out)</option>
+              </select>
             </div>
 
             {/* Product Tax */}

@@ -14,7 +14,13 @@ const NewPayment = () => {
     paymentDate: new Date().toISOString().split('T')[0],
     supplierParty: '',
     paymentAmount: 0,
-    paymentMethod: '',
+    paymentMethod: 'Bank',
+    isSplitPayment: false,
+    bankAmount: '',
+    cashAmount: '',
+    isLoanRepayment: false,
+    principalAmount: '',
+    interestAmount: '',
     paidFromAccount: '',
     transactionRef: '',
     remarks: ''
@@ -33,7 +39,6 @@ const NewPayment = () => {
 
   // Derived filtered options
   const warehouses = allWarehouses.filter(w => !branch || w.branchName === branch).map(w => w.name);
-  // We assume suppliers aren't strictly filtered by warehouse in all schemas, but we can filter if they have warehouseName. If not, just show all.
   const suppliers = allSuppliers;
   const invoices = allPurchases.filter(p => (p.supplier?._id || p.supplier) === form.supplierParty && p.paymentStatus !== 'Paid');
 
@@ -53,7 +58,7 @@ const NewPayment = () => {
           api.get('/branches').catch(() => ({ data: { data: [] } })),
           api.get('/catalogs/warehouses').catch(() => ({ data: { data: [] } })),
           api.get('/suppliers').catch(() => ({ data: { data: [] } })),
-          api.get('/purchases').catch(() => ({ data: { data: [] } })), // Assuming purchases exists
+          api.get('/purchases').catch(() => ({ data: { data: [] } })),
           api.get('/payment-modes').catch(() => ({ data: { data: [] } })),
           api.get('/account-ledgers').catch(() => ({ data: { data: [] } }))
         ]);
@@ -105,12 +110,17 @@ const NewPayment = () => {
               paymentDate: p.paymentDate ? p.paymentDate.substring(0, 10) : '',
               supplierParty: p.supplierParty || '',
               paymentAmount: p.paymentAmount || 0,
-              paymentMethod: p.paymentMethod || '',
+              paymentMethod: p.paymentMethod || 'Bank',
+              isSplitPayment: Boolean(p.isSplitPayment),
+              bankAmount: p.bankAmount || '',
+              cashAmount: p.cashAmount || '',
+              isLoanRepayment: Boolean(p.principalAmount || p.interestAmount),
+              principalAmount: p.principalAmount || '',
+              interestAmount: p.interestAmount || '',
               paidFromAccount: p.paidFromAccount || '',
               transactionRef: p.transactionRef || '',
               remarks: p.remarks || ''
             });
-            // Also need to set branch/warehouse logic if we had it, but we can leave them blank since they aren't stored
           }
         } catch (error) {
           console.error('Error fetching payment details:', error);
@@ -121,23 +131,34 @@ const NewPayment = () => {
   }, [id]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    const val = type === 'checkbox' ? checked : value;
     setForm(prev => {
-      const updated = { ...prev, [name]: value };
-      if (name === 'paymentAmount') {
-        const amt = Number(value) || 0;
-        let remaining = amt;
-        const newAdjustments = invoiceAdjustments.map(inv => {
-          if (remaining > 0) {
-            const adjust = Math.min(remaining, inv.dueAmount);
-            remaining -= adjust;
-            return { ...inv, adjustAmount: adjust };
-          }
-          return { ...inv, adjustAmount: 0 };
-        });
-        setInvoiceAdjustments(newAdjustments);
-        calculateTotals(amt, newAdjustments);
+      const updated = { ...prev, [name]: val };
+
+      if (name === 'bankAmount' || name === 'cashAmount') {
+        const b = Number(name === 'bankAmount' ? val : prev.bankAmount) || 0;
+        const c = Number(name === 'cashAmount' ? val : prev.cashAmount) || 0;
+        updated.paymentAmount = b + c;
+      } else if (name === 'principalAmount' || name === 'interestAmount') {
+        const p = Number(name === 'principalAmount' ? val : prev.principalAmount) || 0;
+        const i = Number(name === 'interestAmount' ? val : prev.interestAmount) || 0;
+        updated.paymentAmount = p + i;
       }
+
+      const amt = Number(updated.paymentAmount) || 0;
+      let remaining = amt;
+      const newAdjustments = invoiceAdjustments.map(inv => {
+        if (remaining > 0) {
+          const adjust = Math.min(remaining, inv.dueAmount);
+          remaining -= adjust;
+          return { ...inv, adjustAmount: adjust };
+        }
+        return { ...inv, adjustAmount: 0 };
+      });
+      setInvoiceAdjustments(newAdjustments);
+      calculateTotals(amt, newAdjustments);
+
       return updated;
     });
   };
@@ -146,7 +167,6 @@ const NewPayment = () => {
     const suppId = e.target.value;
     setForm(prev => ({ ...prev, supplierParty: suppId }));
 
-    // Automatically prepare pending invoices for this supplier
     const pending = allPurchases.filter(p => (p.supplier?._id || p.supplier) === suppId && p.paymentStatus !== 'Paid');
     const preparedAdjustments = pending.map(inv => ({
       id: inv.id,
@@ -179,11 +199,22 @@ const NewPayment = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
+      const finalAmount = form.isSplitPayment
+        ? ((Number(form.bankAmount) || 0) + (Number(form.cashAmount) || 0))
+        : (form.isLoanRepayment
+          ? ((Number(form.principalAmount) || 0) + (Number(form.interestAmount) || 0))
+          : (Number(form.paymentAmount) || 0));
+
       const payload = {
         ...form,
         branch,
         warehouse,
-        paymentAmount: Number(form.paymentAmount) || 0,
+        paymentAmount: finalAmount,
+        isSplitPayment: Boolean(form.isSplitPayment),
+        bankAmount: Number(form.bankAmount) || 0,
+        cashAmount: Number(form.cashAmount) || 0,
+        principalAmount: Number(form.principalAmount) || 0,
+        interestAmount: Number(form.interestAmount) || 0,
         invoices: invoiceAdjustments.filter(i => i.adjustAmount > 0)
       };
 
@@ -292,11 +323,117 @@ const NewPayment = () => {
 
           {/* SECTION: PAYMENT DETAILS */}
           <div className="border border-slate-200 rounded-lg p-5">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Payment Details</h3>
+            <div className="flex flex-wrap justify-between items-center mb-4 pb-2 border-b border-slate-100 gap-2">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Payment Details</h3>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                  <input
+                    type="checkbox"
+                    name="isSplitPayment"
+                    checked={form.isSplitPayment}
+                    onChange={(e) => {
+                      if (e.target.checked) setForm(prev => ({ ...prev, isSplitPayment: true, isLoanRepayment: false }));
+                      else setForm(prev => ({ ...prev, isSplitPayment: false }));
+                    }}
+                    className="w-3.5 h-3.5 text-indigo-600 rounded focus:ring-indigo-500"
+                  />
+                  <span>Split Payment (Bank + Cash)</span>
+                </label>
+
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-100">
+                  <input
+                    type="checkbox"
+                    name="isLoanRepayment"
+                    checked={form.isLoanRepayment}
+                    onChange={(e) => {
+                      if (e.target.checked) setForm(prev => ({ ...prev, isLoanRepayment: true, isSplitPayment: false }));
+                      else setForm(prev => ({ ...prev, isLoanRepayment: false }));
+                    }}
+                    className="w-3.5 h-3.5 text-purple-600 rounded focus:ring-purple-500"
+                  />
+                  <span>Loan Installment (Principal + Interest)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Split Payment (Bank + Cash) Box */}
+            {form.isSplitPayment && (
+              <div className="space-y-3 mb-4 p-3.5 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                <p className="text-[11px] text-indigo-900 font-semibold">
+                  Multi-Account Payment: Specify amount paid from Bank vs Cash
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-indigo-800 mb-1">Bank Payment Amount (₹) *</label>
+                    <input
+                      type="number"
+                      name="bankAmount"
+                      value={form.bankAmount}
+                      onChange={handleChange}
+                      placeholder="e.g. 50000"
+                      className="w-full border border-indigo-300 rounded px-3 py-2 text-sm font-bold text-slate-800 focus:bg-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-800 mb-1">Cash Payment Amount (₹) *</label>
+                    <input
+                      type="number"
+                      name="cashAmount"
+                      value={form.cashAmount}
+                      onChange={handleChange}
+                      placeholder="e.g. 10000"
+                      className="w-full border border-emerald-300 rounded px-3 py-2 text-sm font-bold text-slate-800 focus:bg-white outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Loan Repayment Split Box */}
+            {form.isLoanRepayment && (
+              <div className="space-y-3 mb-4 p-3.5 bg-purple-50/50 rounded-lg border border-purple-100">
+                <p className="text-[11px] text-purple-900 font-semibold">
+                  Loan Repayment Split: Entry 28 (Principal Repayment + Interest Expense)
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-purple-800 mb-1">Principal Reduction (Liability Dr) ₹ *</label>
+                    <input
+                      type="number"
+                      name="principalAmount"
+                      value={form.principalAmount}
+                      onChange={handleChange}
+                      placeholder="e.g. 10000"
+                      className="w-full border border-purple-300 rounded px-3 py-2 text-sm font-bold text-slate-800 focus:bg-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-rose-800 mb-1">Interest Expense (Expense Dr) ₹ *</label>
+                    <input
+                      type="number"
+                      name="interestAmount"
+                      value={form.interestAmount}
+                      onChange={handleChange}
+                      placeholder="e.g. 2000"
+                      className="w-full border border-rose-300 rounded px-3 py-2 text-sm font-bold text-slate-800 focus:bg-white outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Amount *</label>
-                <input type="number" name="paymentAmount" value={form.paymentAmount} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold text-blue-700 focus:border-indigo-500 outline-none" />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Total Payment Amount (₹) *</label>
+                <input
+                  type="number"
+                  name="paymentAmount"
+                  value={form.paymentAmount}
+                  onChange={handleChange}
+                  readOnly={form.isSplitPayment || form.isLoanRepayment}
+                  required
+                  className={`w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold text-blue-700 focus:border-indigo-500 outline-none ${(form.isSplitPayment || form.isLoanRepayment) ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method *</label>
