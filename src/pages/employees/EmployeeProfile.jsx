@@ -17,17 +17,19 @@ const EmployeeProfile = () => {
   // Form State
   const [form, setForm] = useState(() => {
     let defaultCompany = '';
+    let defaultCompanyName = '';
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const u = JSON.parse(userStr);
-        defaultCompany = u.company?.name || (typeof u.company === 'string' ? u.company : '');
+        defaultCompanyName = u.company?.name || (typeof u.company === 'string' && !/^[0-9a-fA-F]{24}$/.test(u.company) ? u.company : '');
+        defaultCompany = u.company?._id || (typeof u.company === 'string' && /^[0-9a-fA-F]{24}$/.test(u.company) ? u.company : '') || u.companyId || defaultCompanyName;
       }
     } catch {
       defaultCompany = '';
     }
-    if (!defaultCompany) {
-      defaultCompany = localStorage.getItem('companyName') || localStorage.getItem('erp_company') || '';
+    if (!defaultCompanyName) {
+      defaultCompanyName = localStorage.getItem('companyName') || localStorage.getItem('erp_company') || defaultCompany || '';
     }
 
     return {
@@ -42,6 +44,7 @@ const EmployeeProfile = () => {
       
       // Employment Details
       company: defaultCompany,
+      companyName: defaultCompanyName,
       branch: '',
       department: '',
       role: '',
@@ -101,17 +104,18 @@ const EmployeeProfile = () => {
     const fetchCompanyInfo = async () => {
       try {
         const { data } = await api.get('/companies/profile');
-        if (data && data.name) {
+        if (data) {
           setForm(prev => ({
             ...prev,
-            company: prev.company || data.name
+            companyName: data.name || prev.companyName,
+            company: data._id || prev.company || data.name
           }));
         }
       } catch (err) {
         // Fallback silently if not available
       }
     };
-    if (!form.company) {
+    if (!form.company || !form.companyName) {
       fetchCompanyInfo();
     }
   }, []);
@@ -125,7 +129,8 @@ const EmployeeProfile = () => {
           if (data.success) {
             setForm(prev => ({
               ...prev,
-              ...data.data
+              ...data.data,
+              companyName: data.data?.companyName || prev.companyName || data.data?.company
             }));
           }
         } catch (error) {
@@ -472,9 +477,21 @@ const EmployeeProfile = () => {
         netSalary: Number(form.netSalary) || 0
       };
 
-      // Exclude files from text loop
+      // Exclude files and display helpers from text loop
       delete payload.profilePhotoFile;
       delete payload.documentFiles;
+      delete payload.companyName;
+
+      // Ensure company is an ID if available in local session
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const activeCompId = u.company?._id || (typeof u.company === 'string' && /^[0-9a-fA-F]{24}$/.test(u.company) ? u.company : '') || u.companyId;
+        if (activeCompId) {
+          payload.company = activeCompId;
+        }
+      } catch (e) {
+        // Fallback to payload.company
+      }
 
       // Append all text/number fields to FormData
       Object.entries(payload).forEach(([key, value]) => {
@@ -1037,7 +1054,7 @@ const EmployeeProfile = () => {
                     <input 
                       type="text" 
                       name="company" 
-                      value={form.company || 'Loading...'} 
+                      value={form.companyName || form.company || 'Loading...'} 
                       readOnly 
                       title="Company is automatically assigned based on your active organization"
                       className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-slate-100 font-semibold text-slate-700 cursor-not-allowed outline-none select-none" 
