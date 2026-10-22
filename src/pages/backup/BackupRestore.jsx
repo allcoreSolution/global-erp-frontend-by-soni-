@@ -31,6 +31,8 @@ const BackupRestore = () => {
   const fetchBackups = async () => {
     setIsRefreshing(true);
     try {
+      const res = await api.get('/backups');
+      const data = res.data;
       const list = Array.isArray(data) ? data : (data?.backups || data?.data || []);
       setBackupHistory(list);
       addLog('Fetched latest backup snapshot catalog.');

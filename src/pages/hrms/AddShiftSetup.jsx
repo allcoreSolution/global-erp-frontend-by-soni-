@@ -156,9 +156,21 @@ const AddShiftSetup = () => {
   };
 
   const handleSave = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+
+    if (!form.shiftName || !form.shiftName.trim()) {
+      alert('Please enter Shift Name (e.g. Regular Day Shift, Morning Shift).');
+      const shiftNameEl = document.querySelector('input[name="shiftName"]');
+      if (shiftNameEl) shiftNameEl.focus();
+      return;
+    }
+
     try {
-      const payload = { ...form, breaks };
+      const payload = {
+        ...form,
+        shiftName: form.shiftName.trim(),
+        breaks
+      };
       if (isEditMode) {
         await api.put(`/shift-setups/${id}`, payload);
         alert('Shift Updated Successfully!');
@@ -211,9 +223,9 @@ const AddShiftSetup = () => {
               Cancel
             </button>
             <button
-              type="button"
-              onClick={handleSave}
-              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-md shadow-indigo-200 rounded-xl transition flex items-center gap-1.5"
+              type="submit"
+              form="shift-setup-form"
+              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-md shadow-indigo-200 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
             >
               <Save size={14} /> {isEditMode ? 'Update Shift' : 'Save Shift'}
             </button>
@@ -222,7 +234,7 @@ const AddShiftSetup = () => {
       </div>
 
       <div className="max-w-6xl mx-auto">
-        <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <form id="shift-setup-form" onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* LEFT COLUMN - Primary Details */}
           <div className="lg:col-span-7 space-y-6">
