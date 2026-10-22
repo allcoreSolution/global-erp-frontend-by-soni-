@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Plus, Trash2, CheckCircle2, AlertCircle, 
-  Info, Save, ArrowRightLeft, Database
+  Info, Save, Database
 } from 'lucide-react';
 import api from '../../api';
 import DynamicSelect from '../../components/DynamicSelect';
@@ -99,12 +99,6 @@ const NewTransfer = () => {
   const isSameWarehouse = fromWarehouse && toWarehouse && fromWarehouse === toWarehouse;
   const hasEmptyFields = !fromWarehouse || !toWarehouse || items.some(item => !item.product || !item.qty);
   const isValid = !hasEmptyFields && totalQty > 0;
-
-  const handleSwapWarehouses = () => {
-    const temp = fromWarehouse;
-    setFromWarehouse(toWarehouse);
-    setToWarehouse(temp);
-  };
 
   const handleAddRow = () => {
     setItems([...items, { product: '', qty: '', unit: 'Nos', batch: '', serial: '' }]);
@@ -226,29 +220,19 @@ const NewTransfer = () => {
                   value={fromWarehouse}
                   onChange={(e) => setFromWarehouse(e.target.value)}
                   defaultOptions={WAREHOUSES_LIST}
+                  hideAddButton
                 />
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase">To Warehouse *</label>
-                  {fromWarehouse && toWarehouse && (
-                    <button
-                      type="button"
-                      onClick={handleSwapWarehouses}
-                      className="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 cursor-pointer"
-                      title="Swap From and To Warehouses"
-                    >
-                      <ArrowRightLeft size={11} /> Swap
-                    </button>
-                  )}
-                </div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">To Warehouse *</label>
                 <DynamicSelect
                   name="toWarehouse"
                   category="Warehouse"
                   value={toWarehouse}
                   onChange={(e) => setToWarehouse(e.target.value)}
                   defaultOptions={WAREHOUSES_LIST}
+                  hideAddButton
                 />
               </div>
             </div>
@@ -392,18 +376,11 @@ const NewTransfer = () => {
             {isSameWarehouse && (
               <div className="bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-200 text-xs mb-4 shadow-sm">
                 <div className="font-bold flex items-center gap-1.5 mb-1 text-amber-900">
-                  <Info size={15} /> Internal Transfer (Same Warehouse)
+                  <Info size={15} /> Note: Same Warehouse Selected
                 </div>
-                <div className="text-[11px] text-amber-700 leading-relaxed mb-2">
-                  Aapne Source aur Destination dono me <b>{fromWarehouse}</b> chuna hai. Yeh voucher internal movement ke roop me save ho jayega. Agar doosre godown me transfer karna ho, toh <b>To Warehouse</b> me alag warehouse select karein.
+                <div className="text-[11px] text-amber-700 leading-relaxed">
+                  Source aur Destination dono me <b>{fromWarehouse}</b> chuna gaya hai.
                 </div>
-                <button
-                  type="button"
-                  onClick={handleSwapWarehouses}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold bg-white border border-amber-300 text-amber-800 rounded hover:bg-amber-100 transition-colors cursor-pointer"
-                >
-                  <ArrowRightLeft size={12} /> Swap Warehouses
-                </button>
               </div>
             )}
 
