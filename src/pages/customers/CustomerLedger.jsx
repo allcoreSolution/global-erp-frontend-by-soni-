@@ -180,9 +180,9 @@ const CustomerLedgerDetailPage = ({
             </div>
           </div>
 
-          {/* 3. 4 Top KPI Metric Cards for Customer */}
+          {/* 3. Top KPI Metric Cards for Customer */}
           {summary && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${(summary.totalReturns || 0) > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4 mb-6`}>
               <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Sale Invoices</span>
@@ -225,6 +225,22 @@ const CustomerLedgerDetailPage = ({
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
               </div>
 
+              {(summary.totalReturns || 0) > 0 && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-amber-200/80 dark:border-amber-900/60 shadow-sm relative overflow-hidden group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">Returns / Credits</span>
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <RotateCcw size={20} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl font-black text-amber-600 dark:text-amber-400">-₹{(summary.totalReturns || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    <div className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">{customerDetails?.returns?.length || 1} return slip(s) credit</div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500" />
+                </div>
+              )}
+
               <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-rose-200/80 dark:border-rose-900/60 shadow-sm relative overflow-hidden group bg-gradient-to-br from-white via-rose-50/20 to-rose-50/40 dark:from-slate-900 dark:via-rose-950/20 dark:to-rose-950/30">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-rose-800 dark:text-rose-300">Balance Receivable Due</span>
@@ -237,7 +253,11 @@ const CustomerLedgerDetailPage = ({
                     ₹{(summary.netBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-[11px] text-rose-700 dark:text-rose-400 font-semibold mt-1 flex items-center gap-1">
-                    {summary.netBalance > 0 ? <><AlertTriangle size={13} /> Outstanding from customer</> : 'Fully Settled (₹0 Due)'}
+                    {summary.netBalance > 0 ? (
+                      <><AlertTriangle size={13} /> Net Due (Billed − Paid − Returns)</>
+                    ) : (
+                      'Fully Settled (₹0 Due)'
+                    )}
                   </div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-amber-500" />
@@ -336,6 +356,7 @@ const CustomerLedgerDetailPage = ({
                           <th className="py-3 px-4 text-center">Items</th>
                           <th className="py-3 px-4 text-right">Grand Total</th>
                           <th className="py-3 px-4 text-right">Paid Amount</th>
+                          <th className="py-3 px-4 text-right">Return / Credit</th>
                           <th className="py-3 px-4 text-right">Balance Due</th>
                           <th className="py-3 px-4 text-center">Status</th>
                           <th className="py-3 px-4 text-center">Action / Slip</th>
@@ -344,7 +365,7 @@ const CustomerLedgerDetailPage = ({
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-700 dark:text-slate-300">
                         {filteredInvoices.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="py-12 text-center text-slate-400">
+                            <td colSpan={10} className="py-12 text-center text-slate-400">
                               <Receipt size={36} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
                               <p className="font-semibold text-sm text-slate-600 dark:text-slate-300">No invoices match this filter</p>
                               <p className="text-xs text-slate-400 mt-0.5">Click '+ Create Sale Invoice' to record a new sale for this customer.</p>
@@ -354,7 +375,10 @@ const CustomerLedgerDetailPage = ({
                           filteredInvoices.map((inv) => {
                             const grandTotal = Number(inv.grandTotal) || 0;
                             const amountPaid = Number(inv.amountPaid) || 0;
-                            const balanceDue = Math.max(0, grandTotal - amountPaid);
+                            const returnedAmount = Number(inv.returnedAmount) || 0;
+                            const balanceDue = inv.balanceDue !== undefined
+                              ? Number(inv.balanceDue)
+                              : Math.max(0, grandTotal - amountPaid - returnedAmount);
 
                             return (
                               <tr key={inv._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
@@ -391,11 +415,28 @@ const CustomerLedgerDetailPage = ({
                                   ₹{amountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                 </td>
 
+                                <td className="py-3 px-4 text-right font-semibold">
+                                  {returnedAmount > 0 ? (
+                                    <span className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-900/60 inline-block text-xs">
+                                      -₹{returnedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
+                                </td>
+
                                 <td className="py-3 px-4 text-right font-bold">
                                   {balanceDue > 0 ? (
-                                    <span className="text-rose-600 dark:text-rose-400">
-                                      ₹{balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </span>
+                                    <div>
+                                      <span className="text-rose-600 dark:text-rose-400">
+                                        ₹{balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                      </span>
+                                      {returnedAmount > 0 && (
+                                        <div className="text-[10px] text-slate-400 font-normal">
+                                          (₹{(grandTotal - amountPaid).toLocaleString('en-IN')} − ₹{returnedAmount.toLocaleString('en-IN')})
+                                        </div>
+                                      )}
+                                    </div>
                                   ) : (
                                     <span className="text-emerald-600 dark:text-emerald-400">₹0.00</span>
                                   )}
@@ -445,6 +486,38 @@ const CustomerLedgerDetailPage = ({
                           })
                         )}
                       </tbody>
+
+                      {filteredInvoices.length > 0 && (
+                        <tfoot className="bg-slate-50/90 dark:bg-slate-800/90 border-t-2 border-slate-200 dark:border-slate-700 text-xs font-bold">
+                          <tr>
+                            <td colSpan={4} className="py-3.5 px-4 text-slate-700 dark:text-slate-200">
+                              Total Summary ({filteredInvoices.length} Bills)
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-slate-900 dark:text-slate-100 font-black">
+                              ₹{filteredInvoices.reduce((sum, inv) => sum + (Number(inv.grandTotal) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-emerald-600 dark:text-emerald-400 font-black">
+                              ₹{filteredInvoices.reduce((sum, inv) => sum + (Number(inv.amountPaid) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-amber-600 dark:text-amber-400 font-black">
+                              {filteredInvoices.reduce((sum, inv) => sum + (Number(inv.returnedAmount) || 0), 0) > 0
+                                ? `-₹${filteredInvoices.reduce((sum, inv) => sum + (Number(inv.returnedAmount) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                                : '—'}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-rose-600 dark:text-rose-400 font-black text-sm">
+                              ₹{filteredInvoices.reduce((sum, inv) => {
+                                const gTot = Number(inv.grandTotal) || 0;
+                                const pd = Number(inv.amountPaid) || 0;
+                                const ret = Number(inv.returnedAmount) || 0;
+                                return sum + (inv.balanceDue !== undefined ? Number(inv.balanceDue) : Math.max(0, gTot - pd - ret));
+                              }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td colSpan={2} className="py-3.5 px-4 text-center text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                              Net Outstanding
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
                   </div>
                 </div>
@@ -613,16 +686,16 @@ const CustomerLedgerDetailPage = ({
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                           {customerDetails.returns.map((ret) => (
                             <tr key={ret._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                              <td className="p-3 font-mono font-bold text-amber-600">{ret.returnNumber}</td>
-                              <td className="p-3">{ret.returnDate}</td>
-                              <td className="p-3">{ret.invoiceNumber || '—'}</td>
-                              <td className="p-3 text-slate-500">{ret.returnReason}</td>
+                              <td className="p-3 font-mono font-bold text-amber-600">{ret.returnNumber || ret.returnNo}</td>
+                              <td className="p-3">{ret.returnDate || ret.date}</td>
+                              <td className="p-3">{ret.invoiceNumber || ret.invoiceNo || '—'}</td>
+                              <td className="p-3 text-slate-500">{ret.reason || ret.returnReason || 'Approved sales return'}</td>
                               <td className="p-3 text-right font-bold text-amber-600">
-                                ₹{(Number(ret.totalRefundAmount) || 0).toLocaleString()}
+                                ₹{(Number(ret.totalRefundAmount || ret.totalAmount) || 0).toLocaleString()}
                               </td>
                               <td className="p-3">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                                  {ret.status}
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
+                                  {ret.status || 'Approved'}
                                 </span>
                               </td>
                             </tr>
@@ -733,9 +806,15 @@ const CustomerLedgerDetailPage = ({
                     <span>Amount Paid:</span>
                     <span>₹{Number(selectedInvoice.amountPaid || 0).toLocaleString()}</span>
                   </div>
+                  {Number(selectedInvoice.returnedAmount || 0) > 0 && (
+                    <div className="flex justify-between font-bold text-xs text-amber-600">
+                      <span>Sales Return / Credit:</span>
+                      <span>-₹{Number(selectedInvoice.returnedAmount).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-xs text-rose-600 border-t border-dashed border-slate-200 dark:border-slate-800 pt-1">
-                    <span>Balance Due:</span>
-                    <span>₹{Math.max(0, (Number(selectedInvoice.grandTotal || 0) - Number(selectedInvoice.amountPaid || 0))).toLocaleString()}</span>
+                    <span>Net Balance Due:</span>
+                    <span>₹{selectedInvoice.balanceDue !== undefined ? Number(selectedInvoice.balanceDue).toLocaleString() : Math.max(0, (Number(selectedInvoice.grandTotal || 0) - Number(selectedInvoice.amountPaid || 0) - Number(selectedInvoice.returnedAmount || 0))).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -940,8 +1019,12 @@ const CustomerLedger = () => {
     const billDate = inv.saleDate || new Date().toISOString().slice(0, 10);
     const grandTotal = Number(inv.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     const paid = Number(inv.amountPaid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-    const balanceDue = Math.max(0, (Number(inv.grandTotal || 0) - Number(inv.amountPaid || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-    const paymentStatus = inv.paymentStatus || (Number(inv.grandTotal || 0) <= Number(inv.amountPaid || 0) ? 'PAID' : 'DUE / UNPAID');
+    const retAmt = Number(inv.returnedAmount || 0);
+    const balanceDue = (inv.balanceDue !== undefined
+      ? Number(inv.balanceDue)
+      : Math.max(0, (Number(inv.grandTotal || 0) - Number(inv.amountPaid || 0) - retAmt))
+    ).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const paymentStatus = inv.paymentStatus || (Number(inv.grandTotal || 0) <= (Number(inv.amountPaid || 0) + retAmt) ? 'PAID' : 'DUE / UNPAID');
 
     // Build items summary if available
     let itemsText = '';
@@ -968,7 +1051,7 @@ const CustomerLedger = () => {
 
 💰 *Total Bill:* ₹${grandTotal}
 💵 *Amount Paid:* ₹${paid}
-🔴 *BALANCE OUTSTANDING DUE:* *₹${balanceDue}*
+${retAmt > 0 ? `↩️ *Sales Return / Credit:* -₹${retAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : ''}🔴 *NET BALANCE OUTSTANDING DUE:* *₹${balanceDue}*
 ${itemsText ? `\n📦 *Items Summary:*\n${itemsText}\n` : ''}
 ━━━━━━━━━━━━━━━━━━━━
 🏦 *Payment Information:*
