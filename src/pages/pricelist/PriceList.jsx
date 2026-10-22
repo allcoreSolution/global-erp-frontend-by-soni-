@@ -82,19 +82,34 @@ const PriceList = () => {
     let nextNum = priceLists.length + 1;
     if (priceLists.length > 0) {
       const ids = priceLists.map(p => {
-        const match = p.id?.match(/\d+/);
+        const match = (p.id || p.priceListCode || '').match(/\d+/);
         return match ? parseInt(match[0], 10) : 0;
       });
       nextNum = Math.max(...ids) + 1;
     }
     const nextId = `PL-${String(nextNum).padStart(3, '0')}`;
-    setCurrentPL({ id: nextId, name: '', customerType: 'Retailer', status: true, productPricing: [], quantityPricing: [] });
+    setCurrentPL({
+      id: nextId,
+      priceListCode: nextId,
+      name: '',
+      priceType: 'Sales',
+      applicableFor: 'Retailer',
+      customerType: 'Retailer',
+      currency: 'INR',
+      effectiveFrom: new Date().toISOString().slice(0, 10),
+      effectiveTo: '',
+      defaultPriceList: false,
+      status: true,
+      notes: '',
+      productPricing: [],
+      quantityPricing: []
+    });
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (pl) => {
     setIsEditMode(true);
-    setCurrentPL({ ...pl });
+    setCurrentPL({ ...pl, priceListCode: pl.priceListCode || pl.id });
     setIsModalOpen(true);
   };
 
@@ -102,16 +117,24 @@ const PriceList = () => {
     e.preventDefault();
     try {
       const payload = { ...currentPL };
+      if (!payload.priceListCode && payload.id) payload.priceListCode = payload.id;
+      if (!payload.id && payload.priceListCode) payload.id = payload.priceListCode;
+
       // Remove empty string references to prevent mongoose casting issues if any, although here they are mostly strings.
       if (payload.company === '') delete payload.company;
       if (payload.branch === '') delete payload.branch;
 
       if (isEditMode) {
-        const res = await api.put(`/price-lists/${currentPL._id}`, payload);
-        setPriceLists(priceLists.map(p => p._id === currentPL._id ? res.data.data : p));
+        const idToUse = currentPL._id || currentPL.id;
+        const res = await api.put(`/price-lists/${idToUse}`, payload);
+        const updated = res.data.data;
+        setPriceLists(priceLists.map(p => (p._id === currentPL._id || p.id === currentPL.id) ? updated : p));
+        Swal.fire('Success', 'Price list updated successfully!', 'success');
       } else {
         const res = await api.post('/price-lists', payload);
-        setPriceLists([...priceLists, res.data.data]);
+        const created = res.data.data;
+        setPriceLists([...priceLists, created]);
+        Swal.fire('Success', 'Price list created successfully!', 'success');
       }
       setIsModalOpen(false);
     } catch (error) {
