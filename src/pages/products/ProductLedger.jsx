@@ -290,8 +290,8 @@ const SupplierLedgerDetailPage = ({
               {activeTab === 'invoices' && (
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-2">
-                      {['All', 'Received', 'Due', 'Paid', 'Cancelled'].map((st) => (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {['All', 'Received', 'Due', 'Cancelled'].map((st) => (
                         <button
                           key={st}
                           onClick={() => setInvoiceStatusFilter(st)}
@@ -306,9 +306,21 @@ const SupplierLedgerDetailPage = ({
                       ))}
                     </div>
 
-                    <span className="text-xs text-slate-400 font-medium">
-                      Showing {filteredInvoices.length} bill(s)
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSendSupplierStatementWhatsApp(supplierDetails?.supplier, supplierDetails?.summary, supplierDetails?.purchases, false)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
+                        title="Send All Invoices / Due Summary together on WhatsApp"
+                      >
+                        <WhatsAppIcon size={14} />
+                        <span>Send All Invoices Slip (सारा एक साथ)</span>
+                      </button>
+
+                      <span className="text-xs text-slate-400 font-medium">
+                        Showing {filteredInvoices.length} bill(s)
+                      </span>
+                    </div>
                   </div>
 
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -810,13 +822,47 @@ const SupplierLedgerDetailPage = ({
               </div>
             )}
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 pt-3 border-t border-slate-100 flex flex-wrap gap-2 justify-between items-center">
               <button
-                onClick={() => setShowInvoiceModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs shadow-sm transition-all"
+                type="button"
+                onClick={() => {
+                  handleSendSupplierStatementWhatsApp(supplierDetails?.supplier, supplierDetails?.summary, supplierDetails?.purchases, false);
+                  setShowInvoiceModal(false);
+                }}
+                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Send All Invoices Statement on WhatsApp"
               >
-                Close Bill View
+                <WhatsAppIcon size={14} />
+                <span>Send All Invoices Slip (सारा एक साथ)</span>
               </button>
+
+              <div className="flex gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer size={15} /> Print Slip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSendInvoiceWhatsApp(selectedInvoice);
+                    setShowInvoiceModal(false);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-200 transition-all cursor-pointer"
+                  title="Send This Single Invoice Slip on WhatsApp"
+                >
+                  <WhatsAppIcon size={15} /> Send Single Slip (सिंगल)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1025,8 +1071,8 @@ _Thank you for your partnership!_`;
     toast.success('WhatsApp slip opened successfully!');
   };
 
-  // 2. Send Entire Supplier Ledger Due Statement on WhatsApp
-  const handleSendSupplierStatementWhatsApp = (targetSupplier = null, targetSummary = null, targetPurchases = null) => {
+  // 2. Send Entire Supplier Ledger Due Statement / All Bills on WhatsApp
+  const handleSendSupplierStatementWhatsApp = (targetSupplier = null, targetSummary = null, targetPurchases = null, sendAll = false) => {
     const supp = targetSupplier || supplierDetails?.supplier || {};
     const summ = targetSummary || supplierDetails?.summary || {};
     const bills = targetPurchases || supplierDetails?.purchases || [];
@@ -1054,23 +1100,33 @@ _Thank you for your partnership!_`;
       return due > 0 || b.paymentStatus === 'Due' || b.paymentStatus === 'Partial';
     });
 
+    const billsToList = sendAll ? bills : (unpaidBills.length > 0 ? unpaidBills : bills);
+    const listTitle = sendAll
+      ? `📄 *ALL PURCHASE BILLS BREAKDOWN (${bills.length} BILLS):*`
+      : (unpaidBills.length > 0
+          ? `⏳ *PENDING / DUE INVOICES (${unpaidBills.length}):*`
+          : `📄 *RECENT PURCHASE INVOICES (${bills.length}):*`);
+
     let pendingListText = '';
-    if (unpaidBills.length > 0) {
-      pendingListText = unpaidBills
-        .slice(0, 10)
+    if (billsToList.length > 0) {
+      pendingListText = billsToList
+        .slice(0, 15)
         .map((b, idx) => {
           const invNo = b.referenceNo || b.purchaseNo || `BILL-${idx+1}`;
+          const gTot = Number(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+          const pd = Number(b.amountPaid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
           const due = Math.max(0, (Number(b.grandTotal || 0) - Number(b.amountPaid || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-          return `  ${idx + 1}. *#${invNo}* (${b.purchaseDate || 'N/A'}): Due ₹${due}`;
+          const dt = b.purchaseDate || (b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-IN') : 'N/A');
+          return `  ${idx + 1}. *#${invNo}* (${dt})\n     Bill: ₹${gTot} | Paid: ₹${pd} | *Due: ₹${due}*`;
         })
         .join('\n');
-      if (unpaidBills.length > 10) {
-        pendingListText += `\n  ...and ${unpaidBills.length - 10} more bills`;
+      if (billsToList.length > 15) {
+        pendingListText += `\n  ...and ${billsToList.length - 15} more bills`;
       }
     }
 
     const message =
-`📋 *PURCHASE LEDGER STATEMENT & DUE REMINDER*
+`📋 *PURCHASE LEDGER STATEMENT & BILLS SUMMARY*
 ━━━━━━━━━━━━━━━━━━━━
 🏢 *From:* Global ERP Services
 👤 *Supplier:* ${supplierName}
@@ -1082,16 +1138,16 @@ _Thank you for your partnership!_`;
 • Total Purchased: ₹${totalPurchased}
 • Total Disbursed: ₹${totalPaid}
 🔴 *NET OUTSTANDING DUE: ₹${netBalance}*
-
-${pendingListText ? `⏳ *PENDING / DUE INVOICES (${unpaidBills.length}):*\n${pendingListText}\n━━━━━━━━━━━━━━━━━━━━\n` : ''}
-🏦 *Note:*
-This is an automated ledger summary for reconciliation. Please acknowledge upon verification.
-_Thank you!_`;
+━━━━━━━━━━━━━━━━━━━━
+${pendingListText ? `${listTitle}\n${pendingListText}\n━━━━━━━━━━━━━━━━━━━━\n` : ''}
+🏦 *Reconciliation Note:*
+This is an automated purchase ledger statement for reconciliation. Please acknowledge upon verification.
+_Thank you for your partnership!_`;
 
     const encoded = encodeURIComponent(message);
     const waUrl = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
     window.open(waUrl, '_blank');
-    toast.success('WhatsApp statement opened successfully!');
+    toast.success('WhatsApp all-bills slip opened successfully!');
   };
 
   // Filtered suppliers
@@ -1510,41 +1566,17 @@ _Thank you!_`;
                         )}
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions - Only View Button */}
                       <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleViewSupplier(s._id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95"
-                            title="View Full Supplier Details & All Invoices"
-                          >
-                            <Eye size={14} />
-                            <span>View</span>
-                          </button>
-
-                          {(s.dueAmount > 0 || (s.balance > 0)) && (
-                            <button
-                              onClick={() => handleSendSupplierStatementWhatsApp(s, {
-                                totalPurchased: s.totalPurchaseAmount,
-                                totalPaid: s.totalPaid,
-                                netBalance: s.dueAmount !== undefined ? s.dueAmount : s.balance,
-                                totalInvoices: s.totalInvoices
-                              })}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 transition-all active:scale-95"
-                              title={`Send WhatsApp Due Reminder (Due: ₹${(s.dueAmount || s.balance || 0).toLocaleString('en-IN')})`}
-                            >
-                              <WhatsAppIcon size={14} />
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => navigate(`/purchases/add-purchase?supplierId=${s._id}`)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 transition-colors"
-                            title="Create New Invoice for this Supplier"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleViewSupplier(s._id)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
+                          title="View Full Supplier Details & All Invoices"
+                        >
+                          <Eye size={14} />
+                          <span>View</span>
+                        </button>
                       </td>
                     </tr>
                   );

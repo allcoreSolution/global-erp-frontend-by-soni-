@@ -293,7 +293,7 @@ const CustomerLedgerDetailPage = ({
               {activeTab === 'invoices' && (
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {['All', 'Completed', 'Due', 'Paid', 'Cancelled'].map((st) => (
                         <button
                           key={st}
@@ -309,9 +309,21 @@ const CustomerLedgerDetailPage = ({
                       ))}
                     </div>
 
-                    <span className="text-xs text-slate-400 font-medium">
-                      Showing {filteredInvoices.length} bill(s)
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSendCustomerStatementWhatsApp(customer, summary, customerDetails?.sales, false)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
+                        title="Send All Due Invoices & Statement together on WhatsApp"
+                      >
+                        <WhatsAppIcon size={14} />
+                        <span>Send All Invoices Slip (सारा एक साथ)</span>
+                      </button>
+
+                      <span className="text-xs text-slate-400 font-medium">
+                        Showing {filteredInvoices.length} bill(s)
+                      </span>
+                    </div>
                   </div>
 
                   <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -406,19 +418,25 @@ const CustomerLedgerDetailPage = ({
                                     <button
                                       type="button"
                                       onClick={() => handleViewInvoice(inv)}
-                                      className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                                       title="View / Print Invoice Slip"
                                     >
-                                      <Eye size={14} />
+                                      <Eye size={13} />
+                                      <span>View</span>
                                     </button>
 
                                     <button
                                       type="button"
                                       onClick={() => handleSendInvoiceWhatsApp(inv, customer)}
-                                      className="p-1.5 rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 dark:border-emerald-800 transition-all cursor-pointer"
-                                      title="Send WhatsApp Invoice Slip to Customer"
+                                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs transition-all active:scale-95 shadow-sm cursor-pointer ${
+                                        balanceDue > 0
+                                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 dark:shadow-none'
+                                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                      }`}
+                                      title={`Send Single Invoice Slip #${inv.invoiceNo} on WhatsApp`}
                                     >
-                                      <WhatsAppIcon size={14} />
+                                      <WhatsAppIcon size={13} />
+                                      <span>{balanceDue > 0 ? 'Send Slip' : 'WhatsApp'}</span>
                                     </button>
                                   </div>
                                 </td>
@@ -723,24 +741,40 @@ const CustomerLedgerDetailPage = ({
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Printer size={15} /> Print Slip
-              </button>
+            <div className="flex flex-wrap gap-2 justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => {
-                  handleSendInvoiceWhatsApp(selectedInvoice, customer);
+                  handleSendCustomerStatementWhatsApp(customer, summary, customerDetails?.sales, false);
                   setShowInvoiceModal(false);
                 }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-200 dark:shadow-none transition-all cursor-pointer"
+                className="px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Send All Invoices & Due Breakdown together on WhatsApp"
               >
-                <WhatsAppIcon size={15} /> Send on WhatsApp
+                <WhatsAppIcon size={14} />
+                <span>Send All Invoices Slip (सारा एक साथ)</span>
               </button>
+
+              <div className="flex gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer size={15} /> Print Slip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSendInvoiceWhatsApp(selectedInvoice, customer);
+                    setShowInvoiceModal(false);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-200 dark:shadow-none transition-all cursor-pointer"
+                  title="Send This Single Invoice Slip on WhatsApp"
+                >
+                  <WhatsAppIcon size={15} /> Send This Slip (सिंगल)
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -947,8 +981,8 @@ _Thank you for your business!_`;
     toast.success('WhatsApp invoice slip opened successfully!');
   };
 
-  // 2. Send Entire Customer Ledger Due Statement on WhatsApp
-  const handleSendCustomerStatementWhatsApp = (targetCustomer = null, targetSummary = null, targetSales = null) => {
+  // 2. Send Entire Customer Ledger Due Statement / All Invoices on WhatsApp
+  const handleSendCustomerStatementWhatsApp = (targetCustomer = null, targetSummary = null, targetSales = null, sendAll = false) => {
     const cust = targetCustomer || customerDetails?.customer || {};
     const summ = targetSummary || customerDetails?.summary || {};
     const bills = targetSales || customerDetails?.sales || [];
@@ -976,23 +1010,33 @@ _Thank you for your business!_`;
       return due > 0 || b.paymentStatus === 'Due' || b.paymentStatus === 'Pending' || b.paymentStatus === 'Partial';
     });
 
+    const billsToList = sendAll ? bills : (unpaidBills.length > 0 ? unpaidBills : bills);
+    const listTitle = sendAll
+      ? `📄 *ALL INVOICES BREAKDOWN (${bills.length} BILLS):*`
+      : (unpaidBills.length > 0
+          ? `⏳ *PENDING / DUE INVOICES (${unpaidBills.length}):*`
+          : `📄 *RECENT INVOICES (${bills.length}):*`);
+
     let pendingListText = '';
-    if (unpaidBills.length > 0) {
-      pendingListText = unpaidBills
-        .slice(0, 10)
+    if (billsToList.length > 0) {
+      pendingListText = billsToList
+        .slice(0, 15)
         .map((b, idx) => {
           const invNo = b.invoiceNo || `INV-${idx+1}`;
+          const gTot = Number(b.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+          const pd = Number(b.amountPaid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
           const due = Math.max(0, (Number(b.grandTotal || 0) - Number(b.amountPaid || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-          return `  ${idx + 1}. *#${invNo}* (${b.saleDate || 'N/A'}): Due ₹${due}`;
+          const dt = b.saleDate || (b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-IN') : 'N/A');
+          return `  ${idx + 1}. *#${invNo}* (${dt})\n     Bill: ₹${gTot} | Paid: ₹${pd} | *Due: ₹${due}*`;
         })
         .join('\n');
-      if (unpaidBills.length > 10) {
-        pendingListText += `\n  ...and ${unpaidBills.length - 10} more invoices`;
+      if (billsToList.length > 15) {
+        pendingListText += `\n  ...and ${billsToList.length - 15} more invoices`;
       }
     }
 
     const message =
-`📋 *CUSTOMER ACCOUNT STATEMENT & DUE REMINDER*
+`📋 *CUSTOMER ACCOUNT STATEMENT & DUE INVOICES SLIP*
 ━━━━━━━━━━━━━━━━━━━━
 🏢 *From:* Global ERP Services
 👤 *Customer:* ${customerName}
@@ -1004,16 +1048,16 @@ _Thank you for your business!_`;
 • Total Sales Billed: ₹${totalSold}
 • Total Paid / Settled: ₹${totalPaid}
 🔴 *NET OUTSTANDING BALANCE DUE: ₹${netBalance}*
-
-${pendingListText ? `⏳ *PENDING / UNPAID INVOICES (${unpaidBills.length}):*\n${pendingListText}\n━━━━━━━━━━━━━━━━━━━━\n` : ''}
+━━━━━━━━━━━━━━━━━━━━
+${pendingListText ? `${listTitle}\n${pendingListText}\n━━━━━━━━━━━━━━━━━━━━\n` : ''}
 🏦 *Payment Request:*
 Please verify this statement and arrange payment for the outstanding dues. If already settled, kindly share the payment receipt.
-_Thank you for your cooperation!_`;
+_Thank you for your business & partnership!_`;
 
     const encoded = encodeURIComponent(message);
     const waUrl = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
     window.open(waUrl, '_blank');
-    toast.success('WhatsApp statement opened successfully!');
+    toast.success('WhatsApp all-invoices slip opened successfully!');
   };
 
   // Filtered customers
@@ -1444,44 +1488,17 @@ _Thank you for your cooperation!_`;
                         )}
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions - Only View Button */}
                       <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleViewCustomer(c._id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
-                            title="View Full Customer Details & All Sales Bills"
-                          >
-                            <Eye size={14} />
-                            <span>View</span>
-                          </button>
-
-                          {(due > 0) && (
-                            <button
-                              type="button"
-                              onClick={() => handleSendCustomerStatementWhatsApp(c, {
-                                totalSold: c.totalSaleAmount,
-                                totalPaid: c.totalPaid,
-                                netBalance: c.dueAmount,
-                                totalInvoices: c.totalInvoices
-                              })}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 dark:border-emerald-800 transition-all active:scale-95 cursor-pointer"
-                              title={`Send WhatsApp Due Reminder to Customer (Due: ₹${due.toLocaleString('en-IN')})`}
-                            >
-                              <WhatsAppIcon size={14} />
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/sales/add-sale?customerId=${c._id}`)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                            title="Create New Invoice for this Customer"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleViewCustomer(c._id)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
+                          title="View Customer Details & Ledger"
+                        >
+                          <Eye size={14} />
+                          <span>View</span>
+                        </button>
                       </td>
                     </tr>
                   );
