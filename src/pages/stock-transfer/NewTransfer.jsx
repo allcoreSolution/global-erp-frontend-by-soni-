@@ -19,9 +19,11 @@ const PRODUCTS_LIST = [
 ];
 
 const WAREHOUSES_LIST = [
-  'Central Warehouse',
-  'North Branch Warehouse',
-  'East Side Storage'
+  'Main Pharma Godown',
+  'delhi main warehouse',
+  'Delhi Main Warehouse',
+  'Mumbai Storage Hub',
+  'Central Warehouse'
 ];
 
 const TRANSFER_REASONS = [
@@ -97,6 +99,12 @@ const NewTransfer = () => {
   const isSameWarehouse = fromWarehouse && toWarehouse && fromWarehouse === toWarehouse;
   const hasEmptyFields = !fromWarehouse || !toWarehouse || items.some(item => !item.product || !item.qty);
   const isValid = !hasEmptyFields && !isSameWarehouse && totalQty > 0;
+
+  const handleSwapWarehouses = () => {
+    const temp = fromWarehouse;
+    setFromWarehouse(toWarehouse);
+    setToWarehouse(temp);
+  };
 
   const handleAddRow = () => {
     setItems([...items, { product: '', qty: '', unit: 'Nos', batch: '', serial: '' }]);
@@ -218,19 +226,29 @@ const NewTransfer = () => {
                   value={fromWarehouse}
                   onChange={(e) => setFromWarehouse(e.target.value)}
                   defaultOptions={WAREHOUSES_LIST}
-                  hideAddButton
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">To Warehouse *</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase">To Warehouse *</label>
+                  {fromWarehouse && toWarehouse && (
+                    <button
+                      type="button"
+                      onClick={handleSwapWarehouses}
+                      className="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 cursor-pointer"
+                      title="Swap From and To Warehouses"
+                    >
+                      <ArrowRightLeft size={11} /> Swap
+                    </button>
+                  )}
+                </div>
                 <DynamicSelect
                   name="toWarehouse"
                   category="Warehouse"
                   value={toWarehouse}
                   onChange={(e) => setToWarehouse(e.target.value)}
                   defaultOptions={WAREHOUSES_LIST}
-                  hideAddButton
                 />
               </div>
             </div>
@@ -372,8 +390,20 @@ const NewTransfer = () => {
 
             {/* Error badge for same warehouse */}
             {isSameWarehouse && (
-              <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-2.5 rounded border border-red-200 dark:border-red-950/40 text-[11px] mb-4 font-semibold">
-                Invalid Route: From and To warehouses must be different locations.
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg border border-red-200 text-xs mb-4 shadow-sm">
+                <div className="font-bold flex items-center gap-1.5 mb-1 text-red-800">
+                  <AlertCircle size={15} /> Invalid Route: Same Warehouse Selected
+                </div>
+                <div className="text-[11px] text-red-600 leading-relaxed mb-2">
+                  Stock Transfer me <b>From Warehouse</b> aur <b>To Warehouse</b> dono alag-alag hone chahiye. Source aur Destination ek hi warehouse nahi ho sakte.
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSwapWarehouses}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold bg-white border border-red-300 text-red-700 rounded hover:bg-red-100 transition-colors cursor-pointer"
+                >
+                  <ArrowRightLeft size={12} /> Swap Warehouses
+                </button>
               </div>
             )}
 
