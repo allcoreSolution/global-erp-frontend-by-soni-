@@ -163,20 +163,26 @@ const NewDebitNote = () => {
         const purchases = res.data?.data || [];
         const selectedPurchase = purchases.find(p => p.purchaseNo === form.originalInvoiceNo);
         
-        if (selectedPurchase && selectedPurchase.orderItems && selectedPurchase.orderItems.length > 0) {
-          const newItems = selectedPurchase.orderItems.map((item, index) => {
-             const qty = Number(item.quantity) || 0;
-             const rate = Number(item.netUnitCost || item.cost) || 0;
-             return {
-                id: index + 1,
-                product: item.product?.productName || item.name || '',
-                qty: qty,
-                rate: rate,
-                amount: qty * rate
-             };
-          });
-          setItems(newItems);
-          calculateSummary(newItems, form);
+        if (selectedPurchase) {
+          if (selectedPurchase.warehouse) {
+            setForm(prev => ({ ...prev, warehouse: selectedPurchase.warehouse }));
+          }
+          if (selectedPurchase.orderItems && selectedPurchase.orderItems.length > 0) {
+            const newItems = selectedPurchase.orderItems.map((item, index) => {
+               const qty = Number(item.quantity) || 0;
+               const rate = Number(item.netUnitCost || item.cost) || 0;
+               return {
+                  id: index + 1,
+                  product: item.product?.productName || item.name || '',
+                  qty: qty,
+                  rate: rate,
+                  amount: qty * rate,
+                  batch: item.batch || ''
+               };
+            });
+            setItems(newItems);
+            calculateSummary(newItems, form);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch invoice details', err);
@@ -216,6 +222,7 @@ const NewDebitNote = () => {
           qty: Number(item.qty) || 0,
           rate: Number(item.rate) || 0,
           amount: Number(item.amount) || 0,
+          batch: item.batch || ''
         })),
 
         summary: {
