@@ -47,7 +47,15 @@ const AddCourier = () => {
     if (!id) {
       api.get('/couriers').then(res => {
         const list = res.data?.data || [];
-        const nextCode = `CR-${String(list.length + 1).padStart(5, '0')}`;
+        let maxNum = 0;
+        list.forEach(c => {
+          const match = (c.courierCode || '').match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (num > maxNum) maxNum = num;
+          }
+        });
+        const nextCode = `CR-${String(maxNum + 1).padStart(5, '0')}`;
         setForm(prev => ({ ...prev, courierCode: nextCode }));
       }).catch(() => {});
     }

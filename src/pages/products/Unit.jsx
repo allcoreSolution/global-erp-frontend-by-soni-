@@ -500,8 +500,8 @@ const Unit = () => {
                   className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
                 >
                   <option value="None">None (Root Unit)</option>
-                  {units.map(u => (
-                    <option key={u.id} value={u.code}>{u.name} ({u.code})</option>
+                  {units.map((u, idx) => (
+                    <option key={u._id || u.unitCode || u.code || idx} value={u.code || u.unitCode}>{u.name || u.unitName} ({u.code || u.unitCode})</option>
                   ))}
                 </select>
               </div>
