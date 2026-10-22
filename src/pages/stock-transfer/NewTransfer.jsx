@@ -98,7 +98,7 @@ const NewTransfer = () => {
   // Validations
   const isSameWarehouse = fromWarehouse && toWarehouse && fromWarehouse === toWarehouse;
   const hasEmptyFields = !fromWarehouse || !toWarehouse || items.some(item => !item.product || !item.qty);
-  const isValid = !hasEmptyFields && !isSameWarehouse && totalQty > 0;
+  const isValid = !hasEmptyFields && totalQty > 0;
 
   const handleSwapWarehouses = () => {
     const temp = fromWarehouse;
@@ -388,19 +388,19 @@ const NewTransfer = () => {
               </select>
             </div>
 
-            {/* Error badge for same warehouse */}
+            {/* Same warehouse notice */}
             {isSameWarehouse && (
-              <div className="bg-red-50 text-red-700 p-3 rounded-lg border border-red-200 text-xs mb-4 shadow-sm">
-                <div className="font-bold flex items-center gap-1.5 mb-1 text-red-800">
-                  <AlertCircle size={15} /> Invalid Route: Same Warehouse Selected
+              <div className="bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-200 text-xs mb-4 shadow-sm">
+                <div className="font-bold flex items-center gap-1.5 mb-1 text-amber-900">
+                  <Info size={15} /> Internal Transfer (Same Warehouse)
                 </div>
-                <div className="text-[11px] text-red-600 leading-relaxed mb-2">
-                  Stock Transfer me <b>From Warehouse</b> aur <b>To Warehouse</b> dono alag-alag hone chahiye. Source aur Destination ek hi warehouse nahi ho sakte.
+                <div className="text-[11px] text-amber-700 leading-relaxed mb-2">
+                  Aapne Source aur Destination dono me <b>{fromWarehouse}</b> chuna hai. Yeh voucher internal movement ke roop me save ho jayega. Agar doosre godown me transfer karna ho, toh <b>To Warehouse</b> me alag warehouse select karein.
                 </div>
                 <button
                   type="button"
                   onClick={handleSwapWarehouses}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold bg-white border border-red-300 text-red-700 rounded hover:bg-red-100 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold bg-white border border-amber-300 text-amber-800 rounded hover:bg-amber-100 transition-colors cursor-pointer"
                 >
                   <ArrowRightLeft size={12} /> Swap Warehouses
                 </button>
