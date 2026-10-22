@@ -249,6 +249,7 @@ const NewCreditNote = () => {
       const payload = {
         ...form,
         voucherNo: form.creditNoteNo, // Protect from duplicate unique index
+        noteNo: form.creditNoteNo, // Protect from duplicate unique index noteNo_1
         
         // Deep Casting numbers
         discount: Number(form.discount) || 0,
