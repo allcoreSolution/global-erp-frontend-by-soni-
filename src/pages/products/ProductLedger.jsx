@@ -177,9 +177,9 @@ const SupplierLedgerDetailPage = ({
             </div>
           </div>
 
-          {/* 3. 4 Top KPI Metric Cards for Supplier */}
+          {/* 3. Top KPI Metric Cards for Supplier */}
           {supplierDetails?.summary && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${(supplierDetails.summary.totalReturns || 0) > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4 mb-6`}>
               <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Purchase Bills</span>
@@ -222,6 +222,22 @@ const SupplierLedgerDetailPage = ({
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
               </div>
 
+              {(supplierDetails.summary.totalReturns || 0) > 0 && (
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200/80 shadow-sm relative overflow-hidden group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">Returns / Debit Notes</span>
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                      <ArrowDownRight size={20} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl font-black text-amber-600">-₹{(supplierDetails.summary.totalReturns || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    <div className="text-[11px] text-amber-600 mt-1">{supplierDetails?.returns?.length || 1} debit note(s) credit</div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500" />
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200/80 shadow-sm relative overflow-hidden group bg-gradient-to-br from-white via-amber-50/20 to-amber-50/40">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">Current Balance Due</span>
@@ -234,7 +250,7 @@ const SupplierLedgerDetailPage = ({
                     ₹{(supplierDetails.summary.netBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-[11px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
-                    {supplierDetails.summary.netBalance > 0 ? <><AlertTriangle size={13} /> Outstanding balance</> : 'Fully Settled (₹0 Due)'}
+                    {supplierDetails.summary.netBalance > 0 ? <><AlertTriangle size={13} /> Net Due (Purchased − Paid − Returns)</> : 'Fully Settled (₹0 Due)'}
                   </div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-red-500" />
@@ -334,6 +350,8 @@ const SupplierLedgerDetailPage = ({
                           <th className="py-3 px-4 text-center">Items</th>
                           <th className="py-3 px-4 text-right">Grand Total</th>
                           <th className="py-3 px-4 text-right">Paid Amount</th>
+                          <th className="py-3 px-4 text-right">Return / Debit Note</th>
+                          <th className="py-3 px-4 text-right">Balance Due</th>
                           <th className="py-3 px-4 text-center">Purchase Status</th>
                           <th className="py-3 px-4 text-center">Payment Status</th>
                           <th className="py-3 px-4 text-center">Action / Slip</th>
@@ -342,7 +360,7 @@ const SupplierLedgerDetailPage = ({
                       <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                         {filteredInvoices.length === 0 ? (
                           <tr>
-                            <td colSpan={10} className="py-12 text-center text-slate-400">
+                            <td colSpan={12} className="py-12 text-center text-slate-400">
                               <Receipt size={36} className="mx-auto mb-2 text-slate-300" />
                               <p className="font-semibold text-sm text-slate-600">No invoices match this filter</p>
                               <p className="text-xs text-slate-400 mt-0.5">Click '+ Add Purchase Invoice' to record a new invoice for this supplier.</p>
@@ -352,7 +370,10 @@ const SupplierLedgerDetailPage = ({
                           filteredInvoices.map((inv) => {
                             const grandTotal = Number(inv.grandTotal) || 0;
                             const amountPaid = Number(inv.amountPaid) || 0;
-                            const balanceDue = Math.max(0, grandTotal - amountPaid);
+                            const returnedAmount = Number(inv.returnedAmount) || 0;
+                            const balanceDue = inv.balanceDue !== undefined
+                              ? Number(inv.balanceDue)
+                              : Math.max(0, grandTotal - amountPaid - returnedAmount);
 
                             return (
                               <tr key={inv._id} className="hover:bg-slate-50/80 transition-colors">
@@ -379,6 +400,31 @@ const SupplierLedgerDetailPage = ({
                                 <td className="py-3 px-4 text-right font-semibold text-emerald-700">
                                   ₹{amountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                 </td>
+                                <td className="py-3 px-4 text-right font-semibold">
+                                  {returnedAmount > 0 ? (
+                                    <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 inline-block text-xs">
+                                      -₹{returnedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-right font-bold">
+                                  {balanceDue > 0 ? (
+                                    <div>
+                                      <span className="text-rose-600">
+                                        ₹{balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                      </span>
+                                      {returnedAmount > 0 && (
+                                        <div className="text-[10px] text-slate-400 font-normal">
+                                          (₹{(grandTotal - amountPaid).toLocaleString('en-IN')} − ₹{returnedAmount.toLocaleString('en-IN')})
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-emerald-600">₹0.00</span>
+                                  )}
+                                </td>
                                 <td className="py-3 px-4 text-center">
                                   <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                     inv.purchaseStatus === 'Received'
@@ -394,13 +440,13 @@ const SupplierLedgerDetailPage = ({
                                 </td>
                                 <td className="py-3 px-4 text-center">
                                   <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    inv.paymentStatus === 'Paid'
+                                    balanceDue === 0 || inv.paymentStatus === 'Paid'
                                       ? 'bg-emerald-100 text-emerald-800'
                                       : inv.paymentStatus === 'Partial'
                                       ? 'bg-blue-100 text-blue-800'
                                       : 'bg-amber-100 text-amber-800'
                                   }`}>
-                                    {inv.paymentStatus || (balanceDue === 0 ? 'Paid' : 'Due')}
+                                    {balanceDue === 0 || inv.paymentStatus === 'Paid' ? 'Paid' : 'Due'}
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-center">
@@ -433,6 +479,38 @@ const SupplierLedgerDetailPage = ({
                           })
                         )}
                       </tbody>
+
+                      {filteredInvoices.length > 0 && (
+                        <tfoot className="bg-slate-50 border-t-2 border-slate-200 text-xs font-bold">
+                          <tr>
+                            <td colSpan={5} className="py-3.5 px-4 text-slate-700">
+                              Total Summary ({filteredInvoices.length} Bills)
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-slate-900 font-black">
+                              ₹{filteredInvoices.reduce((sum, inv) => sum + (Number(inv.grandTotal) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-emerald-600 font-black">
+                              ₹{filteredInvoices.reduce((sum, inv) => sum + (Number(inv.amountPaid) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-amber-600 font-black">
+                              {filteredInvoices.reduce((sum, inv) => sum + (Number(inv.returnedAmount) || 0), 0) > 0
+                                ? `-₹${filteredInvoices.reduce((sum, inv) => sum + (Number(inv.returnedAmount) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                                : '—'}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-rose-600 font-black text-sm">
+                              ₹{filteredInvoices.reduce((sum, inv) => {
+                                const gTot = Number(inv.grandTotal) || 0;
+                                const pd = Number(inv.amountPaid) || 0;
+                                const ret = Number(inv.returnedAmount) || 0;
+                                return sum + (inv.balanceDue !== undefined ? Number(inv.balanceDue) : Math.max(0, gTot - pd - ret));
+                              }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td colSpan={3} className="py-3.5 px-4 text-center text-[11px] text-slate-500 font-medium">
+                              Net Outstanding
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
                   </div>
                 </div>
@@ -642,14 +720,14 @@ const SupplierLedgerDetailPage = ({
                           <tbody className="divide-y divide-slate-100">
                             {supplierDetails?.returns?.map((ret) => (
                               <tr key={ret._id}>
-                                <td className="py-2.5 px-3 font-mono font-bold">{ret.returnNo}</td>
-                                <td className="py-2.5 px-3">{ret.returnDate}</td>
-                                <td className="py-2.5 px-3 font-mono">{ret.debitNoteNo || '—'}</td>
-                                <td className="py-2.5 px-3">{ret.returnReason || 'Defective Goods'}</td>
-                                <td className="py-2.5 px-3 text-right font-bold text-red-600">₹{(ret.totals?.goodsValue || ret.totals?.netAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                <td className="py-2.5 px-3 font-mono font-bold">{ret.returnNo || ret.returnNumber}</td>
+                                <td className="py-2.5 px-3">{ret.returnDate || ret.date}</td>
+                                <td className="py-2.5 px-3 font-mono">{ret.debitNoteNo || ret.referenceNo || '—'}</td>
+                                <td className="py-2.5 px-3">{ret.reason || ret.returnReason || 'Purchase return'}</td>
+                                <td className="py-2.5 px-3 text-right font-bold text-red-600">₹{(ret.totalRefundAmount || ret.grandTotal || ret.totals?.goodsValue || ret.totals?.netAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                 <td className="py-2.5 px-3 text-center">
                                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                                    {ret.status || 'Draft'}
+                                    {ret.status || 'Approved'}
                                   </span>
                                 </td>
                               </tr>
@@ -809,9 +887,15 @@ const SupplierLedgerDetailPage = ({
                   <span>Amount Paid:</span>
                   <span>₹{(Number(selectedInvoice.amountPaid) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
+                {Number(selectedInvoice.returnedAmount || 0) > 0 && (
+                  <div className="flex justify-between w-full sm:w-1/2 text-amber-700 font-bold">
+                    <span>Purchase Return / Debit Note:</span>
+                    <span>-₹{Number(selectedInvoice.returnedAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
                 <div className="flex justify-between w-full sm:w-1/2 text-amber-700 font-bold border-t border-slate-200/60 pt-1">
-                  <span>Balance Due:</span>
-                  <span>₹{Math.max(0, (Number(selectedInvoice.grandTotal) || 0) - (Number(selectedInvoice.amountPaid) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span>Net Balance Due:</span>
+                  <span>₹{(selectedInvoice.balanceDue !== undefined ? Number(selectedInvoice.balanceDue) : Math.max(0, (Number(selectedInvoice.grandTotal) || 0) - (Number(selectedInvoice.amountPaid) || 0) - Number(selectedInvoice.returnedAmount || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>
@@ -1029,8 +1113,12 @@ const ProductLedger = () => {
     const dueDate = inv.dueDate || 'Upon Receipt';
     const grandTotal = Number(inv.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     const paid = Number(inv.amountPaid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-    const balanceDue = Math.max(0, (Number(inv.grandTotal || 0) - Number(inv.amountPaid || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 });
-    const paymentStatus = inv.paymentStatus || (Number(inv.grandTotal || 0) <= Number(inv.amountPaid || 0) ? 'PAID' : 'DUE / UNPAID');
+    const retAmt = Number(inv.returnedAmount || 0);
+    const balanceDue = (inv.balanceDue !== undefined
+      ? Number(inv.balanceDue)
+      : Math.max(0, (Number(inv.grandTotal || 0) - Number(inv.amountPaid || 0) - retAmt))
+    ).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const paymentStatus = inv.paymentStatus || (Number(inv.grandTotal || 0) <= (Number(inv.amountPaid || 0) + retAmt) ? 'PAID' : 'DUE / UNPAID');
 
     // Build items summary if available
     let itemsText = '';
@@ -1058,7 +1146,7 @@ const ProductLedger = () => {
 
 💰 *Total Bill:* ₹${grandTotal}
 💵 *Amount Paid:* ₹${paid}
-🔴 *BALANCE OUTSTANDING DUE:* *₹${balanceDue}*
+${retAmt > 0 ? `↩️ *Purchase Return / Debit Note:* -₹${retAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : ''}🔴 *NET BALANCE OUTSTANDING DUE:* *₹${balanceDue}*
 ${itemsText ? `\n📦 *Purchased Items:*\n${itemsText}\n` : ''}
 ━━━━━━━━━━━━━━━━━━━━
 🏦 *Payment Request Note:*
