@@ -51,7 +51,15 @@ const PricingRules = () => {
 
   const handleOpenAdd = () => {
     setIsEdit(false);
-    const nextId = `PR-${String(rules.length + 1).padStart(5, '0')}`;
+    let maxNum = 0;
+    rules.forEach(r => {
+      const match = String(r.id || r.ruleCode || '').match(/^PR-(\d+)$/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+      }
+    });
+    const nextId = maxNum > 0 ? `PR-${String(maxNum + 1).padStart(5, '0')}` : `PR-${Date.now().toString().slice(-5)}`;
     setCurrentRule({
       id: nextId, name: '', type: 'Discount', description: '', status: 'Active',
       company: '', branch: '', brand: '', product: '',
