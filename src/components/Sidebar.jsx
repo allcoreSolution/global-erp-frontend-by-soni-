@@ -624,7 +624,8 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
                 { text: 'Challan List', to: '/sales/challan-list', permission: ['view_sales', 'manage_sales'] },
                 { text: 'Courier List', to: '/sales/courier-list', permission: ['view_sales', 'manage_sales'] },
                 { text: 'Sale Return', to: '/sales/sale-return', permission: ['create_sales', 'create_credit_notes', 'manage_sales'] },
-                { text: 'Sale Exchange List', to: '/sales/sale-exchange-list', permission: ['view_sales', 'manage_sales'] }
+                { text: 'Sale Exchange List', to: '/sales/sale-exchange-list', permission: ['view_sales', 'manage_sales'] },
+                { text: 'Customer Ledger', to: '/sales/customer-ledger', permission: ['view_sales', 'manage_sales'] }
               ]}
             />
 

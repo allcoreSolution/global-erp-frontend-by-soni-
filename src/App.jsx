@@ -593,6 +593,11 @@ function App() {
           <Route path="sales/sale-exchange-list" element={<SaleExchangeList />} />
           <Route path="sales/add-sale-exchange" element={<AddSaleExchange />} />
           <Route path="sales/edit-sale-exchange/:id" element={<AddSaleExchange />} />
+          <Route path="sales/customer-ledger" element={<CustomerLedger />} />
+          <Route path="sales/customer-ledger/:customerId" element={<CustomerLedger />} />
+          <Route path="customers/ledger" element={<CustomerLedger />} />
+          <Route path="customers/ledger/:customerId" element={<CustomerLedger />} />
+          <Route path="reports/accounts/customer-ledger" element={<CustomerLedger />} />
           <Route path="setup/backup-restore" element={<BackupRestore />} />
           <Route path="setup/system-settings" element={<SystemSettings />} />
           <Route path="setup/general-settings" element={<GeneralSettings />} />
