@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import { ToastContainer } from 'react-toastify';
@@ -299,7 +299,7 @@ function App() {
         'F6': '/bank-receipt/new',
         'F7': '/bank-payment/new',
         'F8': '/journal/new',
-        'F9': '/products/product-list',
+        'F9': '/reports/stock/current-stock',
         'F10': '/stock-entry/new',
         'F11': '/stock-transfer/new',
         'ctrl_l': '/reports/accounts/ledger-voucher',
@@ -399,7 +399,7 @@ function App() {
           <Route path="products/brand" element={<Brand />} />
           <Route path="products/category" element={<Category />} />
           <Route path="products/unit" element={<Unit />} />
-          <Route path="products/product-list" element={<ProductList />} />
+          <Route path="products/product-list" element={<Navigate to="/reports/stock/current-stock" replace />} />
           <Route path="products/edit-product/:id" element={<EditProduct />} />
           <Route path="products/add-adjustment" element={<AddAdjustment />} />
           <Route path="products/adjustment-list" element={<AdjustmentList />} />

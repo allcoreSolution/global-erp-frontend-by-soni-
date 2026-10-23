@@ -56,45 +56,11 @@ export const DashboardTables = ({ data, loading }) => {
   const canSales = isSuperAdmin || isAdmin || hasPerm('view_sales');
   const canAccounts = isSuperAdmin || isAdmin || hasPerm('view_accounts') || hasPerm('view_vouchers');
 
-  const lowStockData = data?.lowStockData || [
-    { id: '1.', name: 'Premium Headphones', stock: '12', reorder: '50' },
-    { id: '2.', name: 'Smart Fitness Band', stock: '8', reorder: '25' },
-    { id: '3.', name: 'Mini Bluetooth Speaker', stock: '5', reorder: '20' },
-    { id: '4.', name: 'Organic Green Tea', stock: '3', reorder: '15' },
-    { id: '5.', name: 'Stainless Steel Bottle', stock: '2', reorder: '10' },
-  ];
-  
-  const expiryData = data?.expiryData || [
-    { id: '1.', name: 'Organic Green Tea', date: '31-10-2026', qty: '25' },
-    { id: '2.', name: 'Roasted Almonds pack', date: '15-12-2026', qty: '18' },
-    { id: '3.', name: 'Premium Green Coffee', date: '20-01-2027', qty: '30' },
-    { id: '4.', name: 'Chia Seeds organic', date: '30-03-2027', qty: '22' },
-    { id: '5.', name: 'Flax Seeds premium', date: '05-04-2027', qty: '15' },
-  ];
-
-  const topSellingData = data?.topSellingData || [
-    { id: '1.', name: 'Wireless Headphones', qty: '1,250', amount: '₹ 18,75,230.00' },
-    { id: '2.', name: 'Smart Fitness Band', qty: '980', amount: '₹ 14,20,450.00' },
-    { id: '3.', name: 'Classic Leather Wallet', qty: '875', amount: '₹ 12,45,320.00' },
-    { id: '4.', name: 'Roasted Almonds (500g)', qty: '620', amount: '₹ 8,75,120.00' },
-    { id: '5.', name: 'Mini Bluetooth Speaker', qty: '540', amount: '₹ 6,25,430.00' },
-  ];
-
-  const recentActivities = data?.recentActivities || [
-    { activity: 'POS Sale Invoice Created', user: 'ADMIN', time: '11:20 AM' },
-    { activity: 'Purchase Voucher Saved', user: 'ADMIN', time: '11:10 AM' },
-    { activity: 'Payment Received', user: 'ACCOUNTANT', time: '10:55 AM' },
-    { activity: 'GSTR-1 Return Synced', user: 'ADMIN', time: '10:40 AM' },
-    { activity: 'Stock Transfer to Noida', user: 'OPERATOR', time: '10:30 AM' },
-  ];
-
-  const bankBalanceData = data?.bankBalanceData || [
-    { particulars: 'Cash-in-Hand', amount: '₹ 1,25,430.00' },
-    { particulars: 'HDFC Current A/c', amount: '₹ 8,75,230.00' },
-    { particulars: 'ICICI Current A/c', amount: '₹ 6,25,430.00' },
-    { particulars: 'SBI Cash-Credit A/c', amount: '₹ 2,35,120.00' },
-    { particulars: 'Total Balance', amount: '₹ 18,61,210.00', totalValue: '₹ 18,61,210.00' },
-  ];
+  const lowStockData = data?.lowStockData || [];
+  const expiryData = data?.expiryData || [];
+  const topSellingData = data?.topSellingData || [];
+  const recentActivities = data?.recentActivities || [];
+  const bankBalanceData = data?.bankBalanceData || [];
 
   // Dynamically assemble widgets that user is permitted to see
   const widgets = [];

@@ -14,7 +14,7 @@ export const QuickLinks = () => {
     { icon: Users, title: 'CRM', subtitle: 'Leads & Customers', to: '/customers/customer-master', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-950/40' },
     { icon: ShoppingCart, title: 'SALES', subtitle: 'Quotations, Orders', to: '/sales/sale-list', color: 'text-blue-500 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-950/40' },
     { icon: Package, title: 'PURCHASE', subtitle: 'Orders, Bills', to: '/purchases/purchase-list', color: 'text-red-500 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-950/40' },
-    { icon: Building2, title: 'INVENTORY', subtitle: 'Stock, Items', to: '/products/product-list', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-950/40' },
+    { icon: Building2, title: 'INVENTORY', subtitle: 'Stock, Items', to: '/reports/stock/current-stock', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-950/40' },
     { icon: Landmark, title: 'ACCOUNTS', subtitle: 'Ledger, Journal', to: '/reports/accounts/ledger-voucher', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-100 dark:bg-indigo-950/40' },
     { icon: Banknote, title: 'BANKING', subtitle: 'Banking, Reconcile', to: '/reports/mis/management-dashboard', color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-950/40' },
     { icon: UsersRound, title: 'HRM', subtitle: 'Employees, Staff', to: '/employees/list', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-950/40' },
@@ -56,24 +56,42 @@ export const SummaryCards = ({ data, loading }) => {
   const { canRoute, isSuperAdmin, isAdmin, role: userRole } = usePermissions();
 
   // Fallbacks for data coming from the backend
-  const sales = data?.sales || { amount: '₹1.25 Cr', percent: '18.65%', up: true };
-  const purchase = data?.purchase || { amount: '₹85.4 L', percent: '8.32%', up: false };
-  const grossProfit = data?.grossProfit || { amount: '₹40.4 L', percent: '22.41%', up: true };
-  const netProfit = data?.netProfit || { amount: '₹18.7 L', percent: '16.35%', up: true };
-  const totalExpenses = data?.totalExpenses || { amount: '₹75.4 L', percent: '12.52%', up: true };
-  const outstanding = data?.outstanding || { amount: '₹21.2 L' };
+  const sales = data?.sales || { amount: '₹ 0.00', percent: '0%', up: true };
+  const purchase = data?.purchase || { amount: '₹ 0.00', percent: '0%', up: false };
+  const grossProfit = data?.grossProfit || { amount: '₹ 0.00', percent: '0%', up: true };
+  const netProfit = data?.netProfit || { amount: '₹ 0.00', percent: '0%', up: true };
+  const totalExpenses = data?.totalExpenses || { amount: '₹ 0.00', percent: '0%', up: false };
+  const outstanding = data?.outstanding || { amount: '₹ 0.00' };
 
   const cards = [
     { title: 'TOTAL SALES', amount: sales.amount, percent: sales.percent, up: sales.up, icon: ShoppingCart, to: '/reports/sales/summary', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-950/40' },
     { title: 'TOTAL PURCHASE', amount: purchase.amount, percent: purchase.percent, up: purchase.up, icon: Package, to: '/reports/purchases/summary', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-950/40' },
-    { title: 'GROSS PROFIT', amount: grossProfit.amount, percent: grossProfit.percent, up: grossProfit.up, icon: Percent, to: '/reports/financial/profit-and-loss', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-950/40' },
-    { title: 'NET PROFIT', amount: netProfit.amount, percent: netProfit.percent, up: netProfit.up, icon: TrendingUp, to: '/reports/financial/profit-and-loss', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-950/40' },
+    { 
+      title: grossProfit.up ? 'GROSS PROFIT' : 'GROSS LOSS', 
+      amount: grossProfit.amount, 
+      percent: grossProfit.percent, 
+      up: grossProfit.up, 
+      icon: Percent, 
+      to: '/reports/financial/profit-and-loss', 
+      color: grossProfit.up ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400', 
+      bg: grossProfit.up ? 'bg-green-100 dark:bg-green-950/40' : 'bg-rose-100 dark:bg-rose-950/40' 
+    },
+    { 
+      title: netProfit.up ? 'NET PROFIT' : 'NET LOSS', 
+      amount: netProfit.amount, 
+      percent: netProfit.percent, 
+      up: netProfit.up, 
+      icon: netProfit.up ? TrendingUp : TrendingDown, 
+      to: '/reports/financial/profit-and-loss', 
+      color: netProfit.up ? 'text-teal-600 dark:text-teal-400' : 'text-rose-600 dark:text-rose-400', 
+      bg: netProfit.up ? 'bg-teal-100 dark:bg-teal-950/40' : 'bg-rose-100 dark:bg-rose-950/40' 
+    },
     { title: 'TOTAL EXPENSES', amount: totalExpenses.amount, percent: totalExpenses.percent, up: totalExpenses.up, icon: TrendingDown, to: '/reports/financial/expense-report', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-950/40' },
     { title: 'OUTSTANDING', amount: outstanding.amount, link: 'View Details', icon: FileText, to: '/reports/recent-outstanding-details', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-950/40' }
   ];
 
   if (userRole === 'SuperAdmin') {
-    cards.unshift({ title: 'TOTAL COMPANIES', amount: '12', link: 'Manage Companies', icon: Building2, to: '/super-admin/companies', color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-100 dark:bg-pink-950/40' });
+    cards.unshift({ title: 'TOTAL COMPANIES', amount: String(data?.totalCompanies ?? '0'), link: 'Manage Companies', icon: Building2, to: '/super-admin/companies', color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-100 dark:bg-pink-950/40' });
   }
 
   const visibleCards = cards.filter(card => {

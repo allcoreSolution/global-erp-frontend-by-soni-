@@ -51,7 +51,7 @@ export const ShortcutKeys = () => {
     { key: 'F6', label: 'Bank Receipt', to: '/bank-receipt/new' },
     { key: 'F7', label: 'Bank Payment', to: '/bank-payment/new' },
     { key: 'F8', label: 'Journal Entry', to: '/journal/new' },
-    { key: 'F9', label: 'Stock View', to: '/products/product-list' },
+    { key: 'F9', label: 'Stock View', to: '/reports/stock/current-stock' },
     { key: 'F10', label: 'Stock Entry', to: '/stock-entry/new' },
     { key: 'F11', label: 'Stock Transfer', to: '/stock-transfer/new' },
     { key: 'Ctrl+L', label: 'Ledger', to: '/reports/accounts/ledger-voucher' },

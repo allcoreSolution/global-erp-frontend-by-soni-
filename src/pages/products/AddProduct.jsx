@@ -166,7 +166,7 @@ const AddProduct = () => {
       const response = await api.post('/products', formData);
       if (response.data.success) {
         alert('Product added successfully!');
-        navigate('/products/product-list');
+        navigate('/reports/stock/current-stock');
       }
     } catch (error) {
       console.error('Error saving product:', error);

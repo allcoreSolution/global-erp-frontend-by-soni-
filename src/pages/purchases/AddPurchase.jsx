@@ -72,6 +72,7 @@ const AddPurchase = () => {
             setPurchaseDate(data.purchaseDate || new Date().toISOString().split('T')[0]);
             setPurchaseType(data.purchaseType || 'Trading Goods');
             setReferenceNo(data.referenceNo || '');
+            setInvoiceNo(data.invoiceNo || data.purchaseNo || data.referenceNo || '');
             setBranch(data.branch?._id || data.branch || '');
             setWarehouse(data.warehouse?._id || data.warehouse || '');
             setSupplier(data.supplier?._id || data.supplier || '');
@@ -117,6 +118,7 @@ const AddPurchase = () => {
   // ── Purchase Header ────────────────────────────
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [purchaseType, setPurchaseType] = useState('Trading Goods');
+  const [invoiceNo, setInvoiceNo]       = useState('');
   const [referenceNo, setReferenceNo]   = useState('');
   const [branch, setBranch]             = useState('');
   const [warehouse, setWarehouse]       = useState('');
@@ -230,7 +232,9 @@ const AddPurchase = () => {
       const payload = {
         purchaseDate,
         purchaseType,
-        referenceNo,
+        invoiceNo:     invoiceNo.trim(),
+        referenceNo:   referenceNo.trim(),
+        purchaseNo:    invoiceNo.trim() || referenceNo.trim(),
         branch:        branch    || null,
         warehouse:     warehouse || null,
         supplier:      supplier  || null,
@@ -365,6 +369,12 @@ const AddPurchase = () => {
             <div>
               <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">Purchase Date *</label>
               <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} required
+                className="w-full border border-blue-400 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-300" />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-gray-600 mb-1">Invoice No</label>
+              <input type="text" value={invoiceNo} onChange={e => setInvoiceNo(e.target.value)} placeholder="e.g. INV-2024-001 (Supplier Bill No)"
                 className="w-full border border-blue-400 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
 

@@ -1,14 +1,67 @@
-import React from 'react';
-import { FileText, Download, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, Printer, Loader2 } from 'lucide-react';
+import api from '../../api';
 
 const RecentOutstandingDetails = () => {
-  const outstandingList = [
-    { id: 'INV-2026-0810', type: 'Receivable', party: 'Choudhary Logistics', date: '15-08-2026', dueDate: '15-09-2026', amount: 45000, status: 'Overdue' },
-    { id: 'BILL-8822', type: 'Payable', party: 'Acme Distributors Ltd.', date: '20-08-2026', dueDate: '20-09-2026', amount: 155000, status: 'Pending' },
-    { id: 'INV-2026-0901', type: 'Receivable', party: 'Amit Sharma (Retail)', date: '01-09-2026', dueDate: '01-10-2026', amount: 18500, status: 'Pending' },
-    { id: 'BILL-8845', type: 'Payable', party: 'Electroparts India', date: '05-09-2026', dueDate: '05-10-2026', amount: 22000, status: 'Pending' },
-    { id: 'INV-2026-0905', type: 'Receivable', party: 'Superstone Enterprises', date: '05-09-2026', dueDate: '05-10-2026', amount: 55000, status: 'Pending' }
-  ];
+  const [outstandingList, setOutstandingList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOutstanding = async () => {
+      try {
+        const [salesRes, purchasesRes] = await Promise.allSettled([
+          api.get('/sales'),
+          api.get('/purchases')
+        ]);
+
+        const items = [];
+
+        if (salesRes.status === 'fulfilled' && salesRes.value.data) {
+          const salesData = Array.isArray(salesRes.value.data) ? salesRes.value.data : (salesRes.value.data.data || []);
+          salesData.forEach(s => {
+            const due = (s.grandTotal || 0) - (s.amountPaid || 0);
+            if (due > 0 && (s.paymentStatus || '').toLowerCase() !== 'paid') {
+              items.push({
+                id: s.invoiceNumber || `INV-${s._id?.slice(-4)}`,
+                type: 'Receivable',
+                party: s.customerName || 'Customer',
+                date: s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-GB') : '-',
+                dueDate: s.dueDate ? new Date(s.dueDate).toLocaleDateString('en-GB') : '-',
+                amount: due,
+                status: s.paymentStatus || 'Pending'
+              });
+            }
+          });
+        }
+
+        if (purchasesRes.status === 'fulfilled' && purchasesRes.value.data) {
+          const purchaseData = Array.isArray(purchasesRes.value.data) ? purchasesRes.value.data : (purchasesRes.value.data.data || []);
+          purchaseData.forEach(p => {
+            const due = (p.grandTotal || 0) - (p.amountPaid || 0);
+            if (due > 0 && (p.paymentStatus || '').toLowerCase() !== 'paid') {
+              items.push({
+                id: p.billNumber || p.invoiceNo || `BILL-${p._id?.slice(-4)}`,
+                type: 'Payable',
+                party: p.supplierName || 'Supplier',
+                date: p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-GB') : '-',
+                dueDate: p.dueDate ? new Date(p.dueDate).toLocaleDateString('en-GB') : '-',
+                amount: due,
+                status: p.paymentStatus || 'Pending'
+              });
+            }
+          });
+        }
+
+        setOutstandingList(items);
+      } catch (err) {
+        console.error('Failed to fetch outstanding details', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOutstanding();
+  }, []);
 
   const totalReceivables = outstandingList.filter(o => o.type === 'Receivable').reduce((acc, curr) => acc + curr.amount, 0);
   const totalPayables = outstandingList.filter(o => o.type === 'Payable').reduce((acc, curr) => acc + curr.amount, 0);
@@ -44,40 +97,55 @@ const RecentOutstandingDetails = () => {
       </div>
 
       <div className="overflow-x-auto border rounded-lg">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="p-3 font-semibold text-gray-600">Ref No</th>
-              <th className="p-3 font-semibold text-gray-600">Type</th>
-              <th className="p-3 font-semibold text-gray-600">Party Name</th>
-              <th className="p-3 font-semibold text-gray-600">Bill Date</th>
-              <th className="p-3 font-semibold text-gray-600">Due Date</th>
-              <th className="p-3 font-semibold text-gray-600 text-center">Status</th>
-              <th className="p-3 font-semibold text-gray-600 text-right">Amount (₹)</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {outstandingList.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50">
-                <td className="p-3 font-mono text-gray-600">{item.id}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.type === 'Receivable' ? 'bg-blue-100 text-blue-700' : 'bg-rose-100 text-rose-700'}`}>
-                    {item.type}
-                  </span>
-                </td>
-                <td className="p-3 font-medium text-gray-800">{item.party}</td>
-                <td className="p-3 text-xs text-gray-600">{item.date}</td>
-                <td className="p-3 text-xs text-gray-600">{item.dueDate}</td>
-                <td className="p-3 text-center">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'Overdue' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td className="p-3 text-right font-bold text-gray-700">₹ {item.amount.toLocaleString()}</td>
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-gray-400 gap-2">
+            <Loader2 className="animate-spin" size={20} />
+            <span className="text-xs">Loading outstanding records...</span>
+          </div>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="p-3 font-semibold text-gray-600">Ref No</th>
+                <th className="p-3 font-semibold text-gray-600">Type</th>
+                <th className="p-3 font-semibold text-gray-600">Party Name</th>
+                <th className="p-3 font-semibold text-gray-600">Bill Date</th>
+                <th className="p-3 font-semibold text-gray-600">Due Date</th>
+                <th className="p-3 font-semibold text-gray-600 text-center">Status</th>
+                <th className="p-3 font-semibold text-gray-600 text-right">Amount (₹)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {outstandingList.length > 0 ? (
+                outstandingList.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3 font-mono text-gray-600">{item.id}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.type === 'Receivable' ? 'bg-blue-100 text-blue-700' : 'bg-rose-100 text-rose-700'}`}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td className="p-3 font-medium text-gray-800">{item.party}</td>
+                    <td className="p-3 text-xs text-gray-600">{item.date}</td>
+                    <td className="p-3 text-xs text-gray-600">{item.dueDate}</td>
+                    <td className="p-3 text-center">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'Overdue' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right font-bold text-gray-700">₹ {item.amount.toLocaleString()}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400 italic">
+                    No outstanding records found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

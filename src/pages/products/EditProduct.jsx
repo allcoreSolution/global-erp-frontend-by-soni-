@@ -106,15 +106,15 @@ const EditProduct = () => {
       const response = await api.put(`/products/${id}`, formData);
       if (response.data?.success) {
         alert('Product updated successfully!');
-        navigate('/products/product-list');
+        navigate('/reports/stock/current-stock');
       } else {
         alert('Failed to update product.');
-        navigate('/products/product-list'); // fallback
+        navigate('/reports/stock/current-stock'); // fallback
       }
     } catch (error) {
       console.error('Error updating product:', error);
       alert('Product updated locally (mocked network response).');
-      navigate('/products/product-list');
+      navigate('/reports/stock/current-stock');
     }
   };
 
@@ -238,7 +238,7 @@ const EditProduct = () => {
 
         {/* Form Actions */}
         <div className="flex items-center justify-end gap-4 pt-4">
-          <button type="button" onClick={() => navigate('/products/product-list')} className="px-6 py-2 border border-blue-500 rounded text-black font-semibold hover:bg-slate-50 transition-colors">
+          <button type="button" onClick={() => navigate('/reports/stock/current-stock')} className="px-6 py-2 border border-blue-500 rounded text-black font-semibold hover:bg-slate-50 transition-colors">
             Cancel
           </button>
           <button type="submit" className="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold shadow-md transition-all">

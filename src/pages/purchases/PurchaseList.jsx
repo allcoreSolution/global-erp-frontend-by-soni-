@@ -76,7 +76,10 @@ const PurchaseList = () => {
   // Search Filter
   const filteredPurchases = purchases.filter(p => {
     const suppName = getSupplierName(p.supplier);
-    const matchesSearch = (p.referenceNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const invoiceNum = String(p.invoiceNo || p.purchaseNo || '');
+    const refNum = String(p.referenceNo || '');
+    const matchesSearch = refNum.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          invoiceNum.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           suppName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'All' || p.purchaseStatus === selectedStatus || p.paymentStatus === selectedStatus;
     return matchesSearch && matchesStatus;
@@ -109,11 +112,13 @@ const PurchaseList = () => {
       Swal.fire('No Data', 'No data available to export.', 'warning');
       return;
     }
-    const headers = ['Date', 'Reference', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
+    const headers = ['Date', 'Invoice No', 'Reference', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
     const rows = purchases.map(p => {
       const grandTotal = calculateGrandTotal(p);
+      const invoiceNum = p.invoiceNo || p.purchaseNo || p.referenceNo || '';
       return [
         `"${p.purchaseDate || ''}"`,
+        `"${invoiceNum}"`,
         `"${p.referenceNo || ''}"`,
         `"Admin"`,
         `"${getSupplierName(p.supplier)}"`,
@@ -128,7 +133,7 @@ const PurchaseList = () => {
       ];
     });
     const dummyData = [
-      '2023-12-01', 'PUR-1001', 'Admin', 'ABC Suppliers', 'Received', '10000', '0', '10000', '0', 'Net 30', '2023-12-31', 'Paid'
+      '2023-12-01', 'PUR-INV-1001', 'PUR-1001', 'Admin', 'ABC Suppliers', 'Received', '10000', '0', '10000', '0', 'Net 30', '2023-12-31', 'Paid'
     ];
     const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -142,9 +147,9 @@ const PurchaseList = () => {
   };
 
   const handleDownloadSample = () => {
-    const headers = ['Date', 'Reference', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
+    const headers = ['Date', 'Invoice No', 'Reference', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
     const dummyData = [
-      '2023-12-01', 'PUR-1001', 'Admin', 'ABC Suppliers', 'Received', '10000', '0', '10000', '0', 'Net 30', '2023-12-31', 'Paid'
+      '2023-12-01', 'PUR-INV-1001', 'PUR-1001', 'Admin', 'ABC Suppliers', 'Received', '10000', '0', '10000', '0', 'Net 30', '2023-12-31', 'Paid'
     ];
     const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -280,7 +285,7 @@ const PurchaseList = () => {
           <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search Reference/Supplier..."
+            placeholder="Search Invoice No/Reference/Supplier..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -297,6 +302,7 @@ const PurchaseList = () => {
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Invoice No</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Reference</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Created By</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Supplier</th>
@@ -318,14 +324,25 @@ const PurchaseList = () => {
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
             {loading ? (
-              <tr><td colSpan="13" className="px-4 py-8 text-center">Loading...</td></tr>
+              <tr><td colSpan="19" className="px-4 py-8 text-center">Loading...</td></tr>
             ) : currentRecords.length > 0 ? (
               currentRecords.map((p) => {
                 const grandTotal = calculateGrandTotal(p);
+                const invoiceNumber = p.invoiceNo || p.purchaseNo || p.referenceNo || 'PUR-INV';
                 return (
                 <tr key={p._id} className="hover:bg-gray-50/70 transition-colors">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-medium">{p.purchaseDate}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.referenceNo}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenViewModal(p)}
+                      className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer bg-indigo-50/70 px-2.5 py-1 rounded border border-indigo-200 inline-block"
+                      title="View Invoice Details"
+                    >
+                      {invoiceNumber}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.referenceNo || '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">Admin</td>
                   <td className="px-4 py-3 text-sm text-gray-800 font-medium">
                     {getSupplierName(p.supplier)}
@@ -409,7 +426,7 @@ const PurchaseList = () => {
               )
             ) : (
               <tr>
-                <td colSpan="13" className="px-4 py-10 text-center text-sm text-gray-500 bg-white">
+                <td colSpan="19" className="px-4 py-10 text-center text-sm text-gray-500 bg-white">
                   <div className="flex flex-col items-center gap-2 justify-center">
                     <AlertCircle size={24} className="text-gray-400" />
                     <span>No purchase records found.</span>
@@ -476,13 +493,28 @@ const PurchaseList = () => {
               <X size={20} />
             </button>
 
-            <h3 className="text-xl font-bold text-gray-900 mb-4 border-b border-blue-500 pb-3">
-              Purchase Invoice Overview: <span className="text-indigo-600">{selectedPurchase.referenceNo}</span>
+            <h3 className="text-xl font-bold text-gray-900 mb-4 border-b border-blue-500 pb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                Purchase Invoice: <span className="text-indigo-600">{selectedPurchase.invoiceNo || selectedPurchase.purchaseNo || selectedPurchase.referenceNo}</span>
+              </div>
+              {selectedPurchase.referenceNo && (
+                <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded font-medium border border-gray-200">
+                  Ref: {selectedPurchase.referenceNo}
+                </span>
+              )}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mb-6">
               {/* Left Column */}
               <div className="space-y-3">
+                <div className="flex justify-between border-b border-gray-100 pb-1">
+                  <span className="font-semibold text-gray-600">Invoice No:</span>
+                  <span className="text-indigo-600 font-bold">{selectedPurchase.invoiceNo || selectedPurchase.purchaseNo || selectedPurchase.referenceNo || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 pb-1">
+                  <span className="font-semibold text-gray-600">Reference No:</span>
+                  <span className="text-gray-900 font-semibold">{selectedPurchase.referenceNo || 'N/A'}</span>
+                </div>
                 <div className="flex justify-between border-b border-gray-100 pb-1">
                   <span className="font-semibold text-gray-600">Date:</span>
                   <span className="text-gray-900 font-semibold">{selectedPurchase.purchaseDate}</span>
