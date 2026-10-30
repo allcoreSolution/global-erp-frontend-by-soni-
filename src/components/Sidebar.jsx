@@ -303,25 +303,37 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
 
   React.useEffect(() => {
     const loadTheme = () => {
+      // 1. Read dynamically switched company name
+      const activeName = localStorage.getItem('companyName') || localStorage.getItem('erp_company');
       const userStr = localStorage.getItem('user');
+      let userComp = {};
       if (userStr) {
         try {
           const userObj = JSON.parse(userStr);
           if (userObj.company) {
-            setCompanyTheme({
-              name: userObj.company.name || 'GLOBAL ERP',
-              logoUrl: userObj.company.logoUrl || '',
-              themeColor: userObj.company.themeColor || '#0a192f'
-            });
+            userComp = userObj.company;
           }
         } catch (e) {
           console.error('Failed to parse user for theme', e);
         }
       }
+
+      setCompanyTheme({
+        name: activeName || userComp.name || 'GLOBAL ERP',
+        logoUrl: userComp.logoUrl || '',
+        themeColor: userComp.themeColor || '#0a192f'
+      });
     };
+
     loadTheme();
     window.addEventListener('userUpdated', loadTheme);
-    return () => window.removeEventListener('userUpdated', loadTheme);
+    window.addEventListener('companySwitched', loadTheme);
+    window.addEventListener('erp_config_changed', loadTheme);
+    return () => {
+      window.removeEventListener('userUpdated', loadTheme);
+      window.removeEventListener('companySwitched', loadTheme);
+      window.removeEventListener('erp_config_changed', loadTheme);
+    };
   }, []);
 
   if (isSuperAdminMode) {

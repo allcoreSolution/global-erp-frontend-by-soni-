@@ -58,6 +58,22 @@ const CompanyMaster = () => {
     localStorage.setItem('active_company_id', comp._id);
     localStorage.setItem('companyName', comp.name);
     localStorage.setItem('erp_company', comp.name);
+
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userObj = JSON.parse(userStr);
+        userObj.company = {
+          ...(userObj.company || {}),
+          _id: comp._id,
+          name: comp.name,
+          logoUrl: comp.logoUrl || '',
+          themeColor: comp.themeColor || '#0a192f'
+        };
+        localStorage.setItem('user', JSON.stringify(userObj));
+      }
+    } catch (_) {}
+
     setActiveCompanyId(comp._id);
     window.dispatchEvent(new Event('companySwitched'));
     window.dispatchEvent(new Event('userUpdated'));
