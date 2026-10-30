@@ -1,8 +1,29 @@
 import axios from 'axios';
 
-// Create an Axios instance with the base URL from .env, fallback to localhost
+// Resolve API Base URL: automatically use live Render backend on production hosts, or env/localhost in local dev
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+
+  // Check if running on a production host (e.g. Render, Vercel, etc.)
+  const isProductionHost =
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1';
+
+  if (isProductionHost) {
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      return 'https://global-erp-backend-by-soni-8bxl.onrender.com/api';
+    }
+    return envUrl;
+  }
+
+  // Local development: use env or fallback to localhost:5000/api
+  return envUrl || 'http://localhost:5000/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
