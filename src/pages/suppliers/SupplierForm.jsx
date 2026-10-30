@@ -46,7 +46,7 @@ export const initialFormState = {
 };
 
 const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
-  const [supplierTypes, setSupplierTypes] = useState(['Manufacturer', 'Distributor', 'Wholesaler', 'Service Provider', 'Importer', 'Local Supplier']);
+  const [supplierTypes, setSupplierTypes] = useState(['Manufacturer', 'Service Provider', 'Importer', 'Local Supplier']);
   const [supplierCategories, setSupplierCategories] = useState(['Raw Materials', 'Packaging', 'Logistics', 'IT Services']);
   const [paymentTermsList, setPaymentTermsList] = useState(['Advance', 'Due on Receipt', 'Net 7', 'Net 15', 'Net 30', 'Net 45', 'Net 60']);
   const [currencyList, setCurrencyList] = useState(['INR', 'USD', 'EUR']);
@@ -75,7 +75,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
           setBranchesList(brRes.data.data);
         }
         if (typeRes.data?.success && typeRes.data.data.length > 0) {
-          setSupplierTypes(typeRes.data.data.map(d => d.value));
+          setSupplierTypes(typeRes.data.data.map(d => d.value).filter(val => val !== 'Distributor' && val !== 'Wholesaler'));
         }
         if (catRes.data?.success && catRes.data.data.length > 0) {
           setSupplierCategories(catRes.data.data.map(d => d.value));
@@ -165,7 +165,6 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
           { id: 'basic', label: 'Basic & Tax', icon: User },
           { id: 'address', label: 'Addresses', icon: MapPin },
           { id: 'bank', label: 'Bank Details', icon: CreditCard },
-          { id: 'commercial', label: 'Commercials', icon: DollarSign },
           { id: 'documents', label: 'Documents', icon: FileText }
         ].map(tab => (
           <button
@@ -377,42 +376,6 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
           </div>
         )}
 
-        {activeFormTab === 'commercial' && (
-          <div className="space-y-6">
-            <h3 className="font-bold text-slate-700 mb-4 border-b pb-2 flex items-center gap-2"><DollarSign size={16}/> Purchase / Commercial Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Payment Terms</label>
-                <select value={supplierForm.paymentTerms} onChange={(e) => setSupplierForm({ ...supplierForm, paymentTerms: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white">
-                  {paymentTermsList.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Credit Period (Days)</label>
-                <input type="number" placeholder="e.g. 30" value={supplierForm.creditPeriod || 30} onChange={(e) => setSupplierForm({ ...supplierForm, creditPeriod: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 bg-white" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Credit Limit (₹)</label>
-                <input type="number" placeholder="e.g. 100000" value={supplierForm.creditLimit || 0} onChange={(e) => setSupplierForm({ ...supplierForm, creditLimit: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 bg-white" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Drug Licence Number (D.L.)</label>
-                <input type="text" placeholder="e.g. DL-20B-78901/21B-23456" value={supplierForm.drugLicenceNo || ''} onChange={(e) => setSupplierForm({ ...supplierForm, drugLicenceNo: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Drug Licence Validity</label>
-                <input type="date" value={supplierForm.drugLicenceValidity || ''} onChange={(e) => setSupplierForm({ ...supplierForm, drugLicenceValidity: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Currency</label>
-                <select value={supplierForm.currency} onChange={(e) => setSupplierForm({ ...supplierForm, currency: e.target.value })} className="w-full border border-slate-300 rounded p-2 bg-white">
-                  {currencyList.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
         {activeFormTab === 'documents' && (
           <div className="space-y-8">
             {/* Documents Upload */}
@@ -452,7 +415,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
         
         {activeFormTab !== 'basic' && (
           <button type="button" onClick={() => {
-            const tabs = ['basic', 'address', 'bank', 'commercial', 'documents'];
+            const tabs = ['basic', 'address', 'bank', 'documents'];
             setActiveFormTab(tabs[tabs.indexOf(activeFormTab) - 1]);
           }} className="px-5 py-2 rounded border border-slate-300 hover:bg-slate-100 font-semibold text-xs">Back</button>
         )}
@@ -461,7 +424,7 @@ const SupplierForm = ({ initialData, isEditMode, onSubmit, onCancel }) => {
           <button onClick={handleFormSubmit} className="px-6 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs">Save Supplier</button>
         ) : (
           <button type="button" onClick={() => {
-            const tabs = ['basic', 'address', 'bank', 'commercial', 'documents'];
+            const tabs = ['basic', 'address', 'bank', 'documents'];
             setActiveFormTab(tabs[tabs.indexOf(activeFormTab) + 1]);
           }} className="px-6 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs">Save & Next</button>
         )}

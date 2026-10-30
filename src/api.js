@@ -8,13 +8,20 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Attach JWT Token before sending any request
+// Request Interceptor: Attach JWT Token & Active Company ID before sending any request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('erp_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Dynamic Multi-Company Isolation Pass
+    const activeCompanyId = localStorage.getItem('active_company_id');
+    if (activeCompanyId) {
+      config.headers['x-company-id'] = activeCompanyId;
+    }
+
     return config;
   },
   (error) => {

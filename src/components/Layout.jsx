@@ -91,7 +91,7 @@ const Layout = () => {
           )}
         </header>
 
-        <main ref={mainRef} className={`flex-1 overflow-y-auto no-scrollbar ${isSuperAdminRoute ? 'p-0' : 'p-4 space-y-4'}`}>
+        <main ref={mainRef} className={`flex-1 overflow-y-auto ${isSuperAdminRoute ? 'p-0' : 'p-4 space-y-4'}`}>
           {(!isSuperAdminRoute && !isSuperAdmin && !canRoute(location.pathname)) ? (
             <div className="flex h-full min-h-[400px] items-center justify-center p-6">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-lg max-w-md text-center border border-slate-200 dark:border-slate-800">

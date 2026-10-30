@@ -61,7 +61,6 @@ export const ROUTE_PERMISSION_MAP = [
 
   // Products / Inventory
   { prefix: '/products', permission: ['view_products', 'view_stock', 'manage_products'] },
-  { prefix: '/price-list', permission: ['view_price_lists'] },
   { prefix: '/tax', permission: ['view_tax_slabs', 'view_accounts'] },
   { prefix: '/company', permission: ['view_company'] },
   { prefix: '/branch', permission: ['view_branches'] },
@@ -178,7 +177,6 @@ export const ROUTE_MODULE_MAP = [
   // Sales
   { prefix: '/sales', module: 'Sales' },
   { prefix: '/credit-note', module: 'Sales' },
-  { prefix: '/price-list', module: 'Sales' },
 
   // Purchases
   { prefix: '/purchases', module: 'Purchase' },

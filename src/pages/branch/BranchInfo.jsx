@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Edit, Trash2, Search, X, MapPin, Phone, Mail, Upload, FileDown, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, MapPin, Phone, Mail, Upload, FileDown, Download, Eye, Building2, User, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
 import { usePermissions } from '../../utils/permissionUtils';
@@ -14,11 +14,13 @@ const BranchInfo = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewBranch, setViewBranch] = useState(null);
   const [currentBranch, setCurrentBranch] = useState({
     id: '', code: '', name: '', company: '', manager: '', status: 'Active',
     contactPerson: '', mobile: '', email: '', phone: '',
     address1: '', address2: '', state: 'Uttar Pradesh', city: 'Lucknow', district: '', pincode: '',
-    gstStatus: 'Registered', gstin: '', pan: '', tan: '', hsn: ''
+    gstStatus: 'Registered', gstin: '', pan: '', tan: '', hsn: '', documentUrl: ''
   });
 
   useEffect(() => {
@@ -54,9 +56,22 @@ const BranchInfo = () => {
     }
   };
 
+  const getManagerName = (managerVal) => {
+    if (!managerVal) return '-';
+    const found = employees.find(e => String(e._id) === String(managerVal) || String(e.id) === String(managerVal));
+    return found ? (found.employeeName || found.name || `${found.firstName || ''} ${found.lastName || ''}`.trim()) : managerVal;
+  };
+
+  const handleOpenView = (branch) => {
+    setViewBranch(branch);
+    setIsViewModalOpen(true);
+  };
+
   const filtered = branches.filter(b =>
     (b.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (b.code || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (b.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (b.contactPerson || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (b.city || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenAdd = () => {
@@ -271,37 +286,80 @@ const BranchInfo = () => {
             <tr className="bg-slate-100 border-b font-semibold text-gray-700">
               <th className="p-2.5 sm:p-3">Code</th>
               <th className="p-2.5 sm:p-3">Branch Name</th>
-              <th className="p-2.5 sm:p-3">Contact</th>
-              <th className="p-2.5 sm:p-3 font-mono">GSTIN</th>
+              <th className="p-2.5 sm:p-3">Manager</th>
+              <th className="p-2.5 sm:p-3">Contact Person</th>
+              <th className="p-2.5 sm:p-3">Phone & Email</th>
+              <th className="p-2.5 sm:p-3">Address / Location</th>
+              <th className="p-2.5 sm:p-3 text-center">Document</th>
+              <th className="p-2.5 sm:p-3 text-center">Status</th>
               <th className="p-2.5 sm:p-3 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan="6" className="p-4 text-center text-gray-500">Loading branches...</td>
+                <td colSpan="9" className="p-4 text-center text-gray-500">Loading branches...</td>
               </tr>
             ) : filtered.length > 0 ? filtered.map(b => (
               <tr key={b._id || b.id} className="hover:bg-slate-50 transition-colors">
-                <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono">{b.code}</td>
+                <td className="p-2.5 sm:p-3 font-semibold text-indigo-600 font-mono whitespace-nowrap">{b.code || b.id}</td>
                 <td className="p-2.5 sm:p-3">
-                  <div className="font-medium text-gray-900">{b.name}</div>
-                  <div className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{b.address}</div>
+                  <div className="font-semibold text-gray-900">{b.name}</div>
+                  <div className="text-[10px] text-gray-400 font-mono">{b.city}, {b.state}</div>
+                </td>
+                <td className="p-2.5 sm:p-3 text-gray-700 font-medium whitespace-nowrap">
+                  {getManagerName(b.manager)}
+                </td>
+                <td className="p-2.5 sm:p-3 text-gray-700 whitespace-nowrap">
+                  {b.contactPerson || '-'}
                 </td>
                 <td className="p-2.5 sm:p-3">
-                  <div>{b.phone}</div>
-                  <div className="text-[10px] text-gray-400 break-all">{b.email}</div>
+                  <div className="font-medium text-gray-800">{b.mobile || b.phone || '-'}</div>
+                  <div className="text-[10px] text-gray-400 break-all">{b.email || '-'}</div>
                 </td>
-                <td className="p-2.5 sm:p-3 font-mono text-gray-700">{b.gstin || '-'}</td>
-                <td className="p-2.5 sm:p-3 text-center">
-                  <div className="flex items-center justify-center gap-1.5">
+                <td className="p-2.5 sm:p-3 min-w-[200px]">
+                  <div className="text-gray-800 line-clamp-1">{b.address1}{b.address2 ? `, ${b.address2}` : ''}</div>
+                  <div className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
+                    <MapPin size={10} className="shrink-0 text-gray-400" />
+                    <span>{b.city}, {b.state} {b.pincode ? `(${b.pincode})` : ''}</span>
+                  </div>
+                </td>
+                <td className="p-2.5 sm:p-3 text-center whitespace-nowrap">
+                  {b.documentUrl ? (
+                    <a 
+                      href={api.defaults.baseURL.replace('/api', '') + b.documentUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded border border-indigo-200 transition-colors"
+                      title="View Document"
+                    >
+                      <FileText size={11} /> File
+                    </a>
+                  ) : (
+                    <span className="text-gray-300">-</span>
+                  )}
+                </td>
+                <td className="p-2.5 sm:p-3 text-center whitespace-nowrap">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${b.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                    {b.status || 'Active'}
+                  </span>
+                </td>
+                <td className="p-2.5 sm:p-3 text-center whitespace-nowrap">
+                  <div className="flex items-center justify-center gap-1">
+                    <button 
+                      onClick={() => handleOpenView(b)} 
+                      className="p-1 text-cyan-600 hover:bg-cyan-50 rounded transition-colors" 
+                      title="View Full Details"
+                    >
+                      <Eye size={14} />
+                    </button>
                     {can(['edit_branches', 'manage_settings']) && (
-                      <button onClick={() => handleOpenEdit(b)} className="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Edit">
+                      <button onClick={() => handleOpenEdit(b)} className="p-1 text-amber-600 hover:bg-amber-50 rounded transition-colors" title="Edit">
                         <Edit size={14} />
                       </button>
                     )}
                     {can(['delete_branches', 'manage_settings']) && (
-                      <button onClick={() => handleDelete(b.id, b._id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                      <button onClick={() => handleDelete(b.id, b._id)} className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete">
                         <Trash2 size={14} />
                       </button>
                     )}
@@ -310,7 +368,7 @@ const BranchInfo = () => {
               </tr>
             )) : (
               <tr>
-                <td colSpan="6" className="p-4 text-center text-gray-500">No branches found</td>
+                <td colSpan="9" className="p-4 text-center text-gray-500">No branches found</td>
               </tr>
             )}
           </tbody>
@@ -413,41 +471,7 @@ const BranchInfo = () => {
                 </div>
               </div>
 
-              {/* TAX & LEGAL */}
-              <div>
-                <h4 className="font-semibold text-gray-700 border-b pb-2 mb-4 uppercase text-xs">Tax & Legal</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">GST Status</label>
-                    <select value={currentBranch.gstStatus} onChange={(e) => setCurrentBranch({ ...currentBranch, gstStatus: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs">
-                      <option value="Registered">Registered</option>
-                      <option value="Unregistered">Unregistered</option>
-                    </select>
-                  </div>
-                  {currentBranch.gstStatus !== 'Unregistered' && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">GSTIN</label>
-                      <input type="text" value={currentBranch.gstin} onChange={(e) => setCurrentBranch({ ...currentBranch, gstin: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs font-mono" />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">PAN</label>
-                    <input type="text" value={currentBranch.pan} onChange={(e) => setCurrentBranch({ ...currentBranch, pan: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs font-mono" />
-                  </div>
-                  {currentBranch.gstStatus !== 'Unregistered' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">TAN</label>
-                        <input type="text" value={currentBranch.tan} onChange={(e) => setCurrentBranch({ ...currentBranch, tan: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs font-mono" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">HSN</label>
-                        <input type="text" value={currentBranch.hsn} onChange={(e) => setCurrentBranch({ ...currentBranch, hsn: e.target.value })} className="w-full border p-2 rounded focus:outline-none focus:border-indigo-500 text-xs font-mono" />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+
 
 
 
@@ -475,6 +499,175 @@ const BranchInfo = () => {
                 <button type="submit" className="px-5 py-2 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-700 text-sm shadow-sm transition-colors">Save Branch</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {isViewModalOpen && viewBranch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-base sm:text-lg text-slate-800">{viewBranch.name}</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${viewBranch.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                      {viewBranch.status || 'Active'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 font-mono">Branch Code: {viewBranch.code || viewBranch.id}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsViewModalOpen(false)} 
+                className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 text-xs sm:text-sm">
+              {/* Basic Information Card */}
+              <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4">
+                <h4 className="font-bold text-xs uppercase text-slate-500 mb-3 flex items-center gap-1.5">
+                  <User size={14} className="text-indigo-600" /> Basic Information
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Branch Code</span>
+                    <span className="font-semibold text-indigo-600 font-mono">{viewBranch.code || viewBranch.id}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Branch Name</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.name}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Branch Manager</span>
+                    <span className="font-semibold text-gray-800">{getManagerName(viewBranch.manager)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Status</span>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${viewBranch.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                      {viewBranch.status || 'Active'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information Card */}
+              <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4">
+                <h4 className="font-bold text-xs uppercase text-slate-500 mb-3 flex items-center gap-1.5">
+                  <Phone size={14} className="text-emerald-600" /> Contact Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Contact Person</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.contactPerson || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Primary Mobile</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.mobile || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Phone (Landline)</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.phone || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Email Address</span>
+                    <span className="font-semibold text-gray-800 break-all">{viewBranch.email || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Details Card */}
+              <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4">
+                <h4 className="font-bold text-xs uppercase text-slate-500 mb-3 flex items-center gap-1.5">
+                  <MapPin size={14} className="text-rose-600" /> Physical Address
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2 md:col-span-3">
+                    <span className="block text-[11px] text-gray-500 font-medium">Address Line 1</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.address1 || '-'}</span>
+                  </div>
+                  {viewBranch.address2 && (
+                    <div className="sm:col-span-2 md:col-span-3">
+                      <span className="block text-[11px] text-gray-500 font-medium">Address Line 2</span>
+                      <span className="font-semibold text-gray-800">{viewBranch.address2}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">City</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.city || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">District</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.district || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">State</span>
+                    <span className="font-semibold text-gray-800">{viewBranch.state || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-gray-500 font-medium">Pincode</span>
+                    <span className="font-semibold text-gray-800 font-mono">{viewBranch.pincode || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attached Document Card */}
+              <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4">
+                <h4 className="font-bold text-xs uppercase text-slate-500 mb-3 flex items-center gap-1.5">
+                  <FileText size={14} className="text-amber-600" /> Attached Documents
+                </h4>
+                {viewBranch.documentUrl ? (
+                  <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-md">
+                    <div className="flex items-center gap-2 text-xs">
+                      <FileText size={16} className="text-indigo-600" />
+                      <span className="font-medium text-gray-700">Uploaded Branch Document</span>
+                    </div>
+                    <a
+                      href={api.defaults.baseURL.replace('/api', '') + viewBranch.documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded text-xs font-semibold transition-colors"
+                    >
+                      View / Download File
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-gray-400 italic text-xs">No document uploaded for this branch.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end items-center gap-3 sticky bottom-0 bg-white px-6 py-4 border-t border-slate-200">
+              {can(['edit_branches', 'manage_settings']) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    handleOpenEdit(viewBranch);
+                  }}
+                  className="px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 text-xs sm:text-sm flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Edit size={14} /> Edit Branch
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsViewModalOpen(false)}
+                className="px-4 py-2 border border-slate-300 text-gray-700 rounded-lg font-semibold hover:bg-slate-50 text-xs sm:text-sm transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

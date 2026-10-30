@@ -64,7 +64,7 @@ const resolveItemModule = (text, to) => {
     if (path.includes('leave') || path.includes('holiday') || t.includes('leave') || t.includes('holiday')) return 'Leave';
     return 'HRMS';
   }
-  if (path.startsWith('/sales') || path.startsWith('/price-list') || t.includes('sale') || t.includes('credit note') || t.includes('challan') || t.includes('packing slip') || t.includes('price list')) {
+  if (path.startsWith('/sales') || t.includes('sale') || t.includes('credit note') || t.includes('challan') || t.includes('packing slip')) {
     return 'Sales';
   }
   if (path.startsWith('/purchases') || path.startsWith('/suppliers') || t.includes('purchase') || t.includes('supplier') || t.includes('debit note')) {
@@ -559,8 +559,9 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
           <MenuSection
             title="MASTERS"
             defaultOpen={true}
-            permission={['view_contacts', 'view_suppliers', 'view_warehouses', 'view_products', 'view_price_lists', 'view_tax_slabs', 'view_company', 'view_branches']}
+            permission={['manage_company', 'view_company', 'view_contacts', 'view_suppliers', 'view_warehouses', 'view_products', 'view_price_lists', 'view_tax_slabs', 'view_branches']}
           >
+            <MenuItem icon={Building2} text="Company Master" to="/company/company-master" permission="view_company" />
             <MenuItem icon={User} text="Customer Master" to="/customers/customer-master" permission="view_contacts" />
             <MenuItem icon={Truck} text="Supplier Master" to="/suppliers/supplier-master" permission="view_suppliers" />
             <MenuItem icon={Building} text="Warehouse Master" to="/warehouse/master" permission="view_warehouses" />
@@ -581,15 +582,6 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
               ]}
             />
 
-            <MenuItem
-              icon={FileText}
-              text="Price List Master"
-              permission="view_price_lists"
-              subItems={[
-                { text: 'Price List', to: '/price-list/list', permission: 'view_price_lists' },
-                { text: 'Pricing Rules', to: '/price-list/rules', permission: 'view_price_lists' }
-              ]}
-            />
             <MenuItem
               icon={Calculator}
               text="Tax Master"

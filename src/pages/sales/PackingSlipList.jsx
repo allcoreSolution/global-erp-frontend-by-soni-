@@ -215,12 +215,12 @@ const PackingSlipList = () => {
         </div>
 
         {/* Global Toolbar buttons */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto pb-1 md:pb-0">
+        <div className="flex flex-nowrap overflow-x-auto no-scrollbar items-center gap-2 w-full md:w-auto pb-1 md:pb-0">
           {/* Column Visibility Dropdown toggle */}
           <div className="relative">
             <button
               onClick={() => setIsColMenuOpen(!isColMenuOpen)}
-              className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
+              className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
             >
               <LayoutGrid size={14} /> Column Visibility
             </button>
@@ -248,13 +248,13 @@ const PackingSlipList = () => {
               <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
               <button
                 onClick={() => fileInputRef.current.click()}
-                className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
+                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
               >
                 <Upload size={14} /> Import CSV
               </button>
               <button
                 onClick={handleDownloadSample}
-                className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
+                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
               >
                 <FileDown size={14} /> Sample
               </button>
@@ -262,14 +262,14 @@ const PackingSlipList = () => {
           )}
           <button
             onClick={handleExportCSV}
-            className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
+            className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
           {can(['create_sales', 'manage_sales']) && (
             <button
               onClick={() => navigate('/sales/add-packing-slip')}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+              className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
             >
               <Plus size={14} /> Add packing slip
             </button>
@@ -449,21 +449,25 @@ const PackingSlipList = () => {
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="px-3 py-2 font-semibold">Product</th>
-                        <th className="px-3 py-2 font-semibold">Ordered Qty</th>
-                        <th className="px-3 py-2 font-semibold">Packed Qty</th>
+                        <th className="px-3 py-2 font-semibold">Batch No</th>
+                        <th className="px-3 py-2 font-semibold text-center">Ordered Qty</th>
+                        <th className="px-3 py-2 font-semibold text-center">Packed Qty</th>
+                        <th className="px-3 py-2 font-semibold text-center">Boxes / Pkgs</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {(viewSlip.items || viewSlip.products || []).map((item, idx) => (
                         <tr key={idx}>
-                          <td className="px-3 py-2">{item.productName || item.productId?.productName || item.product || '-'}</td>
-                          <td className="px-3 py-2">{item.orderedQty || item.quantity || 0}</td>
-                          <td className="px-3 py-2 font-bold">{item.packQty || item.qty || 0}</td>
+                          <td className="px-3 py-2 font-medium text-gray-900">{item.productName || item.productId?.productName || item.product || '-'}</td>
+                          <td className="px-3 py-2 font-bold text-indigo-700">{item.batchNo || '-'}</td>
+                          <td className="px-3 py-2 text-center text-gray-600">{item.orderedQty || item.quantity || 0}</td>
+                          <td className="px-3 py-2 text-center font-black text-emerald-700">{item.packQty || item.qty || 0}</td>
+                          <td className="px-3 py-2 text-center text-gray-700">{item.packagesCount || 1}</td>
                         </tr>
                       ))}
                       {(!viewSlip.items && !viewSlip.products) || (viewSlip.items?.length === 0 && viewSlip.products?.length === 0) ? (
                         <tr>
-                          <td colSpan="3" className="px-3 py-4 text-center text-gray-500">No products found.</td>
+                          <td colSpan="5" className="px-3 py-4 text-center text-gray-500">No products found.</td>
                         </tr>
                       ) : null}
                     </tbody>

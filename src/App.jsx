@@ -35,10 +35,10 @@ import TaxFinancial from './pages/suppliers/TaxFinancial';
 import EmployeeProfile from './pages/employees/EmployeeProfile';
 import EmployeeList from './pages/employees/EmployeeList';
 import EmployeeView from './pages/employees/EmployeeView';
-import PriceList from './pages/pricelist/PriceList';
-import PricingRules from './pages/pricelist/PricingRules';
 import TaxConfig from './pages/tax/TaxConfig';
 import CompanyProfile from './pages/company/CompanyProfile';
+import CompanyMaster from './pages/company/CompanyMaster';
+import AddCompanyMaster from './pages/company/AddCompanyMaster';
 import PharmaOperations from './pages/pharma/PharmaOperations';
 import BusinessSettings from './pages/company/BusinessSettings';
 import BranchInfo from './pages/branch/BranchInfo';
@@ -383,9 +383,13 @@ function App() {
           <Route path="employees/profile/:id" element={<EmployeeProfile />} />
           <Route path="employees/view/:id" element={<EmployeeView />} />
           <Route path="employees/list" element={<EmployeeList />} />
-          <Route path="price-list/list" element={<PriceList />} />
-          <Route path="price-list/rules" element={<PricingRules />} />
           <Route path="tax/config" element={<TaxConfig />} />
+          <Route path="company/company-master" element={<CompanyMaster />} />
+          <Route path="company/company-master/add" element={<AddCompanyMaster />} />
+          <Route path="company/company-master/edit/:id" element={<AddCompanyMaster />} />
+          <Route path="company/master" element={<CompanyMaster />} />
+          <Route path="company/master/add" element={<AddCompanyMaster />} />
+          <Route path="company/master/edit/:id" element={<AddCompanyMaster />} />
           <Route path="company/profile" element={<CompanyProfile />} />
           <Route path="company/business-settings" element={<BusinessSettings />} />
           <Route path="branch/info" element={<BranchInfo />} />

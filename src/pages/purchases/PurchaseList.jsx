@@ -73,12 +73,49 @@ const PurchaseList = () => {
     return String(wh);
   };
 
+  const getPurchaseItems = (p) => {
+    if (!p) return [];
+    if (Array.isArray(p.orderItems) && p.orderItems.length > 0) {
+      return p.orderItems.map((item) => ({
+        name: item.name || item.product?.productName || item.productName || 'Product',
+        code: item.code || item.product?.productCode || item.productCode || '-',
+        quantity: item.quantity ?? item.qty ?? 1,
+        freeQty: item.freeQty || 0,
+        netUnitCost: Number(item.netUnitCost ?? item.cost ?? 0),
+        taxPercent: Number(item.taxPercent ?? 0),
+        discount: Number(item.discount ?? 0),
+        batch: item.batch || '',
+        expDate: item.expDate || '',
+        brand: item.product?.brand?.name || item.brand?.name || (typeof item.brand === 'string' ? item.brand : ''),
+        category: item.product?.category?.name || item.category?.name || (typeof item.category === 'string' ? item.category : '')
+      }));
+    }
+    if (p.productName) {
+      return [{
+        name: p.productName,
+        code: p.productCode || '-',
+        quantity: p.purchaseQty || p.quantity || 1,
+        freeQty: 0,
+        netUnitCost: Number(p.productCost || 0),
+        taxPercent: 0,
+        discount: 0,
+        batch: '',
+        expDate: '',
+        brand: '',
+        category: p.category || ''
+      }];
+    }
+    return [];
+  };
+
   // Search Filter
   const filteredPurchases = purchases.filter(p => {
     const suppName = getSupplierName(p.supplier);
     const invoiceNum = String(p.invoiceNo || p.purchaseNo || '');
+    const billNum = String(p.billNo || '');
     const refNum = String(p.referenceNo || '');
     const matchesSearch = refNum.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          billNum.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           invoiceNum.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           suppName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'All' || p.purchaseStatus === selectedStatus || p.paymentStatus === selectedStatus;
@@ -112,14 +149,14 @@ const PurchaseList = () => {
       Swal.fire('No Data', 'No data available to export.', 'warning');
       return;
     }
-    const headers = ['Date', 'Invoice No', 'Reference', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
+    const headers = ['Date', 'Invoice No', 'Bill No', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
     const rows = purchases.map(p => {
       const grandTotal = calculateGrandTotal(p);
       const invoiceNum = p.invoiceNo || p.purchaseNo || p.referenceNo || '';
       return [
         `"${p.purchaseDate || ''}"`,
         `"${invoiceNum}"`,
-        `"${p.referenceNo || ''}"`,
+        `"${p.billNo || ''}"`,
         `"Admin"`,
         `"${getSupplierName(p.supplier)}"`,
         `"${p.purchaseStatus || ''}"`,
@@ -147,7 +184,7 @@ const PurchaseList = () => {
   };
 
   const handleDownloadSample = () => {
-    const headers = ['Date', 'Invoice No', 'Reference', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
+    const headers = ['Date', 'Invoice No', 'Bill No', 'Created By', 'Supplier', 'Purchase Status', 'Grand Total', 'Returned Amount', 'Paid', 'Due', 'Payment Term', 'Due Date', 'Payment Status'];
     const dummyData = [
       '2023-12-01', 'PUR-INV-1001', 'PUR-1001', 'Admin', 'ABC Suppliers', 'Received', '10000', '0', '10000', '0', 'Net 30', '2023-12-31', 'Paid'
     ];
@@ -303,7 +340,7 @@ const PurchaseList = () => {
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Invoice No</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Reference</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Bill No</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Created By</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Supplier</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Product</th>
@@ -342,19 +379,37 @@ const PurchaseList = () => {
                       {invoiceNumber}
                     </button>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.referenceNo || '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{p.billNo || '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">Admin</td>
                   <td className="px-4 py-3 text-sm text-gray-800 font-medium">
                     {getSupplierName(p.supplier)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-800 font-semibold min-w-[120px]">
                     <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
-                      {p.orderItems?.map((i, idx) => <span key={idx} className="block truncate" title={i.name}>{i.name}</span>)}
+                      {p.orderItems && p.orderItems.length > 0 ? (
+                        p.orderItems.map((i, idx) => (
+                          <span key={idx} className="block truncate" title={i.name || i.product?.productName}>
+                            {i.name || i.product?.productName || 'Product'}
+                          </span>
+                        ))
+                      ) : p.productName ? (
+                        <span className="block truncate" title={p.productName}>{p.productName}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
-                      {p.orderItems?.map((i, idx) => <span key={idx} className="block">{i.code || '-'}</span>)}
+                      {p.orderItems && p.orderItems.length > 0 ? (
+                        p.orderItems.map((i, idx) => (
+                          <span key={idx} className="block">{i.code || i.product?.productCode || '-'}</span>
+                        ))
+                      ) : p.productCode ? (
+                        <span className="block">{p.productCode}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
@@ -369,7 +424,19 @@ const PurchaseList = () => {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 font-bold text-center">
                     <div className="flex flex-col gap-2 max-h-24 overflow-y-auto no-scrollbar">
-                      {p.orderItems?.map((i, idx) => <span key={idx} className="block">{i.quantity}</span>)}
+                      {p.orderItems && p.orderItems.length > 0 ? (
+                        p.orderItems.map((i, idx) => (
+                          <span key={idx} className="inline-block px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded text-xs font-extrabold">
+                            {i.quantity}
+                          </span>
+                        ))
+                      ) : p.purchaseQty ? (
+                        <span className="inline-block px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded text-xs font-extrabold">
+                          {p.purchaseQty}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
@@ -377,8 +444,8 @@ const PurchaseList = () => {
                       {p.purchaseStatus}
                     </span>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${grandTotal.toFixed(2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">$0.00</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">₹{grandTotal.toFixed(2)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">₹0.00</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">₹{(p.amountPaid || 0).toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">₹{(grandTotal - (p.amountPaid || 0)).toFixed(2)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{p.paymentTerm}</td>
@@ -482,190 +549,252 @@ const PurchaseList = () => {
       )}
 
       {/* --- VIEW PURCHASE DETAILS DIALOG MODAL --- */}
-      {isViewModalOpen && selectedPurchase && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-md p-4 sm:p-8 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-blue-200 shadow-[0_20px_50px_rgba(0,0,0,0.3)] max-w-5xl w-full p-8 md:p-12 relative text-black animate-in fade-in slide-in-from-bottom-8 duration-300 mt-10 mb-10 min-h-[80vh]">
-            
-            <button 
-              onClick={() => setIsViewModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 p-2 rounded-full transition-all"
-            >
-              <X size={20} />
-            </button>
+      {isViewModalOpen && selectedPurchase && (() => {
+        const modalItems = getPurchaseItems(selectedPurchase);
+        const totalItemsCount = modalItems.length;
+        const totalQtyCount = modalItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const invoiceNum = selectedPurchase.invoiceNo || selectedPurchase.purchaseNo || 'N/A';
+        const grandTotal = calculateGrandTotal(selectedPurchase);
 
-            <h3 className="text-xl font-bold text-gray-900 mb-4 border-b border-blue-500 pb-3 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                Purchase Invoice: <span className="text-indigo-600">{selectedPurchase.invoiceNo || selectedPurchase.purchaseNo || selectedPurchase.referenceNo}</span>
-              </div>
-              {selectedPurchase.referenceNo && (
-                <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded font-medium border border-gray-200">
-                  Ref: {selectedPurchase.referenceNo}
-                </span>
-              )}
-            </h3>
+        return (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-md p-4 sm:p-8 overflow-y-auto">
+            <div className="bg-white rounded-2xl border border-blue-200 shadow-[0_20px_50px_rgba(0,0,0,0.3)] max-w-5xl w-full p-6 md:p-10 relative text-black animate-in fade-in slide-in-from-bottom-8 duration-300 mt-6 mb-10">
+              
+              {/* Close Button */}
+              <button 
+                onClick={() => setIsViewModalOpen(false)}
+                className="absolute top-5 right-5 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 p-2 rounded-full transition-all"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm mb-6">
-              {/* Left Column */}
-              <div className="space-y-3">
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Invoice No:</span>
-                  <span className="text-indigo-600 font-bold">{selectedPurchase.invoiceNo || selectedPurchase.purchaseNo || selectedPurchase.referenceNo || 'N/A'}</span>
+              {/* Modal Header */}
+              <div className="border-b border-blue-500 pb-3 mb-6 pr-10 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Purchase Invoice: <span className="text-indigo-600">{invoiceNum}</span>
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Purchased items, quantities and payment breakdown</p>
                 </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Reference No:</span>
-                  <span className="text-gray-900 font-semibold">{selectedPurchase.referenceNo || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Date:</span>
-                  <span className="text-gray-900 font-semibold">{selectedPurchase.purchaseDate}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Created By:</span>
-                  <span className="text-gray-900">Admin</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Supplier:</span>
-                  <span className="text-gray-900 font-semibold">{getSupplierName(selectedPurchase.supplier)}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Warehouse:</span>
-                  <span className="text-gray-900">{getWarehouseName(selectedPurchase.warehouse)}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Purchase Status:</span>
-                  <span className="font-bold text-blue-700">{selectedPurchase.purchaseStatus}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedPurchase.billNo && (
+                    <span className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-bold border border-indigo-200">
+                      Bill No: {selectedPurchase.billNo}
+                    </span>
+                  )}
+                  <span className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-bold border border-emerald-200">
+                    Total Products: {totalItemsCount}
+                  </span>
+                  <span className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-bold border border-blue-200">
+                    Total Qty: {totalQtyCount}
+                  </span>
                 </div>
               </div>
 
-              {/* Right Column */}
-              <div className="space-y-3">
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Payment Term:</span>
-                  <span className="text-gray-900">{selectedPurchase.paymentTerm || 'N/A'}</span>
+              {/* Quick Info Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6 bg-gray-50/70 p-4 rounded-xl border border-gray-200">
+                {/* Left Column */}
+                <div className="space-y-2">
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Invoice No:</span>
+                    <span className="text-indigo-600 font-bold">{invoiceNum}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Bill No:</span>
+                    <span className="text-gray-900 font-bold">{selectedPurchase.billNo || '-'}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Date:</span>
+                    <span className="text-gray-900 font-semibold">{selectedPurchase.purchaseDate || '-'}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Supplier:</span>
+                    <span className="text-gray-900 font-semibold">{getSupplierName(selectedPurchase.supplier)}</span>
+                  </div>
+                  <div className="flex justify-between pb-0.5">
+                    <span className="font-semibold text-gray-600">Warehouse:</span>
+                    <span className="text-gray-900">{getWarehouseName(selectedPurchase.warehouse)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Due Date:</span>
-                  <span className="text-gray-900">{selectedPurchase.dueDate || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Payment Status:</span>
-                  <span className="font-bold text-emerald-800">{selectedPurchase.paymentStatus}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Global Tax:</span>
-                  <span className="text-gray-900">{selectedPurchase.orderTax || 'No Tax'}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-100 pb-1">
-                  <span className="font-semibold text-gray-600">Currency:</span>
-                  <span className="text-gray-900">{selectedPurchase.currency || 'INR'} (Rate: {selectedPurchase.exchangeRate || 1})</span>
+
+                {/* Right Column */}
+                <div className="space-y-2">
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Purchase Status:</span>
+                    <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                      {selectedPurchase.purchaseStatus || 'Received'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Payment Status:</span>
+                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-extrabold ${
+                      selectedPurchase.paymentStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedPurchase.paymentStatus || 'Due'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Payment Term:</span>
+                    <span className="text-gray-900">{selectedPurchase.paymentTerm || '-'}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-200/70 pb-1.5">
+                    <span className="font-semibold text-gray-600">Due Date:</span>
+                    <span className="text-gray-900">{selectedPurchase.dueDate || '-'}</span>
+                  </div>
+                  <div className="flex justify-between pb-0.5">
+                    <span className="font-semibold text-gray-600">Currency / Tax:</span>
+                    <span className="text-gray-900">{selectedPurchase.currency || 'INR'} • {selectedPurchase.orderTax || 'No Tax'}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Unified Form Details (If added from new flow) */}
-            {selectedPurchase.productName && (
-              <div className="mb-6 bg-blue-50/50 p-4 rounded-lg border border-blue-200">
-                <h4 className="text-md font-bold text-gray-800 mb-3">Product Details</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div><span className="text-gray-500 block text-xs">Name</span><span className="font-semibold">{selectedPurchase.productName}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Code</span><span className="font-semibold">{selectedPurchase.productCode}</span></div>
-                  <div><span className="text-gray-500 block text-xs">HSN Number</span><span className="font-semibold">{selectedPurchase.hsnNumber || 'N/A'}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Category</span><span className="font-semibold">{selectedPurchase.category}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Purchase Qty</span><span className="font-bold text-indigo-600">{selectedPurchase.purchaseQty} {selectedPurchase.productUnit}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Unit Cost</span><span className="font-semibold">${selectedPurchase.productCost}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Sale Price</span><span className="font-bold text-emerald-600">${selectedPurchase.productPrice}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Margin</span><span className="font-semibold">{selectedPurchase.profitMargin} {selectedPurchase.profitMarginType}</span></div>
-                </div>
-              </div>
-            )}
-
-            {/* Items Table (If array of orderItems exists) */}
-            {selectedPurchase.orderItems && selectedPurchase.orderItems.length > 0 && (
+              {/* --- PURCHASED PRODUCTS & QUANTITIES TABLE (Prominent Section) --- */}
               <div className="mb-6">
-                <h4 className="text-md font-bold text-gray-800 mb-2">Order Items</h4>
-                <div className="overflow-x-auto border border-gray-200 rounded">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <span>📦 Purchased Products & Quantities</span>
+                    <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">
+                      {modalItems.length} {modalItems.length === 1 ? 'Product' : 'Products'}
+                    </span>
+                  </h4>
+                  <span className="text-xs text-gray-500">
+                    Total Quantity: <strong className="text-indigo-600 font-bold text-sm">{totalQtyCount}</strong>
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto border border-blue-300 rounded-lg shadow-sm">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-blue-50/80 border-b border-blue-200 text-gray-700">
                       <tr>
-                        <th className="px-3 py-2 font-semibold">Product</th>
-                        <th className="px-3 py-2 font-semibold">Qty</th>
-                        <th className="px-3 py-2 font-semibold">Unit Cost</th>
-                        <th className="px-3 py-2 font-semibold">Tax %</th>
-                        <th className="px-3 py-2 font-semibold">Discount</th>
-                        <th className="px-3 py-2 font-semibold">Subtotal</th>
+                        <th className="px-3 py-2.5 font-bold text-xs uppercase tracking-wider text-center w-12">#</th>
+                        <th className="px-4 py-2.5 font-bold text-xs uppercase tracking-wider">Product Name & Code</th>
+                        <th className="px-4 py-2.5 font-bold text-xs uppercase tracking-wider text-center">Purchased Qty</th>
+                        <th className="px-3 py-2.5 font-bold text-xs uppercase tracking-wider text-center">Free Qty</th>
+                        <th className="px-3 py-2.5 font-bold text-xs uppercase tracking-wider text-right">Unit Cost (₹)</th>
+                        <th className="px-3 py-2.5 font-bold text-xs uppercase tracking-wider text-center">Tax %</th>
+                        <th className="px-3 py-2.5 font-bold text-xs uppercase tracking-wider text-right">Discount (₹)</th>
+                        <th className="px-4 py-2.5 font-bold text-xs uppercase tracking-wider text-right">Subtotal (₹)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {selectedPurchase.orderItems.map((item, idx) => {
-                        const rawCost = item.netUnitCost - item.discount;
-                        const taxAmt = rawCost * (item.taxPercent / 100);
-                        const sub = (rawCost + taxAmt) * item.quantity;
-                        return (
-                          <tr key={idx}>
-                            <td className="px-3 py-2">
-                              <div className="font-medium">{item.name}</div>
-                              <div className="text-xs text-gray-500">{item.code}</div>
-                            </td>
-                            <td className="px-3 py-2">{item.quantity}</td>
-                            <td className="px-3 py-2">${item.netUnitCost}</td>
-                            <td className="px-3 py-2">{item.taxPercent}%</td>
-                            <td className="px-3 py-2">${item.discount}</td>
-                            <td className="px-3 py-2 font-bold">${sub.toFixed(2)}</td>
-                          </tr>
-                        )
-                      })}
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {modalItems.length > 0 ? (
+                        modalItems.map((item, idx) => {
+                          const rawCost = item.netUnitCost - item.discount;
+                          const taxAmt = rawCost * (item.taxPercent / 100);
+                          const sub = (rawCost + taxAmt) * item.quantity;
+                          return (
+                            <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                              <td className="px-3 py-3 text-center text-xs text-gray-500 font-semibold">{idx + 1}</td>
+                              <td className="px-4 py-3">
+                                <div className="font-bold text-gray-900 text-sm">{item.name}</div>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                  <span className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-gray-700">Code: {item.code}</span>
+                                  {item.brand && <span>Brand: {item.brand}</span>}
+                                  {item.category && <span>Cat: {item.category}</span>}
+                                  {item.batch && <span className="text-amber-700">Batch: {item.batch}</span>}
+                                  {item.expDate && <span className="text-red-600">Exp: {item.expDate}</span>}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="inline-flex items-center justify-center px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 font-extrabold text-sm rounded-lg min-w-14 shadow-sm">
+                                  {item.quantity}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 text-center text-gray-600 font-medium">
+                                {item.freeQty > 0 ? (
+                                  <span className="text-emerald-600 font-bold">+{item.freeQty}</span>
+                                ) : (
+                                  '-'
+                                )}
+                              </td>
+                              <td className="px-3 py-3 text-right text-gray-800 font-medium">₹{item.netUnitCost.toFixed(2)}</td>
+                              <td className="px-3 py-3 text-center text-gray-600">{item.taxPercent}%</td>
+                              <td className="px-3 py-3 text-right text-gray-600">{item.discount > 0 ? `₹${item.discount.toFixed(2)}` : '-'}</td>
+                              <td className="px-4 py-3 text-right font-bold text-gray-900">₹{sub.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="8" className="px-4 py-6 text-center text-gray-500 text-sm">
+                            Koi product add nahi hai is purchase record mein.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
+                    {modalItems.length > 0 && (
+                      <tfoot className="bg-gray-50 border-t border-gray-200 font-bold text-xs text-gray-700">
+                        <tr>
+                          <td colSpan="2" className="px-4 py-2.5 text-right uppercase">Total:</td>
+                          <td className="px-4 py-2.5 text-center text-indigo-700 text-sm font-extrabold">{totalQtyCount}</td>
+                          <td className="px-3 py-2.5 text-center">
+                            {modalItems.reduce((s, i) => s + (Number(i.freeQty) || 0), 0) || '-'}
+                          </td>
+                          <td colSpan="3"></td>
+                          <td className="px-4 py-2.5 text-right text-sm text-indigo-700 font-extrabold">
+                            ₹{grandTotal.toFixed(2)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
               </div>
-            )}
 
-            {/* Financial Summary */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm">
-              <div className="flex flex-col items-end space-y-2">
-                <div className="flex justify-between w-full md:w-1/2">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-semibold">${(calculateGrandTotal(selectedPurchase) - (selectedPurchase.shippingCost || 0) + (selectedPurchase.discountValue || 0)).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between w-full md:w-1/2">
-                  <span className="text-gray-600">Discount:</span>
-                  <span className="font-semibold text-red-600">-${(selectedPurchase.discountValue || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between w-full md:w-1/2">
-                  <span className="text-gray-600">Shipping:</span>
-                  <span className="font-semibold">${(selectedPurchase.shippingCost || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between w-full md:w-1/2 border-t border-gray-300 pt-2 mt-2">
-                  <span className="text-gray-900 font-bold">Grand Total:</span>
-                  <span className="font-extrabold text-indigo-700 text-lg">${calculateGrandTotal(selectedPurchase).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between w-full md:w-1/2 text-xs">
-                  <span className="text-gray-500">Paid: $0.00</span>
-                  <span className="text-red-500 font-bold">Due: ${calculateGrandTotal(selectedPurchase).toFixed(2)}</span>
+              {/* Financial Summary */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm">
+                <div className="flex flex-col items-end space-y-2">
+                  <div className="flex justify-between w-full md:w-1/2">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-semibold">₹{(grandTotal - (selectedPurchase.shippingCost || 0) + (selectedPurchase.discountValue || 0)).toFixed(2)}</span>
+                  </div>
+                  {selectedPurchase.discountValue > 0 && (
+                    <div className="flex justify-between w-full md:w-1/2">
+                      <span className="text-gray-600">Discount:</span>
+                      <span className="font-semibold text-red-600">-₹{(selectedPurchase.discountValue || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {selectedPurchase.shippingCost > 0 && (
+                    <div className="flex justify-between w-full md:w-1/2">
+                      <span className="text-gray-600">Shipping:</span>
+                      <span className="font-semibold">₹{(selectedPurchase.shippingCost || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between w-full md:w-1/2 border-t border-gray-300 pt-2 mt-2">
+                    <span className="text-gray-900 font-bold">Grand Total:</span>
+                    <span className="font-extrabold text-indigo-700 text-lg">₹{grandTotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between w-full md:w-1/2 text-xs pt-1">
+                    <span className="text-emerald-700 font-bold">Paid: ₹{(selectedPurchase.amountPaid || 0).toFixed(2)}</span>
+                    <span className="text-amber-700 font-bold">Due: ₹{(grandTotal - (selectedPurchase.amountPaid || 0)).toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Notes Section */}
-            {selectedPurchase.note && (
-              <div className="mt-4 p-3 bg-yellow-50/50 border border-yellow-200 rounded text-sm text-gray-700">
-                <span className="font-bold block mb-1">Note:</span>
-                {selectedPurchase.note}
+              {/* Notes Section */}
+              {selectedPurchase.note && (
+                <div className="mt-4 p-3 bg-yellow-50/50 border border-yellow-200 rounded text-sm text-gray-700">
+                  <span className="font-bold block mb-1">Note:</span>
+                  {selectedPurchase.note}
+                </div>
+              )}
+
+              {/* Close Button Footer */}
+              <div className="flex justify-end pt-4 border-t border-blue-500 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-bold shadow transition-colors"
+                >
+                  Close Details
+                </button>
               </div>
-            )}
-
-            <div className="flex justify-end pt-4 border-t border-blue-500 mt-6">
-              <button
-                type="button"
-                onClick={() => setIsViewModalOpen(false)}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-bold shadow transition-colors"
-              >
-                Close Details
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
 
     </div>
   );

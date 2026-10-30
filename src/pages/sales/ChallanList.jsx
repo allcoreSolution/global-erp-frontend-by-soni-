@@ -13,6 +13,8 @@ const ChallanList = () => {
   const navigate = useNavigate();
   // Empty data table setup as requested: "No data available in table"
   const [challans, setChallans] = useState([]);
+  const [allChallans, setAllChallans] = useState([]);
+  const [viewChallan, setViewChallan] = useState(null);
   const fileInputRef = useRef(null);
 
   // States
@@ -42,6 +44,7 @@ const ChallanList = () => {
         closedBy: item.approvedBy || '-'
       }));
       setChallans(mappedData);
+      setAllChallans(data);
     } catch (err) {
       console.error("Failed to fetch challans:", err);
     }
@@ -231,12 +234,12 @@ const ChallanList = () => {
         </div>
 
         {/* Global Toolbar buttons */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto pb-1 md:pb-0">
+        <div className="flex flex-nowrap overflow-x-auto no-scrollbar items-center gap-2 w-full md:w-auto pb-1 md:pb-0">
           {/* Column Visibility Dropdown */}
           <div className="relative">
             <button 
               onClick={() => setIsColMenuOpen(!isColMenuOpen)}
-              className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
+              className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 bg-white transition-colors"
             >
               <LayoutGrid size={14} /> Column Visibility
             </button>
@@ -264,13 +267,13 @@ const ChallanList = () => {
               <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
               <button 
                 onClick={() => fileInputRef.current.click()}
-                className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
+                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
               >
                 <Upload size={14} /> Import CSV
               </button>
               <button 
                 onClick={handleDownloadSample}
-                className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
+                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
               >
                 <FileDown size={14} /> Sample
               </button>
@@ -278,14 +281,14 @@ const ChallanList = () => {
           )}
           <button 
             onClick={handleExportCSV}
-            className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
+            className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-blue-500 rounded hover:bg-gray-50 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
           {can(['create_sales', 'manage_sales']) && (
             <button 
               onClick={() => navigate('/sales/add-challan')}
-              className="whitespace-nowrap flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+              className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
             >
               <Plus size={14} /> Create Challan
             </button>
@@ -407,7 +410,7 @@ const ChallanList = () => {
                   )}
 
                   {visibleColumns.closingDate && <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-center">{c.closingDate}</td>}
-                  {visibleColumns.totalAmount && <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">${c.totalAmount.toFixed(2)}</td>}
+                  {visibleColumns.totalAmount && <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">₹{c.totalAmount.toFixed(2)}</td>}
                   {visibleColumns.createdBy && <td className="px-4 py-3 text-sm text-gray-600">{c.createdBy}</td>}
                   {visibleColumns.closedBy && <td className="px-4 py-3 text-sm text-gray-600 text-center">{c.closedBy}</td>}
                   
@@ -415,7 +418,10 @@ const ChallanList = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
                     <div className="inline-flex items-center gap-1">
                       <button
-                        onClick={() => alert(`View details: ${c.referenceNo}`)}
+                        onClick={() => {
+                          const found = allChallans.find(raw => raw._id === c.id);
+                          if (found) setViewChallan(found);
+                        }}
                         className="p-1.5 text-indigo-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                         title="View Challan details"
                       >
@@ -494,6 +500,114 @@ const ChallanList = () => {
           </button>
         </div>
       </div>
+
+      {/* VIEW CHALLAN MODAL */}
+      {viewChallan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-slate-50">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Delivery Challan Details</h2>
+                <p className="text-xs text-indigo-700 font-bold">#{viewChallan.challanNo}</p>
+              </div>
+              <button onClick={() => setViewChallan(null)} className="text-gray-500 hover:text-gray-700 p-1">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-gray-50 p-3 rounded border">
+                <div>
+                  <span className="text-gray-500 font-medium block">Challan Date:</span>
+                  <span className="font-bold text-gray-800">{viewChallan.challanDate || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-medium block">Type:</span>
+                  <span className="font-bold text-gray-800">{viewChallan.challanType || 'Delivery'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-medium block">Customer / Party:</span>
+                  <span className="font-bold text-gray-900">{viewChallan.customerName || viewChallan.contactPerson || 'Walk-in'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-medium block">Delivery Status:</span>
+                  <span className="inline-flex px-2 py-0.5 rounded font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    {viewChallan.deliveryStatus || 'Pending'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-medium block">Transporter:</span>
+                  <span className="font-bold text-gray-800">{viewChallan.transporter || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-medium block">Vehicle No:</span>
+                  <span className="font-bold text-indigo-700">{viewChallan.vehicleNo || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-medium block">LR / GR No:</span>
+                  <span className="font-bold text-indigo-700">{viewChallan.lrGrNo || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-medium block">Driver:</span>
+                  <span className="font-bold text-gray-800">
+                    {viewChallan.driverName || '-'} {viewChallan.driverMobile ? `(${viewChallan.driverMobile})` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div>
+                <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700 mb-2">Challan Items</h3>
+                <div className="overflow-x-auto border rounded">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-3 py-2 font-bold text-gray-600">Product Name</th>
+                        <th className="px-3 py-2 font-bold text-gray-600">SKU</th>
+                        <th className="px-3 py-2 font-bold text-gray-600">Batch No</th>
+                        <th className="px-3 py-2 font-bold text-gray-600 text-center">Qty</th>
+                        <th className="px-3 py-2 font-bold text-gray-600 text-right">Rate</th>
+                        <th className="px-3 py-2 font-bold text-gray-600 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(viewChallan.items || []).map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="px-3 py-2 font-bold text-gray-900">{item.productName || 'Product'}</td>
+                          <td className="px-3 py-2 font-mono text-gray-500">{item.sku || '-'}</td>
+                          <td className="px-3 py-2 font-bold text-indigo-700">{item.batch || '-'}</td>
+                          <td className="px-3 py-2 text-center font-bold text-gray-800">{item.qty} {item.unit || 'PCS'}</td>
+                          <td className="px-3 py-2 text-right">₹{Number(item.rate || 0).toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-black text-gray-900">
+                            ₹{(Number(item.qty || 0) * Number(item.rate || 0)).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {viewChallan.deliveryRemarks && (
+                <div className="text-xs bg-gray-50 p-2.5 rounded border">
+                  <span className="font-bold text-gray-600 block mb-0.5">Delivery Remarks:</span>
+                  <p className="text-gray-800">{viewChallan.deliveryRemarks}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-3 border-t bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setViewChallan(null)}
+                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-xs font-bold transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -21,6 +21,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import superAdminAvatar from '../assets/superadmin-avatar.jpg';
 import api from '../api';
+import { CompanySwitcherHeader } from './Header';
 
 const SuperAdminHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
   const navigate = useNavigate();
@@ -240,6 +241,9 @@ const SuperAdminHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             </div>
           )}
         </div>
+
+        {/* Company Switcher */}
+        <CompanySwitcherHeader />
       </div>
 
       {/* ── Right Section: Notifications, Theme, Profile ── */}

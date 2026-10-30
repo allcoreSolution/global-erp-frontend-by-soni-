@@ -152,29 +152,99 @@ const AddPurchaseReturn = () => {
 
     // Auto-fill logic for Purchase Invoice
     if (name === 'purchaseInvoice') {
-      const selectedPurchase = purchases.find(p => p._id === finalValue);
+      const selectedPurchase = purchases.find(p => 
+        String(p._id) === String(finalValue) || 
+        p.invoiceNo === finalValue || 
+        p.billNo === finalValue || 
+        p.purchaseNo === finalValue
+      );
+
       if (selectedPurchase) {
+        // 1. Supplier Auto-fill
+        let suppId = '';
+        if (selectedPurchase.supplier) {
+          if (typeof selectedPurchase.supplier === 'object') {
+            suppId = selectedPurchase.supplier._id;
+            setSuppliers(prev => {
+              if (!prev.some(s => String(s._id) === String(suppId))) {
+                return [...prev, selectedPurchase.supplier];
+              }
+              return prev;
+            });
+          } else {
+            suppId = selectedPurchase.supplier;
+          }
+        }
+
+        // 2. Branch & Warehouse Auto-fill
+        const branchId = typeof selectedPurchase.branch === 'object' ? selectedPurchase.branch?._id : (selectedPurchase.branch || '');
+        const whId = typeof selectedPurchase.warehouse === 'object' ? selectedPurchase.warehouse?._id : (selectedPurchase.warehouse || '');
+
+        // 3. Purchase Date, Invoice No, and Reference Fields
+        const pDate = selectedPurchase.purchaseDate ? String(selectedPurchase.purchaseDate).split('T')[0] : '';
+        const invNo = selectedPurchase.invoiceNo || selectedPurchase.billNo || selectedPurchase.referenceNo || '';
+        const poNo = selectedPurchase.purchaseNo || '';
+
         setForm(prev => ({
           ...prev,
-          purchaseDate: selectedPurchase.purchaseDate ? selectedPurchase.purchaseDate.split('T')[0] : '',
-          supplier: typeof selectedPurchase.supplier === 'object' ? selectedPurchase.supplier?._id : selectedPurchase.supplier || ''
+          purchaseInvoice: finalValue,
+          purchaseDate: pDate,
+          supplier: suppId || prev.supplier,
+          branch: branchId || prev.branch,
+          warehouse: whId || prev.warehouse,
+          returnWarehouse: whId || prev.returnWarehouse,
+          company: (typeof selectedPurchase.company === 'object' ? selectedPurchase.company?._id : selectedPurchase.company) || prev.company,
+          supplierInvoiceNo: invNo,
+          purchaseOrder: poNo
         }));
-        
+
+        // 4. Products & Items Auto-fill
         const purchaseItems = selectedPurchase.orderItems || selectedPurchase.items || [];
         if (purchaseItems.length > 0) {
-          const newItems = purchaseItems.map((item, idx) => ({
-            id: idx + 1,
-            product: item.product?._id || item.product || item.productId || '',
-            batch: item.batch || '',
-            purchasedQty: item.quantity || item.qty || 1,
-            returnQty: item.quantity || item.qty || 1,
-            rate: item.netUnitPrice || item.rate || item.price || 0,
-            taxPercent: item.taxPercent || item.tax || 0,
-            amount: (item.quantity || item.qty || 1) * (item.netUnitPrice || item.rate || item.price || 0)
-          }));
+          const newProductsToAdd = [];
+          const newItems = purchaseItems.map((item, idx) => {
+            const prodObj = typeof item.product === 'object' && item.product !== null ? item.product : null;
+            const prodId = prodObj?._id || (typeof item.product === 'string' && item.product ? item.product : '');
+            const prodName = prodObj?.productName || item.name || item.productName || 'Purchased Item';
+            const prodCode = prodObj?.productCode || item.code || item.productCode || '';
+            const resolvedId = prodId || `prod-${idx}-${item.code || item.name || 'item'}`;
+
+            // Ensure product is in products state so <select> displays product name properly
+            if (!products.some(p => String(p._id) === String(resolvedId)) && !newProductsToAdd.some(p => String(p._id) === String(resolvedId))) {
+              newProductsToAdd.push({
+                _id: resolvedId,
+                productName: prodName,
+                productCode: prodCode,
+                name: prodName
+              });
+            }
+
+            const itemQty = Number(item.quantity ?? item.qty ?? 1);
+            const itemRate = Number(item.netUnitCost ?? item.cost ?? item.netUnitPrice ?? item.productPrice ?? item.rate ?? item.price ?? 0);
+            const itemTax = Number(item.taxPercent ?? item.tax ?? 0);
+            const itemAmount = itemQty * itemRate;
+
+            return {
+              id: idx + 1,
+              product: resolvedId,
+              productName: prodName,
+              productCode: prodCode,
+              batch: item.batch || '',
+              purchasedQty: itemQty,
+              returnQty: itemQty,
+              rate: itemRate,
+              taxPercent: itemTax,
+              amount: itemAmount
+            };
+          });
+
+          if (newProductsToAdd.length > 0) {
+            setProducts(prev => [...prev, ...newProductsToAdd]);
+          }
+
           setItems(newItems);
         } else {
-          setItems([{ id: 1, product: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 0, amount: 0 }]);
+          setItems([{ id: 1, product: '', productName: '', productCode: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 0, amount: 0 }]);
         }
       }
     }
@@ -185,11 +255,15 @@ const AddPurchaseReturn = () => {
       if (item.id === id) {
         let updated = { ...item, [field]: value };
         
-        // Auto-fill product rate when a product is selected
+        // Auto-fill product rate and name when a product is selected
         if (field === 'product' && value) {
-          const selectedProduct = products.find(p => p._id === value);
+          const selectedProduct = products.find(p => String(p._id) === String(value));
           if (selectedProduct) {
-            updated.rate = Number(selectedProduct.productCost || 0);
+            updated.productName = selectedProduct.productName || selectedProduct.name || '';
+            updated.productCode = selectedProduct.productCode || '';
+            if (!updated.rate || updated.rate === 0) {
+              updated.rate = Number(selectedProduct.productCost || 0);
+            }
           }
         }
 
@@ -206,7 +280,7 @@ const AddPurchaseReturn = () => {
 
   const addItem = () => {
     const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
-    setItems([...items, { id: newId, product: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 0, amount: 0 }]);
+    setItems([...items, { id: newId, product: '', productName: '', productCode: '', batch: '', purchasedQty: 1, returnQty: 1, rate: 0, taxPercent: 0, amount: 0 }]);
   };
 
   const removeItem = (id) => {
@@ -230,12 +304,26 @@ const AddPurchaseReturn = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+
+    const selectedPurchase = purchases.find(p => 
+      String(p._id) === String(form.purchaseInvoice) || 
+      p.invoiceNo === form.purchaseInvoice || 
+      p.billNo === form.purchaseInvoice || 
+      p.purchaseNo === form.purchaseInvoice
+    );
+    const resolvedInvoiceNo = selectedPurchase ? (selectedPurchase.invoiceNo || selectedPurchase.billNo || selectedPurchase.purchaseNo) : form.purchaseInvoice;
+
     const payload = {
       ...form,
+      purchaseInvoice: resolvedInvoiceNo || form.purchaseInvoice,
+      invoiceNo: resolvedInvoiceNo || form.purchaseInvoice,
+      purchaseId: selectedPurchase ? selectedPurchase._id : undefined,
       returnReason,
       itemCondition,
       items: items.map(item => ({
         product: item.product || '',
+        productName: item.productName || '',
+        code: item.productCode || '',
         batch: item.batch || '',
         purchasedQty: Number(item.purchasedQty) || 0,
         returnQty: Number(item.returnQty) || 1,
@@ -320,11 +408,7 @@ const AddPurchaseReturn = () => {
             {/* SECTION: BASIC INFORMATION */}
             <div className="border border-slate-200 rounded-lg p-5">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Basic Information</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Return No. *</label>
-                  <input type="text" name="returnNo" value={form.returnNo} readOnly className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm font-bold text-slate-600 cursor-not-allowed" />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Return Date *</label>
                   <input type="date" name="returnDate" value={form.returnDate} onChange={handleChange} required className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none transition-all" />
@@ -342,7 +426,7 @@ const AddPurchaseReturn = () => {
                   <select required name="warehouse" value={form.warehouse} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
                     <option value="">Select Warehouse</option>
                     {warehouses
-                      .filter(w => form.branch && (typeof w.branch === 'object' ? w.branch?._id : w.branch) === form.branch)
+                      .filter(w => !form.branch || !w.branch || (typeof w.branch === 'object' ? w.branch?._id : w.branch) === form.branch)
                       .map(w => <option key={w._id} value={w._id}>{w.warehouseName || w.name}</option>)}
                   </select>
                 </div>
@@ -355,18 +439,29 @@ const AddPurchaseReturn = () => {
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Invoice *</label>
-                  <select required name="purchaseInvoice" value={form.purchaseInvoice} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
+                  <select required name="purchaseInvoice" value={form.purchaseInvoice} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white font-medium">
                     <option value="">Select Purchase Invoice</option>
-                    {purchases.map(p => <option key={p._id} value={p._id}>{p.purchaseNo || p.invoiceNo}</option>)}
+                    {purchases.map(p => {
+                      const invNumber = p.invoiceNo || p.billNo || p.purchaseNo || p.referenceNo || p._id;
+                      const suppName = typeof p.supplier === 'object' ? (p.supplier?.companyName || p.supplier?.supplierName) : '';
+                      const totalAmt = p.grandTotal ? `₹${p.grandTotal.toLocaleString('en-IN')}` : '';
+                      const label = [
+                        invNumber,
+                        p.purchaseDate ? String(p.purchaseDate).split('T')[0] : '',
+                        suppName,
+                        totalAmt
+                      ].filter(Boolean).join(' | ');
+                      return <option key={p._id} value={p._id}>{label}</option>;
+                    })}
                   </select>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Date</label>
-                  <input type="text" value={form.purchaseDate} readOnly placeholder="Auto" className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none" />
+                  <input type="text" value={form.purchaseDate} readOnly placeholder="Auto" className="w-full border border-slate-300 rounded bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none font-semibold" />
                 </div>
                 <div className="col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Supplier *</label>
-                  <select required name="supplier" value={form.supplier} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white">
+                  <select required name="supplier" value={form.supplier} onChange={handleChange} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none bg-white font-medium">
                     <option value="">Select Supplier</option>
                     {suppliers.map(s => <option key={s._id} value={s._id}>{s.companyName || s.supplierName || s.name}</option>)}
                   </select>
@@ -399,22 +494,26 @@ const AddPurchaseReturn = () => {
                   {items.map((item) => (
                     <tr key={item.id}>
                       <td className="px-3 py-2">
-                        <select required value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white">
+                        <select required value={item.product} onChange={(e) => handleItemChange(item.id, 'product', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white font-medium">
                           <option value="">Select Product</option>
-                          {products.map(p => <option key={p._id} value={p._id}>{p.productName || p.name}</option>)}
+                          {products.map(p => (
+                            <option key={p._id} value={p._id}>
+                              {p.productName || p.name} {p.productCode ? `(${p.productCode})` : ''}
+                            </option>
+                          ))}
                         </select>
                       </td>
                       <td className="px-3 py-2">
                         <input type="text" placeholder="---" value={item.batch} onChange={(e) => handleItemChange(item.id, 'batch', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white" />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" value={item.purchasedQty} onChange={(e) => handleItemChange(item.id, 'purchasedQty', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-slate-100 cursor-not-allowed" readOnly />
+                        <input type="number" value={item.purchasedQty} onChange={(e) => handleItemChange(item.id, 'purchasedQty', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-slate-100 cursor-not-allowed font-semibold" readOnly />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" required value={item.returnQty} onChange={(e) => handleItemChange(item.id, 'returnQty', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white font-bold text-red-700" />
+                        <input type="number" required min="1" max={item.purchasedQty || undefined} value={item.returnQty} onChange={(e) => handleItemChange(item.id, 'returnQty', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white font-bold text-red-700" />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" required value={item.rate} onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white" />
+                        <input type="number" required value={item.rate} onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white font-semibold" />
                       </td>
                       <td className="px-3 py-2">
                          <select value={item.taxPercent} onChange={(e) => handleItemChange(item.id, 'taxPercent', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none bg-white">
@@ -423,6 +522,9 @@ const AddPurchaseReturn = () => {
                            <option value="12">12%</option>
                            <option value="18">18%</option>
                            <option value="28">28%</option>
+                           {![0, 5, 12, 18, 28].includes(Number(item.taxPercent)) && (
+                             <option value={item.taxPercent}>{item.taxPercent}%</option>
+                           )}
                          </select>
                       </td>
                       <td className="px-3 py-2">

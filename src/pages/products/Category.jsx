@@ -12,6 +12,7 @@ const Category = () => {
   // Mock Category Data
   // Real Category Data
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   
   const fetchCategories = async () => {
     try {
@@ -24,8 +25,20 @@ const Category = () => {
     }
   };
 
+  const fetchBrands = async () => {
+    try {
+      const response = await api.get('/products/brands');
+      if (response.data.success) {
+        setBrands(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching brands:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
+    fetchBrands();
   }, []);
 
   // States
@@ -42,6 +55,7 @@ const Category = () => {
   const [categoryForm, setCategoryForm] = useState({ 
     name: '', 
     parent: 'None', 
+    brand: '',
     description: '',
     imageFile: null,
     company: '',
@@ -56,7 +70,8 @@ const Category = () => {
   // Handle Search
   const filteredCategories = categories.filter(cat => 
     cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cat.parent.toLowerCase().includes(searchTerm.toLowerCase())
+    (cat.parent && cat.parent.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (cat.brand?.name && cat.brand.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Pagination calculation
@@ -71,6 +86,7 @@ const Category = () => {
     setCategoryForm({ 
       name: '', 
       parent: 'None', 
+      brand: '',
       description: '',
       imageFile: null,
       company: '',
@@ -90,6 +106,7 @@ const Category = () => {
     setCategoryForm({ 
       name: category.name || '', 
       parent: category.parent || 'None', 
+      brand: category.brand?._id || category.brand || '',
       description: category.description || '',
       imageFile: null,
       company: category.company || '',
@@ -161,6 +178,7 @@ const Category = () => {
       const payload = {
         name: categoryForm.name,
         parent: categoryForm.parent,
+        brand: categoryForm.brand || null,
         description: categoryForm.description,
         image: imageUrl,
         company: categoryForm.company,
@@ -349,6 +367,7 @@ const Category = () => {
           <thead>
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Category</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Brand</th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Parent Category</th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 text-right">Action</th>
             </tr>
@@ -360,6 +379,16 @@ const Category = () => {
                   {/* Category Name */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                     {category.name}
+                  </td>
+                  {/* Brand */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    {category.brand?.name ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        {category.brand.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 italic text-xs">No Brand</span>
+                    )}
                   </td>
                   {/* Parent Category */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -405,7 +434,7 @@ const Category = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="3" className="px-6 py-10 text-center text-sm text-gray-500">
+                <td colSpan="4" className="px-6 py-10 text-center text-sm text-gray-500">
                   <div className="flex flex-col items-center gap-2 justify-center">
                     <AlertCircle size={24} className="text-gray-400" />
                     <span>No categories found matching your search.</span>
@@ -518,6 +547,21 @@ const Category = () => {
                   </select>
                 </div>
 
+                {/* Brand Selection */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Brand</label>
+                  <select 
+                    value={categoryForm.brand}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, brand: e.target.value })}
+                    className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
+                  >
+                    <option value="">None (No Brand)</option>
+                    {brands.map(b => (
+                      <option key={b._id} value={b._id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Company */}
                 <div className="hidden">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Company</label>
@@ -618,6 +662,10 @@ const Category = () => {
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Category Name:</span>
                 <span className="font-bold text-gray-900">{selectedCategory.name}</span>
+              </div>
+              <div className="flex justify-between border-b border-blue-500 pb-2">
+                <span className="font-semibold text-gray-600">Brand:</span>
+                <span className="font-bold text-indigo-700">{selectedCategory.brand?.name || 'None'}</span>
               </div>
               <div className="flex justify-between border-b border-blue-500 pb-2">
                 <span className="font-semibold text-gray-600">Parent Category:</span>

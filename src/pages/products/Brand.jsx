@@ -36,12 +36,27 @@ const Brand = () => {
 
   // Form State for Add / Edit
   const [isEditMode, setIsEditMode] = useState(false);
-  const [brandForm, setBrandForm] = useState({ name: '', image: '', imageFile: null, description: '', status: true, displayOrder: '', featured: false, company: '', branch: '' });
+  const [brandForm, setBrandForm] = useState({ 
+    name: '', 
+    founder: '',
+    realFounder: '',
+    image: '', 
+    imageFile: null, 
+    description: '', 
+    status: true, 
+    displayOrder: '', 
+    featured: false, 
+    company: '', 
+    branch: '' 
+  });
   const fileInputRef = useRef(null);
+  const modalFileInputRef = useRef(null);
 
   // Handle Search
   const filteredBrands = brands.filter(brand =>
-    brand.name.toLowerCase().includes(searchTerm.toLowerCase())
+    brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (brand.founder && brand.founder.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (brand.realFounder && brand.realFounder.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Pagination calculation
@@ -65,7 +80,20 @@ const Brand = () => {
   // Add / Edit Action handlers
   const handleOpenAddModal = () => {
     setIsEditMode(false);
-    setBrandForm({ name: '', image: '', imageFile: null, description: '', status: true, displayOrder: '', featured: false, company: '', branch: '' });
+    setBrandForm({ 
+      name: '', 
+      founder: '',
+      realFounder: '',
+      image: '', 
+      imageFile: null, 
+      description: '', 
+      status: true, 
+      displayOrder: '', 
+      featured: false, 
+      company: '', 
+      branch: '' 
+    });
+    if (modalFileInputRef.current) modalFileInputRef.current.value = '';
     setIsModalOpen(true);
   };
 
@@ -74,6 +102,8 @@ const Brand = () => {
     setSelectedBrand(brand);
     setBrandForm({ 
       name: brand.name || '', 
+      founder: brand.founder || brand.realFounder || '',
+      realFounder: brand.founder || brand.realFounder || '',
       image: brand.image || '', 
       imageFile: null, 
       description: brand.description || '', 
@@ -83,6 +113,7 @@ const Brand = () => {
       company: brand.company || '', 
       branch: brand.branch || '' 
     });
+    if (modalFileInputRef.current) modalFileInputRef.current.value = '';
     setIsModalOpen(true);
   };
 
@@ -140,6 +171,8 @@ const Brand = () => {
 
     const payload = {
       name: brandForm.name,
+      founder: brandForm.founder || brandForm.realFounder || '',
+      realFounder: brandForm.founder || brandForm.realFounder || '',
       image: imageUrl,
       description: brandForm.description,
       status: brandForm.status,
@@ -165,7 +198,7 @@ const Brand = () => {
   };
 
   const handleDownloadSample = () => {
-    const csvContent = "name,description,status,displayOrder,featured,company,branch\nTest Brand,A test brand,true,1,false,,";
+    const csvContent = "name,founder,description,status,displayOrder,featured,company,branch\nTest Brand,Daniel Borel,A test brand,true,1,false,,";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -181,9 +214,10 @@ const Brand = () => {
       Swal.fire('No Data', 'No brands available to export.', 'warning');
       return;
     }
-    const headers = ['Name', 'Description', 'Status', 'Display Order', 'Featured', 'Company', 'Branch'];
+    const headers = ['Name', 'Real Founder', 'Description', 'Status', 'Display Order', 'Featured', 'Company', 'Branch'];
     const rows = brands.map(b => [
       `"${b.name || ''}"`,
+      `"${(b.founder || b.realFounder || '').replace(/"/g, '""')}"`,
       `"${(b.description || '').replace(/"/g, '""')}"`,
       b.status ? 'true' : 'false',
       b.displayOrder || '',
@@ -191,7 +225,7 @@ const Brand = () => {
       `"${b.company || ''}"`,
       `"${b.branch || ''}"`
     ]);
-    const csvContent = [headers.join(',') + '\n' + 'Sample Name,Sample description,Yes,Sample,Sample,Company1,Sample', ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = [headers.join(',') + '\n' + 'Sample Name,Sample Founder,Sample description,Yes,Sample,Sample,Company1,Sample', ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -215,7 +249,7 @@ const Brand = () => {
         return;
       }
       
-      const headers = lines[0].split(',').map(h => h.trim());
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const importedData = [];
       
       for (let i = 1; i < lines.length; i++) {
@@ -223,12 +257,18 @@ const Brand = () => {
         const values = lines[i].split(',');
         const bData = {};
         headers.forEach((header, index) => {
-          bData[header] = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
+          const val = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
+          if (header === 'real founder' || header === 'founder') {
+            bData.founder = val;
+            bData.realFounder = val;
+          } else {
+            bData[header] = val;
+          }
         });
         
         // Deduplication
         const isDuplicate = brands.some(b => 
-          (bData.name && b.name.toLowerCase() === b.name.toLowerCase())
+          (bData.name && b.name.toLowerCase() === bData.name.toLowerCase())
         );
         
         if (!isDuplicate && bData.name) {
@@ -338,6 +378,7 @@ const Brand = () => {
             <tr className="bg-gray-50 border-b border-blue-500">
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Image</th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Brand</th>
+              <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Real Founder</th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700">Status</th>
               <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-700 text-right">Action</th>
             </tr>
@@ -357,6 +398,17 @@ const Brand = () => {
                   {/* Brand Name */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                     {brand.name}
+                  </td>
+                  {/* Real Founder */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    {brand.founder || brand.realFounder ? (
+                      <span className="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
+                        {brand.founder || brand.realFounder}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 italic text-xs">Not specified</span>
+                    )}
                   </td>
                   {/* Status Indicator Badge */}
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -421,7 +473,7 @@ const Brand = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="3" className="px-6 py-10 text-center text-sm text-gray-500">
+                <td colSpan="5" className="px-6 py-10 text-center text-sm text-gray-500">
                   <div className="flex flex-col items-center gap-2 justify-center">
                     <AlertCircle size={24} className="text-gray-400" />
                     <span>No brands found matching your search.</span>
@@ -516,25 +568,81 @@ const Brand = () => {
                       className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Brand Image / Logo (Upload)</label>
+
+                  {/* Real Founder Name */}
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Real Founder Name</label>
                     <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setBrandForm({ ...brandForm, imageFile: e.target.files[0] })}
-                      className="w-full border border-blue-500 rounded px-3 py-1.5 text-sm text-black bg-white outline-none focus:border-blue-450"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Brand Image Link</label>
-                    <input
-                      type="url"
-                      placeholder="https://example.com/logo.png"
-                      value={brandForm.image}
-                      onChange={(e) => setBrandForm({ ...brandForm, image: e.target.value })}
+                      type="text"
+                      placeholder="e.g. Daniel Borel, Pierluigi Zappacosta"
+                      value={brandForm.founder || brandForm.realFounder || ''}
+                      onChange={(e) => setBrandForm({ ...brandForm, founder: e.target.value, realFounder: e.target.value })}
                       className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450 placeholder:text-gray-400"
                     />
                   </div>
+
+                  {/* Combined Brand Image / Logo (Upload & Link Together) */}
+                  <div className="md:col-span-2 bg-slate-50 p-3.5 rounded-lg border border-blue-500">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-indigo-700">
+                        Brand Image / Logo (Upload or Link)
+                      </label>
+                      {(brandForm.imageFile || brandForm.image) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBrandForm({ ...brandForm, image: '', imageFile: null });
+                            if (modalFileInputRef.current) modalFileInputRef.current.value = '';
+                          }}
+                          className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                        >
+                          Clear Image
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                      <div>
+                        <span className="block text-[11px] font-semibold text-gray-600 mb-1">Option 1: Upload File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={modalFileInputRef}
+                          onChange={(e) => setBrandForm({ ...brandForm, imageFile: e.target.files[0] })}
+                          className="w-full border border-blue-500 rounded px-3 py-1.5 text-sm text-black bg-white outline-none focus:border-blue-450 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-semibold text-gray-600 mb-1">Option 2: Paste Image Link</span>
+                        <input
+                          type="url"
+                          placeholder="https://example.com/logo.png"
+                          value={brandForm.image}
+                          onChange={(e) => setBrandForm({ ...brandForm, image: e.target.value })}
+                          className="w-full border border-blue-500 rounded px-3 py-2 text-sm text-black bg-white outline-none focus:border-blue-450 placeholder:text-gray-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Live Preview if file or url exists */}
+                    {(brandForm.imageFile || brandForm.image) && (
+                      <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center gap-3">
+                        <img
+                          src={brandForm.imageFile ? URL.createObjectURL(brandForm.imageFile) : brandForm.image}
+                          alt="Logo Preview"
+                          className="w-12 h-12 object-contain rounded border border-blue-400 bg-white p-1 shrink-0"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                        <div className="text-xs text-slate-700 truncate">
+                          <span className="font-semibold text-slate-900 block truncate">
+                            {brandForm.imageFile ? brandForm.imageFile.name : brandForm.image}
+                          </span>
+                          <span className="text-[11px] text-emerald-600 font-medium">Selected logo ready for brand</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="md:col-span-2 hidden">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1.5">Brand Description</label>
                     <textarea
@@ -650,12 +758,17 @@ const Brand = () => {
 
             <div className="flex flex-col items-center gap-4 py-4">
               <img
-                src={selectedBrand.image}
+                src={selectedBrand.image || 'https://via.placeholder.com/80?text=No+Image'}
                 alt={selectedBrand.name}
                 className="w-24 h-24 object-contain rounded border border-blue-500 p-2 bg-gray-50"
               />
-              <div className="text-center">
+              <div className="text-center w-full">
                 <h4 className="text-xl font-bold text-gray-900">{selectedBrand.name}</h4>
+                {(selectedBrand.founder || selectedBrand.realFounder) && (
+                  <p className="text-sm text-indigo-700 font-semibold mt-1">
+                    Real Founder: <span className="text-gray-800 font-medium">{selectedBrand.founder || selectedBrand.realFounder}</span>
+                  </p>
+                )}
                 <div className="mt-2">
                   <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${selectedBrand.status ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>

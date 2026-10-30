@@ -19,11 +19,172 @@ import {
   X,
   Plus,
   Keyboard,
-  Clock
+  Clock,
+  Building2,
+  Building,
+  Check,
+  Sparkles
 } from 'lucide-react';
 import api from '../api';
 import { usePermissions } from '../utils/permissionUtils';
 import { useTheme } from '../context/ThemeContext';
+
+export const CompanySwitcherHeader = () => {
+  const [companies, setCompanies] = useState([]);
+  const [activeCompany, setActiveCompany] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const navigate = useNavigate();
+
+  const fetchCompanies = async () => {
+    try {
+      const res = await api.get('/companies/switch-options');
+      if (res.data?.success) {
+        const list = res.data.companies || [];
+        setCompanies(list);
+        const storedId = localStorage.getItem('active_company_id');
+        let current = list.find(c => c._id === storedId);
+        if (!current && list.length > 0) {
+          current = list[0];
+          localStorage.setItem('active_company_id', current._id);
+          localStorage.setItem('companyName', current.name);
+          localStorage.setItem('erp_company', current.name);
+        }
+        setActiveCompany(current || null);
+      }
+    } catch (err) {
+      console.warn('Company fetch error:', err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanies();
+    const handleSwitch = () => fetchCompanies();
+    window.addEventListener('companySwitched', handleSwitch);
+    window.addEventListener('userUpdated', handleSwitch);
+    return () => {
+      window.removeEventListener('companySwitched', handleSwitch);
+      window.removeEventListener('userUpdated', handleSwitch);
+    };
+  }, []);
+
+  useEffect(() => {
+    const clickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', clickOutside);
+    return () => document.removeEventListener('mousedown', clickOutside);
+  }, []);
+
+  const handleSelect = (comp) => {
+    setIsOpen(false);
+    if (activeCompany?._id === comp._id) return;
+
+    localStorage.setItem('active_company_id', comp._id);
+    localStorage.setItem('companyName', comp.name);
+    localStorage.setItem('erp_company', comp.name);
+    setActiveCompany(comp);
+    window.dispatchEvent(new Event('companySwitched'));
+    window.dispatchEvent(new Event('userUpdated'));
+    window.dispatchEvent(new Event('erp_config_changed'));
+
+    // Instant smooth reload so all API calls refresh under new company isolation pass
+    setTimeout(() => {
+      window.location.reload();
+    }, 150);
+  };
+
+  return (
+    <div className="relative shrink-0" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-850 hover:from-indigo-100 hover:to-blue-100 dark:hover:from-slate-750 dark:hover:to-slate-800 border border-indigo-200/90 dark:border-indigo-900/60 rounded-xl transition-all cursor-pointer shadow-xs group"
+        title="Click to Switch Company Workspace"
+      >
+        <div className="w-5 h-5 rounded-md bg-indigo-600 text-white flex items-center justify-center font-black text-[10px] shrink-0 uppercase shadow-xs">
+          {activeCompany?.code ? activeCompany.code.substring(0, 2) : <Building2 size={12} />}
+        </div>
+        <div className="text-left hidden sm:block">
+          <div className="text-[11px] font-extrabold text-slate-800 dark:text-slate-100 leading-tight max-w-[120px] md:max-w-[150px] xl:max-w-[190px] truncate">
+            {activeCompany?.name || 'Select Company'}
+          </div>
+          <div className="text-[9px] text-indigo-600 dark:text-indigo-400 font-bold tracking-wider leading-none mt-0.5 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>{activeCompany?.code || 'FIRM'}</span>
+          </div>
+        </div>
+        <ChevronDown size={13} className={`text-slate-400 dark:text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180 text-indigo-600' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-12 left-0 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[80] py-2 text-slate-800 dark:text-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">
+              Switch Firm / Company
+            </span>
+            <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold px-1.5 py-0.5 rounded">
+              {companies.length} Registered
+            </span>
+          </div>
+
+          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 py-1">
+            {companies.map((comp) => {
+              const isSelected = comp._id === activeCompany?._id;
+              return (
+                <div
+                  key={comp._id}
+                  onClick={() => handleSelect(comp)}
+                  className={`px-3 py-2.5 flex items-center justify-between cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-indigo-50/70 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }`}>
+                      {comp.code ? comp.code.substring(0, 2) : <Building2 size={13} />}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs truncate font-bold leading-tight">
+                        {comp.name}
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5 font-mono">
+                        {comp.gstin ? `GST: ${comp.gstin}` : `Code: ${comp.code || 'CO'}`}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isSelected && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 ml-2" title="Active Workspace"></span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-850/60">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/company/company-master');
+              }}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-750 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 rounded-lg shadow-2xs transition cursor-pointer"
+            >
+              <Plus size={13} />
+              <span>Add / Manage Companies</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const QuickPunchHeader = () => {
   const [status, setStatus] = useState(null);
@@ -351,6 +512,9 @@ export const TopHeader = ({ onMenuClick, onToggleDesktopSidebar }) => {
             </span>
           </div>
         </div>
+
+        {/* Company Switcher Dropdown (Multi-Company Architecture) */}
+        <CompanySwitcherHeader />
       </div>
 
       {/* 2. Middle Section: All Action Buttons - Direct on Desktop, Smooth Horizontal Swipe/Scroll on Phone & Smaller Screens */}

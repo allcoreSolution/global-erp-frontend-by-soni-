@@ -251,12 +251,12 @@ const AdjustmentList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
                     <div className="flex items-center gap-1.5">
                       <Calendar size={14} className="text-gray-400" />
-                      <span>{new Date(adj.createdAt).toLocaleDateString()}</span>
+                      <span>{adj.date || (adj.createdAt ? new Date(adj.createdAt).toLocaleDateString() : 'N/A')}</span>
                     </div>
                   </td>
                   {/* Reference */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    ADJ-{String(adj._id).slice(-5).toUpperCase()}
+                    {adj.reference || `ADJ-${String(adj._id).slice(-5).toUpperCase()}`}
                   </td>
                   {/* Warehouse */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -372,7 +372,7 @@ const AdjustmentList = () => {
       {/* --- VIEW ADJUSTMENT DETAILS DIALOG MODAL --- */}
       {isViewModalOpen && selectedAdjustment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-lg border border-blue-500 shadow-2xl max-w-md w-full p-6 relative text-black animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-lg border border-blue-500 shadow-2xl max-w-3xl w-full p-6 relative text-black max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
 
             <button
               onClick={() => setIsViewModalOpen(false)}
@@ -381,42 +381,98 @@ const AdjustmentList = () => {
               <X size={18} />
             </button>
 
-            <h3 className="text-lg font-bold text-gray-900 mb-4 border-b border-blue-500 pb-2">
-              Adjustment Log Details
+            <h3 className="text-lg font-bold text-gray-900 mb-4 border-b border-blue-500 pb-2 flex items-center justify-between">
+              <span>Adjustment Log Details</span>
+              <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded border border-indigo-200">
+                {selectedAdjustment.reference || `ADJ-${String(selectedAdjustment._id).slice(-5).toUpperCase()}`}
+              </span>
             </h3>
 
-            <div className="space-y-4 py-2 text-sm">
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Reference No:</span>
-                <span className="font-bold text-gray-900">{selectedAdjustment.reference}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2 text-xs bg-gray-50 p-3 rounded border border-gray-200 mb-4">
+              <div>
+                <span className="block font-semibold text-gray-500">Adjustment Date:</span>
+                <span className="font-bold text-gray-800">{selectedAdjustment.date || (selectedAdjustment.createdAt ? new Date(selectedAdjustment.createdAt).toLocaleDateString() : 'N/A')}</span>
               </div>
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Adjustment Date:</span>
-                <span className="text-gray-900">{selectedAdjustment.date}</span>
+              <div>
+                <span className="block font-semibold text-gray-500">Warehouse:</span>
+                <span className="font-bold text-gray-800">{selectedAdjustment.warehouse}</span>
               </div>
-              <div className="flex justify-between border-b border-blue-500 pb-2">
-                <span className="font-semibold text-gray-600">Warehouse:</span>
-                <span className="text-gray-900 font-semibold">{selectedAdjustment.warehouse}</span>
+              <div>
+                <span className="block font-semibold text-gray-500">Reason / Type:</span>
+                <span className="font-bold text-gray-800">{selectedAdjustment.lossType || 'General Adjustment'}</span>
               </div>
-              <div className="border-b border-blue-500 pb-2 space-y-1">
-                <span className="block font-semibold text-gray-600">Products Adjusted:</span>
-                <span className="block text-gray-800 bg-gray-50 p-2 rounded border border-blue-500 font-medium text-xs">
-                  {selectedAdjustment.products}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <span className="block font-semibold text-gray-600">Adjustment Note:</span>
-                <span className="block text-gray-700 italic bg-gray-50 p-2 rounded border border-blue-500 text-xs">
-                  {selectedAdjustment.note || 'No notes added.'}
+              <div>
+                <span className="block font-semibold text-gray-500">Total Loss Cost:</span>
+                <span className="font-bold text-rose-600">
+                  {selectedAdjustment.totalLossCost !== undefined ? `$${selectedAdjustment.totalLossCost.toFixed(2)}` : 'N/A'}
                 </span>
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-blue-500 mt-4">
+            {/* Adjusted Items Table */}
+            <div className="mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">Adjusted Products Breakdown</h4>
+              <div className="overflow-x-auto border border-blue-500 rounded">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-gray-100 text-gray-700 font-bold border-b border-blue-500">
+                      <th className="px-3 py-2">Product</th>
+                      <th className="px-3 py-2">Batch No</th>
+                      <th className="px-3 py-2">Exp Date</th>
+                      <th className="px-3 py-2">Invoice #</th>
+                      <th className="px-3 py-2">Action</th>
+                      <th className="px-3 py-2">Reason</th>
+                      <th className="px-3 py-2 text-center">Qty</th>
+                      <th className="px-3 py-2 text-right">Cost</th>
+                      <th className="px-3 py-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {selectedAdjustment.items && selectedAdjustment.items.length > 0 ? (
+                      selectedAdjustment.items.map((it, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50/70">
+                          <td className="px-3 py-2 font-semibold text-gray-800">
+                            {it.name}
+                            <span className="block text-[10px] text-gray-500">{it.code}</span>
+                          </td>
+                          <td className="px-3 py-2 font-mono font-medium text-indigo-700">{it.batch || '—'}</td>
+                          <td className="px-3 py-2 text-gray-600">{it.expDate || '—'}</td>
+                          <td className="px-3 py-2 font-mono text-gray-600">{it.invoiceNo || '—'}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${it.actionType === 'Add' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                              {it.actionType || (it.quantity > 0 ? 'Add' : 'Subtract')}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-gray-700">{it.reason || 'Damage'}</td>
+                          <td className="px-3 py-2 text-center font-bold text-gray-900">{Math.abs(it.quantity || 1)}</td>
+                          <td className="px-3 py-2 text-right font-medium text-gray-700">${Number(it.cost || 0).toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-bold text-gray-900">${((Number(it.cost || 0)) * Math.abs(Number(it.quantity || 1))).toFixed(2)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="9" className="text-center py-4 text-gray-500">No item details recorded.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {selectedAdjustment.note && (
+              <div className="space-y-1 mb-4">
+                <span className="block font-semibold text-xs text-gray-600">Adjustment Note:</span>
+                <span className="block text-gray-700 italic bg-gray-50 p-2.5 rounded border border-gray-200 text-xs">
+                  {selectedAdjustment.note}
+                </span>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-blue-500">
               <button
                 type="button"
                 onClick={() => setIsViewModalOpen(false)}
-                className="px-5 py-2 bg-gray-900 hover:bg-gray-800 text-slate-800 rounded text-sm font-semibold transition-colors"
+                className="px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded text-sm font-semibold transition-colors"
               >
                 Close View
               </button>

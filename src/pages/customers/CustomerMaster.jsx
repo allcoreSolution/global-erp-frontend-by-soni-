@@ -31,13 +31,8 @@ const CustomerMaster = () => {
 
   const fetchDynamicOptions = async () => {
     try {
-      const [taxRes, priceRes] = await Promise.all([
-        api.get('/tax-slabs'),
-        api.get('/price-lists')
-      ]);
-      
+      const taxRes = await api.get('/tax-slabs');
       if (taxRes.data && taxRes.data.success) setTaxSlabs(taxRes.data.data);
-      if (priceRes.data && priceRes.data.success) setPriceLists(priceRes.data.data);
     } catch (err) {
       console.error('Error fetching dynamic options:', err);
     }
@@ -397,12 +392,10 @@ const CustomerMaster = () => {
   };
 
   const handleExport = () => {
-    const headers = ['Customer ID', 'Customer Name', 'Type', 'Category', 'Phone', 'Email', 'Status', 'Balance'];
+    const headers = ['Customer ID', 'Customer Name', 'Type', 'Category', 'Phone', 'Email', 'Status'];
     let csvContent = headers.join(',') + '\n';
     
     filteredCustomers.forEach(cust => {
-      const balance = calculateDue(cust);
-      const balanceStr = `Rs ${Math.abs(balance).toLocaleString()} ${balance >= 0 ? 'Dr' : 'Cr'}`;
       const row = [
         cust.customerCode || '',
         `"${cust.name || ''}"`,
@@ -410,8 +403,7 @@ const CustomerMaster = () => {
         cust.category || '',
         cust.phone || '',
         cust.email || '',
-        cust.status ? 'Active' : 'Inactive',
-        `"${balanceStr}"`
+        cust.status ? 'Active' : 'Inactive'
       ];
       csvContent += row.join(',') + '\n';
     });
@@ -430,21 +422,17 @@ const CustomerMaster = () => {
     const doc = new jsPDF();
     doc.text('Customer Master List', 14, 15);
     
-    const tableColumn = ["Customer ID", "Name", "Type", "Category", "Contact", "Status", "Balance"];
+    const tableColumn = ["Customer ID", "Name", "Type", "Category", "Contact", "Status"];
     const tableRows = [];
 
     filteredCustomers.forEach(cust => {
-      const balance = calculateDue(cust);
-      const balanceStr = `Rs ${Math.abs(balance).toLocaleString()} ${balance >= 0 ? 'Dr' : 'Cr'}`;
-      
       const customerData = [
         cust.customerCode,
         cust.name,
         cust.type,
         cust.category,
         cust.phone,
-        cust.status ? 'Active' : 'Inactive',
-        balanceStr
+        cust.status ? 'Active' : 'Inactive'
       ];
       tableRows.push(customerData);
     });
@@ -587,7 +575,6 @@ const CustomerMaster = () => {
               <th className="p-2 sm:p-3">Type</th>
               <th className="p-2 sm:p-3">Category</th>
               <th className="p-2 sm:p-3">Contact</th>
-              <th className="p-2 sm:p-3 text-right">Balance (₹)</th>
               <th className="p-2 sm:p-3 text-center no-print">Status</th>
               <th className="p-2 sm:p-3 text-center no-print">Actions</th>
             </tr>
@@ -595,7 +582,6 @@ const CustomerMaster = () => {
           <tbody className="divide-y divide-slate-100">
             {currentRecords.length > 0 ? (
               currentRecords.map((cust) => {
-                const balance = calculateDue(cust);
                 return (
                   <tr key={cust._id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-2 sm:p-3 font-semibold text-indigo-600">{cust.customerCode || '-'}</td>
@@ -621,9 +607,6 @@ const CustomerMaster = () => {
                       <div className="text-[9px] sm:text-[10px] text-gray-500">
                         {cust.billingAddress ? `${cust.billingAddress.city || ''}${cust.billingAddress.city && cust.billingAddress.state ? ', ' : ''}${cust.billingAddress.state || ''}` : '-'}
                       </div>
-                    </td>
-                    <td className={`p-2 sm:p-3 text-right font-medium ${balance >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                      ₹ {Math.abs(balance).toLocaleString()} {balance >= 0 ? 'Dr' : 'Cr'}
                     </td>
                     <td className="p-2 sm:p-3 text-center no-print">
                       {can(['edit_contacts', 'manage_contacts']) ? (
@@ -677,7 +660,7 @@ const CustomerMaster = () => {
               })
             ) : (
               <tr>
-                <td colSpan="8" className="p-6 text-center text-gray-500 text-xs sm:text-sm">
+                <td colSpan="7" className="p-6 text-center text-gray-500 text-xs sm:text-sm">
                   No customers found. Click "Add Customer" to create one.
                 </td>
               </tr>
@@ -854,27 +837,6 @@ const CustomerMaster = () => {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">GSTIN Number</label>
                       <input type="text" placeholder="e.g. 09AABCU3333C1Z3" value={customerForm.gstin || ''} onChange={(e) => setCustomerForm({ ...customerForm, gstin: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Drug Licence Number (D.L.)</label>
-                      <input type="text" placeholder="e.g. DL-20B-56789/21B-12345" value={customerForm.drugLicenceNo || ''} onChange={(e) => setCustomerForm({ ...customerForm, drugLicenceNo: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Drug Licence Validity</label>
-                      <input type="date" value={customerForm.drugLicenceValidity || ''} onChange={(e) => setCustomerForm({ ...customerForm, drugLicenceValidity: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Opening Balance (₹)</label>
-                        <input type="number" value={customerForm.openingBalance} onChange={(e) => setCustomerForm({ ...customerForm, openingBalance: Number(e.target.value) })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm focus:outline-none" />
-                      </div>
-                      <div className="w-24">
-                        <label className="block text-[10px] sm:text-xs font-semibold text-gray-700 uppercase mb-1">Type</label>
-                        <select value={customerForm.balanceType} onChange={(e) => setCustomerForm({ ...customerForm, balanceType: e.target.value })} className="w-full border border-slate-300 rounded p-2 text-xs sm:text-sm bg-white focus:outline-none">
-                          <option value="Dr">Dr</option>
-                          <option value="Cr">Cr</option>
-                        </select>
-                      </div>
                     </div>
 
 

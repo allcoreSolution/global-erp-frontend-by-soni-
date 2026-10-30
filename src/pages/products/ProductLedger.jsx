@@ -24,6 +24,42 @@ const WhatsAppIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
+// WhatsApp phone number sanitizer (adds 91 if 10-digit Indian phone)
+const getCleanPhone = (rawPhone) => {
+  if (!rawPhone) return '';
+  let digits = String(rawPhone).replace(/\D/g, '');
+  if (digits.length === 10) {
+    digits = '91' + digits;
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    digits = '91' + digits.substring(1);
+  }
+  return digits;
+};
+
+// Convert number to Indian currency words
+const numberToWords = (num) => {
+  const n = Math.floor(Math.abs(Number(num) || 0));
+  if (n === 0) return 'Zero Rupees Only';
+
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const inWords = (val) => {
+    if ((val = val.toString()).length > 9) return 'Amount Exceeds Crores';
+    const match = ('000000000' + val).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!match) return '';
+    let str = '';
+    str += (match[1] != 0) ? (a[Number(match[1])] || `${b[match[1][0]]} ${a[match[1][1]]}`) + 'Crore ' : '';
+    str += (match[2] != 0) ? (a[Number(match[2])] || `${b[match[2][0]]} ${a[match[2][1]]}`) + 'Lakh ' : '';
+    str += (match[3] != 0) ? (a[Number(match[3])] || `${b[match[3][0]]} ${a[match[3][1]]}`) + 'Thousand ' : '';
+    str += (match[4] != 0) ? (a[Number(match[4])] || `${b[match[4][0]]} ${a[match[4][1]]}`) + 'Hundred ' : '';
+    str += (match[5] != 0) ? ((str !== '') ? 'and ' : '') + (a[Number(match[5])] || `${b[match[5][0]]}`) : '';
+    return str.trim();
+  };
+
+  return `${inWords(n)} Rupees Only`;
+};
+
 // Dedicated Full Page Component for Supplier Ledger & Profile
 const SupplierLedgerDetailPage = ({
   supplierDetails,
@@ -44,8 +80,214 @@ const SupplierLedgerDetailPage = ({
   setShowInvoiceModal,
   selectedInvoice
 }) => {
+  // Payment Modal state
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [payingInvoice, setPayingInvoice] = useState(null);
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    paymentAmount: '',
+    paymentMethod: 'Cash',
+    paymentDate: new Date().toISOString().slice(0, 10),
+    transactionRef: '',
+    chequeNo: '',
+    bankName: '',
+    remarks: ''
+  });
+
+  // Receipt Slip Modal state
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+
+  // Open Payment modal (either for a specific invoice or direct on-account)
+  const handleOpenPayModal = (inv = null) => {
+    setPayingInvoice(inv);
+    let defaultAmount = '';
+    if (inv) {
+      const grandTotal = Number(inv.grandTotal) || 0;
+      const amountPaid = Number(inv.amountPaid) || 0;
+      const returnedAmount = Number(inv.returnedAmount) || 0;
+      const due = inv.balanceDue !== undefined ? Number(inv.balanceDue) : Math.max(0, grandTotal - amountPaid - returnedAmount);
+      defaultAmount = due > 0 ? due : '';
+    } else {
+      const net = supplierDetails?.summary?.netBalance || 0;
+      defaultAmount = net > 0 ? net : '';
+    }
+
+    setPaymentForm({
+      paymentAmount: defaultAmount,
+      paymentMethod: 'Cash',
+      paymentDate: new Date().toISOString().slice(0, 10),
+      transactionRef: '',
+      chequeNo: '',
+      bankName: '',
+      remarks: inv ? `Payment for Invoice #${inv.referenceNo || inv.purchaseNo}` : 'Direct on-account disbursement'
+    });
+    setShowPayModal(true);
+  };
+
+  // Submit payment to existing API endpoints
+  const handleSubmitPayment = async (e) => {
+    e?.preventDefault();
+    const amt = Number(paymentForm.paymentAmount);
+    if (!amt || amt <= 0) {
+      toast.error('Please enter a valid payment amount greater than 0');
+      return;
+    }
+
+    setSubmittingPayment(true);
+    try {
+      const isBank = paymentForm.paymentMethod !== 'Cash';
+      let res;
+
+      if (isBank) {
+        // Use existing POST /api/bank-payments
+        const bankPayload = {
+          supplierParty: supplierDetails?.supplier?._id,
+          amount: amt,
+          paymentAmount: amt,
+          method: paymentForm.paymentMethod === 'Cheque' ? 'Cheque' : paymentForm.paymentMethod === 'UPI' ? 'UPI' : 'NEFT',
+          paymentDate: paymentForm.paymentDate,
+          bankName: paymentForm.bankName || 'Company Bank',
+          utrNo: paymentForm.transactionRef || undefined,
+          chequeNo: paymentForm.chequeNo || (paymentForm.paymentMethod === 'Cheque' ? paymentForm.transactionRef : undefined),
+          remarks: paymentForm.remarks,
+          status: 'Success'
+        };
+
+        if (payingInvoice) {
+          bankPayload.purchase = payingInvoice._id;
+          bankPayload.invoiceNo = payingInvoice.referenceNo || payingInvoice.purchaseNo;
+          bankPayload.invoices = [{
+            id: payingInvoice._id,
+            referenceNo: payingInvoice.referenceNo || payingInvoice.purchaseNo,
+            invoiceNo: payingInvoice.referenceNo || payingInvoice.purchaseNo,
+            invoiceAmount: Number(payingInvoice.grandTotal || 0),
+            dueAmount: Number(payingInvoice.balanceDue || 0),
+            adjustAmount: amt
+          }];
+        }
+
+        res = await api.post('/bank-payments', bankPayload);
+      } else {
+        // Use existing POST /api/payments
+        const cashPayload = {
+          supplierParty: supplierDetails?.supplier?._id,
+          paymentAmount: amt,
+          paymentMethod: 'Cash',
+          paymentDate: paymentForm.paymentDate,
+          transactionRef: paymentForm.transactionRef || undefined,
+          remarks: paymentForm.remarks,
+          status: 'Success'
+        };
+
+        if (payingInvoice) {
+          cashPayload.purchase = payingInvoice._id;
+          cashPayload.invoiceNo = payingInvoice.referenceNo || payingInvoice.purchaseNo;
+          cashPayload.invoices = [{
+            id: payingInvoice._id,
+            referenceNo: payingInvoice.referenceNo || payingInvoice.purchaseNo,
+            invoiceNo: payingInvoice.referenceNo || payingInvoice.purchaseNo,
+            invoiceAmount: Number(payingInvoice.grandTotal || 0),
+            dueAmount: Number(payingInvoice.balanceDue || 0),
+            adjustAmount: amt
+          }];
+        }
+
+        res = await api.post('/payments', cashPayload);
+      }
+
+      if (res.data?.success) {
+        toast.success(`Payment of ₹${amt.toLocaleString('en-IN')} recorded successfully!`);
+        setShowPayModal(false);
+
+        // Prepare receipt data to view & print receipt voucher immediately
+        const createdData = res.data.data;
+        const receiptSlip = {
+          ...createdData,
+          source: isBank ? 'Bank Payment' : 'Payment (Cash/General)',
+          paymentNo: createdData?.paymentNo || (isBank ? `BPAY-${Date.now().toString().slice(-6)}` : `PAY-${Date.now().toString().slice(-6)}`),
+          paymentDate: paymentForm.paymentDate,
+          paymentMethod: paymentForm.paymentMethod,
+          paymentAmount: amt,
+          transactionRef: paymentForm.transactionRef || paymentForm.chequeNo,
+          chequeNo: paymentForm.chequeNo,
+          bankName: paymentForm.bankName,
+          remarks: paymentForm.remarks,
+          supplierParty: supplierDetails?.supplier?.companyName,
+          supplier: supplierDetails?.supplier,
+          invoiceNo: payingInvoice ? (payingInvoice.referenceNo || payingInvoice.purchaseNo) : 'Direct / On-Account',
+          status: 'Success'
+        };
+
+        setSelectedReceipt(receiptSlip);
+        setShowReceiptModal(true);
+
+        // Refresh ledger data
+        await fetchSupplierDetails(activeSupplierId);
+      } else {
+        toast.error(res.data?.message || 'Failed to record payment');
+      }
+    } catch (err) {
+      console.error('Error recording payment:', err);
+      toast.error(err.response?.data?.message || 'Error occurred while saving payment');
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
+  // WhatsApp Payment Receipt Voucher Share
+  const handleSendReceiptWhatsApp = (receipt) => {
+    const supp = supplierDetails?.supplier || {};
+    let rawPhone = supp?.phone || '';
+    let phone = getCleanPhone(rawPhone);
+    if (!phone) {
+      const prompted = window.prompt(
+        `Supplier (${supp.companyName || 'Supplier'}) phone number is missing.\nPlease enter 10-digit WhatsApp phone number:`,
+        ''
+      );
+      if (prompted) {
+        phone = getCleanPhone(prompted);
+      }
+    }
+
+    const supplierName = supp?.companyName || receipt?.supplierParty || 'Valued Supplier';
+    const payNo = receipt?.paymentNo || receipt?._id || 'PAY-RCPT';
+    const payDate = receipt?.paymentDate || new Date().toISOString().slice(0, 10);
+    const payMode = receipt?.paymentMethod || receipt?.method || 'Cash / Bank';
+    const paySource = receipt?.source || 'Payment Receipt';
+    const amountNum = Number(receipt?.paymentAmount || receipt?.amount || 0);
+    const amountStr = amountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const refNo = receipt?.transactionRef || receipt?.chequeNo || receipt?.utrNo || '';
+    const bankName = receipt?.bankName || '';
+    const invoiceRef = receipt?.invoiceNo || (receipt?.invoices && receipt.invoices[0]?.invoiceNo) || 'Direct / On-Account';
+
+    const message =
+`🧾 *PAYMENT RECEIPT VOUCHER*
+━━━━━━━━━━━━━━━━━━━━
+🏢 *Disbursed From:* Global ERP Services
+👤 *Paid To Supplier:* ${supplierName}
+📱 *Contact:* ${rawPhone || phone || 'N/A'}
+━━━━━━━━━━━━━━━━━━━━
+🔖 *Receipt / Voucher No:* #${payNo}
+📅 *Date:* ${payDate}
+💳 *Payment Mode:* ${payMode}
+🏛 *Channel:* ${paySource}
+${bankName ? `🏦 *Bank Name:* ${bankName}\n` : ''}${refNo ? `🔢 *Ref / Cheque / UTR No:* ${refNo}\n` : ''}📄 *Bill / Purpose:* ${invoiceRef}
+
+💵 *AMOUNT PAID:* *₹${amountStr}*
+🗣 *In Words:* ${numberToWords(amountNum)}
+${receipt?.remarks ? `📝 *Remarks / Note:* ${receipt.remarks}\n` : ''}━━━━━━━━━━━━━━━━━━━━
+✅ *Payment Status:* SUCCESS / CONFIRMED
+_Official payment voucher generated from ERP._`;
+
+    const encoded = encodeURIComponent(message);
+    const waUrl = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(waUrl, '_blank');
+    toast.success('Payment receipt opened on WhatsApp!');
+  };
+
   return (
-    <div className="bg-[#f8fafc] min-h-screen p-4 sm:p-6 lg:p-8 font-sans">
+    <div className="bg-[#f8fafc] min-h-full w-full pb-24 p-3 sm:p-6 lg:p-8 font-sans">
       
       {/* 1. TOP BREADCRUMB & BACK ACTION BAR */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200">
@@ -62,30 +304,30 @@ const SupplierLedgerDetailPage = ({
             <ChevronRight size={13} />
             <span className="hover:text-indigo-600 cursor-pointer" onClick={handleBackToLedger}>Supplier Ledger</span>
             <ChevronRight size={13} />
-            <span className="text-indigo-700 font-bold bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-md">
+            <span className="text-slate-800 font-bold">
               {supplierDetails?.supplier?.companyName || 'Supplier Profile'}
             </span>
           </div>
         </div>
 
         {/* Top Right Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             onClick={() => fetchSupplierDetails(activeSupplierId)}
             disabled={detailsLoading}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold border border-slate-200 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
             title="Refresh Data"
           >
-            <RefreshCw size={15} className={detailsLoading ? 'animate-spin text-indigo-600' : 'text-slate-500'} />
+            <RefreshCw size={13} className={detailsLoading ? 'animate-spin text-indigo-600' : 'text-slate-500'} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
           <button
             onClick={() => handleSendSupplierStatementWhatsApp()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-200 transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
             title="Send Statement Slip on WhatsApp"
           >
-            <WhatsAppIcon size={16} />
+            <WhatsAppIcon size={14} />
             <span>
               {(supplierDetails?.summary?.netBalance || 0) > 0
                 ? `WhatsApp Due Slip (₹${(supplierDetails.summary.netBalance || 0).toLocaleString('en-IN')})`
@@ -94,11 +336,12 @@ const SupplierLedgerDetailPage = ({
           </button>
 
           <button
-            onClick={() => navigate(`/purchases/add-purchase?supplierId=${supplierDetails?.supplier?._id}`)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-200 transition-all active:scale-95"
+            onClick={() => handleOpenPayModal(null)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
+            title="Make Direct / Advance / Lumpsum Payment to Supplier"
           >
-            <Plus size={16} />
-            <span>Add Purchase Invoice</span>
+            <CreditCard size={14} />
+            <span>+ Direct Payment</span>
           </button>
         </div>
       </div>
@@ -111,64 +354,64 @@ const SupplierLedgerDetailPage = ({
         </div>
       ) : (
         <>
-          {/* 2. Hero Supplier Profile Banner */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-7 rounded-2xl shadow-xl border border-slate-800 mb-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0 border border-white/20">
+          {/* 2. Clean Supplier Profile Header (No heavy background & Compact Text) */}
+          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm mb-3.5 text-slate-800">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
                   {supplierDetails?.supplier?.companyName?.slice(0, 2).toUpperCase() || 'SP'}
                 </div>
                 <div>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h1 className="text-sm sm:text-base font-bold text-slate-900">
                       {supplierDetails?.supplier?.companyName || 'Supplier Name'}
                     </h1>
-                    <span className="font-mono text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 px-2.5 py-0.5 rounded-full font-bold">
+                    <span className="font-mono text-[10px] bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.5 rounded font-semibold">
                       {supplierDetails?.supplier?.supplierCode || 'SUP-CODE'}
                     </span>
                     {supplierDetails?.supplier?.type && (
-                      <span className="text-xs bg-white/10 text-slate-300 px-2.5 py-0.5 rounded-full font-semibold">
+                      <span className="text-[10px] bg-slate-50 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
                         {supplierDetails.supplier.type}
                       </span>
                     )}
-                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                       {supplierDetails?.supplier?.status !== false ? '● Active Supplier' : 'Inactive'}
                     </span>
                   </div>
 
-                  <div className="text-xs text-slate-300 mt-2 flex flex-wrap items-center gap-y-1.5 gap-x-5">
+                  <div className="text-[10px] text-slate-600 mt-1.5 flex flex-wrap items-center gap-y-1 gap-x-3.5">
                     {supplierDetails?.supplier?.contactPerson && (
-                      <span className="flex items-center gap-1.5">
-                        <User size={14} className="text-indigo-400" />
+                      <span className="flex items-center gap-1">
+                        <User size={12} className="text-slate-400" />
                         <span className="text-slate-400">Contact:</span>
-                        <strong className="text-white">{supplierDetails.supplier.contactPerson}</strong>
+                        <strong className="text-slate-700">{supplierDetails.supplier.contactPerson}</strong>
                       </span>
                     )}
                     {supplierDetails?.supplier?.phone && (
-                      <span className="flex items-center gap-1.5">
-                        <Phone size={14} className="text-indigo-400" />
+                      <span className="flex items-center gap-1">
+                        <Phone size={12} className="text-slate-400" />
                         <span className="text-slate-400">Phone:</span>
-                        <strong className="text-white">{supplierDetails.supplier.phone}</strong>
+                        <strong className="text-slate-700">{supplierDetails.supplier.phone}</strong>
                       </span>
                     )}
                     {supplierDetails?.supplier?.email && (
-                      <span className="flex items-center gap-1.5">
-                        <Mail size={14} className="text-indigo-400" />
+                      <span className="flex items-center gap-1">
+                        <Mail size={12} className="text-slate-400" />
                         <span className="text-slate-400">Email:</span>
-                        <strong className="text-white">{supplierDetails.supplier.email}</strong>
+                        <strong className="text-slate-700">{supplierDetails.supplier.email}</strong>
                       </span>
                     )}
                     {supplierDetails?.supplier?.gstin && (
-                      <span className="flex items-center gap-1.5 font-mono">
-                        <ShieldCheck size={14} className="text-emerald-400" />
+                      <span className="flex items-center gap-1 font-mono">
+                        <ShieldCheck size={12} className="text-emerald-600" />
                         <span className="text-slate-400">GSTIN:</span>
-                        <strong className="text-emerald-300">{supplierDetails.supplier.gstin}</strong>
+                        <strong className="text-emerald-700">{supplierDetails.supplier.gstin}</strong>
                       </span>
                     )}
                     {supplierDetails?.supplier?.pan && (
-                      <span className="flex items-center gap-1.5 font-mono">
+                      <span className="flex items-center gap-1 font-mono">
                         <span className="text-slate-400">PAN:</span>
-                        <strong className="text-white">{supplierDetails.supplier.pan}</strong>
+                        <strong className="text-slate-700">{supplierDetails.supplier.pan}</strong>
                       </span>
                     )}
                   </div>
@@ -177,141 +420,141 @@ const SupplierLedgerDetailPage = ({
             </div>
           </div>
 
-          {/* 3. Top KPI Metric Cards for Supplier */}
+          {/* 3. Top KPI Metric Cards for Supplier (Compact Font Sizes) */}
           {supplierDetails?.summary && (
-            <div className={`grid grid-cols-1 sm:grid-cols-2 ${(supplierDetails.summary.totalReturns || 0) > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4 mb-6`}>
-              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+            <div className={`grid grid-cols-2 sm:grid-cols-2 ${(supplierDetails.summary.totalReturns || 0) > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2.5 mb-3.5`}>
+              <div className="bg-white rounded-xl p-2.5 sm:p-3 border border-slate-200 shadow-sm relative overflow-hidden group">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Purchase Bills</span>
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Receipt size={20} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Purchase Bills</span>
+                  <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Receipt size={13} />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-black text-slate-800">{supplierDetails.summary.totalInvoices || 0} Bills</div>
-                  <div className="text-[11px] text-slate-400 mt-1">All recorded purchase invoices</div>
+                <div className="mt-1.5">
+                  <div className="text-sm sm:text-base font-bold text-slate-800">{supplierDetails.summary.totalInvoices || 0} Bills</div>
+                  <div className="text-[9px] text-slate-400 mt-0.5">All recorded invoices</div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />
               </div>
 
-              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+              <div className="bg-white rounded-xl p-2.5 sm:p-3 border border-slate-200 shadow-sm relative overflow-hidden group">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Purchased</span>
-                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                    <Boxes size={20} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Purchased</span>
+                  <div className="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <Boxes size={13} />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-black text-purple-700">₹{(supplierDetails.summary.totalPurchased || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-                  <div className="text-[11px] text-purple-600 mt-1">Gross purchase volume</div>
+                <div className="mt-1.5">
+                  <div className="text-sm sm:text-base font-bold text-purple-700">₹{(supplierDetails.summary.totalPurchased || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <div className="text-[9px] text-purple-600 mt-0.5">Gross purchase volume</div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-500" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500" />
               </div>
 
-              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+              <div className="bg-white rounded-xl p-2.5 sm:p-3 border border-slate-200 shadow-sm relative overflow-hidden group">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Paid Out</span>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <CheckCircle size={20} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Paid Out</span>
+                  <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <CheckCircle size={13} />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl font-black text-emerald-700">₹{(supplierDetails.summary.totalPaid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-                  <div className="text-[11px] text-emerald-600 mt-1">Cleared disbursements</div>
+                <div className="mt-1.5">
+                  <div className="text-sm sm:text-base font-bold text-emerald-700">₹{(supplierDetails.summary.totalPaid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <div className="text-[9px] text-emerald-600 mt-0.5">Cleared disbursements</div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
               </div>
 
               {(supplierDetails.summary.totalReturns || 0) > 0 && (
-                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200/80 shadow-sm relative overflow-hidden group">
+                <div className="bg-white rounded-xl p-2.5 sm:p-3 border border-amber-200 shadow-sm relative overflow-hidden group">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">Returns / Debit Notes</span>
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                      <ArrowDownRight size={20} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Returns / Debit Notes</span>
+                    <div className="w-6 h-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
+                      <ArrowDownRight size={13} />
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl font-black text-amber-600">-₹{(supplierDetails.summary.totalReturns || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-                    <div className="text-[11px] text-amber-600 mt-1">{supplierDetails?.returns?.length || 1} debit note(s) credit</div>
+                  <div className="mt-1.5">
+                    <div className="text-sm sm:text-base font-bold text-amber-600">-₹{(supplierDetails.summary.totalReturns || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    <div className="text-[9px] text-amber-600 mt-0.5">{supplierDetails?.returns?.length || 1} debit note(s) credit</div>
                   </div>
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
                 </div>
               )}
 
-              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200/80 shadow-sm relative overflow-hidden group bg-gradient-to-br from-white via-amber-50/20 to-amber-50/40">
+              <div className="bg-white rounded-xl p-2.5 sm:p-3 border border-slate-200 shadow-sm relative overflow-hidden group">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">Current Balance Due</span>
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                    <DollarSign size={20} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Current Balance Due</span>
+                  <div className="w-6 h-6 rounded-md bg-amber-50 text-amber-700 flex items-center justify-center">
+                    <DollarSign size={13} />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className={`text-2xl font-black ${supplierDetails.summary.netBalance > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                <div className="mt-1.5">
+                  <div className={`text-sm sm:text-base font-bold ${supplierDetails.summary.netBalance > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
                     ₹{(supplierDetails.summary.netBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-[11px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
-                    {supplierDetails.summary.netBalance > 0 ? <><AlertTriangle size={13} /> Net Due (Purchased − Paid − Returns)</> : 'Fully Settled (₹0 Due)'}
+                  <div className="text-[9px] text-amber-700 font-semibold mt-0.5 flex items-center gap-1">
+                    {supplierDetails.summary.netBalance > 0 ? <><AlertTriangle size={10} /> Net Due</> : 'Fully Settled (₹0 Due)'}
                   </div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-red-500" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
               </div>
             </div>
           )}
 
-          {/* 4. Tab Navigation Bar */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
-            <div className="px-6 pt-4 bg-white border-b border-slate-200 flex items-center justify-between overflow-x-auto">
-              <div className="flex items-center gap-8 text-sm font-semibold whitespace-nowrap">
+          {/* 4. Tab Navigation Bar (Compact Text) */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+            <div className="px-3 pt-2 bg-white border-b border-slate-200 flex items-center justify-between overflow-x-auto">
+              <div className="flex items-center gap-4 text-[11px] font-semibold whitespace-nowrap">
                 <button
                   onClick={() => setActiveTab('invoices')}
-                  className={`pb-3.5 border-b-2 flex items-center gap-2 transition-all ${
+                  className={`pb-2 border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'invoices'
-                      ? 'border-indigo-600 text-indigo-600 font-bold'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                      ? 'border-indigo-600 text-indigo-700 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Receipt size={17} />
+                  <Receipt size={13} />
                   <span>All Purchase Invoices ({supplierDetails?.purchases?.length || 0})</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('profile')}
-                  className={`pb-3.5 border-b-2 flex items-center gap-2 transition-all ${
+                  className={`pb-2 border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'profile'
-                      ? 'border-indigo-600 text-indigo-600 font-bold'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                      ? 'border-indigo-600 text-indigo-700 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Building size={17} />
+                  <Building size={13} />
                   <span>Supplier Profile & Legal Details</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('history')}
-                  className={`pb-3.5 border-b-2 flex items-center gap-2 transition-all ${
+                  className={`pb-2 border-b-2 flex items-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'history'
-                      ? 'border-indigo-600 text-indigo-600 font-bold'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                      ? 'border-indigo-600 text-indigo-700 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Clock size={17} />
+                  <CreditCard size={13} />
                   <span>Payments & Returns History</span>
                 </button>
               </div>
             </div>
 
             {/* Tab Contents */}
-            <div className="p-5 sm:p-6 bg-slate-50/40">
+            <div className="p-3 sm:p-4 bg-slate-50/30">
               {/* TAB 1: ALL INVOICES */}
               {activeTab === 'invoices' && (
                 <div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-1 flex-wrap">
                       {['All', 'Received', 'Due', 'Cancelled'].map((st) => (
                         <button
                           key={st}
                           onClick={() => setInvoiceStatusFilter(st)}
-                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
                             invoiceStatusFilter === st
                               ? 'bg-indigo-600 text-white shadow-sm'
                               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
@@ -322,48 +565,48 @@ const SupplierLedgerDetailPage = ({
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleSendSupplierStatementWhatsApp(supplierDetails?.supplier, supplierDetails?.summary, supplierDetails?.purchases, false)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-sm transition-all active:scale-95 cursor-pointer"
                         title="Send All Invoices / Due Summary together on WhatsApp"
                       >
-                        <WhatsAppIcon size={14} />
+                        <WhatsAppIcon size={12} />
                         <span>Send All Invoices Slip (सारा एक साथ)</span>
                       </button>
 
-                      <span className="text-xs text-slate-400 font-medium">
+                      <span className="text-[10px] text-slate-400 font-medium">
                         Showing {filteredInvoices.length} bill(s)
                       </span>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <table className="w-full text-left border-collapse">
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto relative">
+                    <table className="w-full min-w-[1180px] text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                          <th className="py-3 px-4">Invoice / Ref No</th>
-                          <th className="py-3 px-4">Bill Date</th>
-                          <th className="py-3 px-4">Due Date</th>
-                          <th className="py-3 px-4">Warehouse</th>
-                          <th className="py-3 px-4 text-center">Items</th>
-                          <th className="py-3 px-4 text-right">Grand Total</th>
-                          <th className="py-3 px-4 text-right">Paid Amount</th>
-                          <th className="py-3 px-4 text-right">Return / Debit Note</th>
-                          <th className="py-3 px-4 text-right">Balance Due</th>
-                          <th className="py-3 px-4 text-center">Purchase Status</th>
-                          <th className="py-3 px-4 text-center">Payment Status</th>
-                          <th className="py-3 px-4 text-center">Action / Slip</th>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          <th className="py-2 px-3">Invoice / Ref No</th>
+                          <th className="py-2 px-3">Bill Date</th>
+                          <th className="py-2 px-3">Due Date</th>
+                          <th className="py-2 px-3">Warehouse</th>
+                          <th className="py-2 px-3 text-center">Items</th>
+                          <th className="py-2 px-3 text-right">Grand Total</th>
+                          <th className="py-2 px-3 text-right">Paid Amount</th>
+                          <th className="py-2 px-3 text-right">Return / Debit Note</th>
+                          <th className="py-2 px-3 text-right">Balance Due</th>
+                          <th className="py-2 px-3 text-center">Purchase Status</th>
+                          <th className="py-2 px-3 text-center">Payment Status</th>
+                          <th className="py-2 px-3 text-center sticky right-0 bg-slate-50 z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] min-w-[165px]">Action / Slip</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                      <tbody className="divide-y divide-slate-100 text-[11px] text-slate-700">
                         {filteredInvoices.length === 0 ? (
                           <tr>
-                            <td colSpan={12} className="py-12 text-center text-slate-400">
-                              <Receipt size={36} className="mx-auto mb-2 text-slate-300" />
-                              <p className="font-semibold text-sm text-slate-600">No invoices match this filter</p>
-                              <p className="text-xs text-slate-400 mt-0.5">Click '+ Add Purchase Invoice' to record a new invoice for this supplier.</p>
+                            <td colSpan={12} className="py-10 text-center text-slate-400">
+                              <Receipt size={32} className="mx-auto mb-1.5 text-slate-300" />
+                              <p className="font-semibold text-xs text-slate-600">No invoices match this filter</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">No invoices recorded for this supplier.</p>
                             </td>
                           </tr>
                         ) : (
@@ -377,46 +620,46 @@ const SupplierLedgerDetailPage = ({
 
                             return (
                               <tr key={inv._id} className="hover:bg-slate-50/80 transition-colors">
-                                <td className="py-3 px-4">
-                                  <div className="font-bold text-slate-800 font-mono text-xs">
+                                <td className="py-2 px-3">
+                                  <div className="font-bold text-slate-800 font-mono text-[11px]">
                                     {inv.referenceNo || inv.purchaseNo || 'PUR-BILL'}
                                   </div>
                                 </td>
-                                <td className="py-3 px-4 font-medium text-slate-600">
+                                <td className="py-2 px-3 font-medium text-slate-600 text-[11px]">
                                   {inv.purchaseDate || '—'}
                                 </td>
-                                <td className="py-3 px-4 font-medium text-slate-600">
+                                <td className="py-2 px-3 font-medium text-slate-600 text-[11px]">
                                   {inv.dueDate || '—'}
                                 </td>
-                                <td className="py-3 px-4 font-medium text-slate-600">
+                                <td className="py-2 px-3 font-medium text-slate-600 text-[11px]">
                                   {inv.warehouse?.name || (typeof inv.warehouse === 'string' ? inv.warehouse : 'General')}
                                 </td>
-                                <td className="py-3 px-4 text-center font-bold text-slate-700">
+                                <td className="py-2 px-3 text-center font-bold text-slate-700 text-[11px]">
                                   {inv.orderItems?.length || 1}
                                 </td>
-                                <td className="py-3 px-4 text-right font-bold text-slate-800">
+                                <td className="py-2 px-3 text-right font-bold text-slate-800 text-[11px]">
                                   ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="py-3 px-4 text-right font-semibold text-emerald-700">
+                                <td className="py-2 px-3 text-right font-semibold text-emerald-700 text-[11px]">
                                   ₹{amountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="py-3 px-4 text-right font-semibold">
+                                <td className="py-2 px-3 text-right font-semibold text-[11px]">
                                   {returnedAmount > 0 ? (
-                                    <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 inline-block text-xs">
+                                    <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block text-[10px]">
                                       -₹{returnedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </span>
                                   ) : (
-                                    <span className="text-slate-400">—</span>
+                                    <span className="text-slate-400 text-[11px]">—</span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-right font-bold">
+                                <td className="py-2 px-3 text-right font-bold text-[11px]">
                                   {balanceDue > 0 ? (
                                     <div>
                                       <span className="text-rose-600">
                                         ₹{balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                       </span>
                                       {returnedAmount > 0 && (
-                                        <div className="text-[10px] text-slate-400 font-normal">
+                                        <div className="text-[9px] text-slate-400 font-normal">
                                           (₹{(grandTotal - amountPaid).toLocaleString('en-IN')} − ₹{returnedAmount.toLocaleString('en-IN')})
                                         </div>
                                       )}
@@ -425,8 +668,8 @@ const SupplierLedgerDetailPage = ({
                                     <span className="text-emerald-600">₹0.00</span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-center">
-                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                <td className="py-2 px-3 text-center">
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                     inv.purchaseStatus === 'Received'
                                       ? 'bg-emerald-100 text-emerald-800'
                                       : inv.purchaseStatus === 'Pending'
@@ -438,8 +681,8 @@ const SupplierLedgerDetailPage = ({
                                     {inv.purchaseStatus || 'Received'}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-center">
-                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                <td className="py-2 px-3 text-center">
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                     balanceDue === 0 || inv.paymentStatus === 'Paid'
                                       ? 'bg-emerald-100 text-emerald-800'
                                       : inv.paymentStatus === 'Partial'
@@ -449,27 +692,38 @@ const SupplierLedgerDetailPage = ({
                                     {balanceDue === 0 || inv.paymentStatus === 'Paid' ? 'Paid' : 'Due'}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-center">
-                                  <div className="flex items-center justify-center gap-1.5">
+                                <td className="py-2 px-3 text-center sticky right-0 bg-white group-hover:bg-slate-50 transition-colors z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] min-w-[165px]">
+                                  <div className="flex items-center justify-center gap-1">
+                                    {balanceDue > 0 && (
+                                      <button
+                                        onClick={() => handleOpenPayModal(inv)}
+                                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-sm transition-all active:scale-95 cursor-pointer"
+                                        title={`Record Payment for #${inv.referenceNo || inv.purchaseNo} (Due: ₹${balanceDue.toLocaleString('en-IN')})`}
+                                      >
+                                        <CreditCard size={11} />
+                                        <span>Pay</span>
+                                      </button>
+                                    )}
+
                                     <button
                                       onClick={() => handleViewInvoice(inv)}
-                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition-colors"
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10px] border border-indigo-200 transition-colors cursor-pointer"
                                       title="View Full Invoice Breakdown"
                                     >
-                                      <Eye size={12} />
+                                      <Eye size={11} />
                                       <span>View</span>
                                     </button>
 
                                     <button
                                       onClick={() => handleSendInvoiceWhatsApp(inv)}
-                                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs transition-all active:scale-95 shadow-sm ${
+                                      className={`inline-flex items-center gap-1 px-2 py-1 rounded font-bold text-[10px] transition-all active:scale-95 shadow-sm cursor-pointer ${
                                         balanceDue > 0
                                           ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200'
                                           : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
                                       }`}
                                       title={balanceDue > 0 ? `Send Unpaid Invoice Slip on WhatsApp (Due: ₹${balanceDue.toLocaleString('en-IN')})` : "Share Invoice Slip on WhatsApp"}
                                     >
-                                      <WhatsAppIcon size={13} />
+                                      <WhatsAppIcon size={11} />
                                       <span>{balanceDue > 0 ? 'Send Slip' : 'WhatsApp'}</span>
                                     </button>
                                   </div>
@@ -481,23 +735,23 @@ const SupplierLedgerDetailPage = ({
                       </tbody>
 
                       {filteredInvoices.length > 0 && (
-                        <tfoot className="bg-slate-50 border-t-2 border-slate-200 text-xs font-bold">
+                        <tfoot className="bg-slate-50 border-t-2 border-slate-200 text-[11px] font-bold">
                           <tr>
-                            <td colSpan={5} className="py-3.5 px-4 text-slate-700">
+                            <td colSpan={5} className="py-2.5 px-3 text-slate-700">
                               Total Summary ({filteredInvoices.length} Bills)
                             </td>
-                            <td className="py-3.5 px-4 text-right text-slate-900 font-black">
+                            <td className="py-2.5 px-3 text-right text-slate-900 font-bold text-[11px]">
                               ₹{filteredInvoices.reduce((sum, inv) => sum + (Number(inv.grandTotal) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
-                            <td className="py-3.5 px-4 text-right text-emerald-600 font-black">
+                            <td className="py-2.5 px-3 text-right text-emerald-700 font-bold text-[11px]">
                               ₹{filteredInvoices.reduce((sum, inv) => sum + (Number(inv.amountPaid) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
-                            <td className="py-3.5 px-4 text-right text-amber-600 font-black">
+                            <td className="py-2.5 px-3 text-right text-amber-700 font-bold text-[11px]">
                               {filteredInvoices.reduce((sum, inv) => sum + (Number(inv.returnedAmount) || 0), 0) > 0
                                 ? `-₹${filteredInvoices.reduce((sum, inv) => sum + (Number(inv.returnedAmount) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
                                 : '—'}
                             </td>
-                            <td className="py-3.5 px-4 text-right text-rose-600 font-black text-sm">
+                            <td className="py-2.5 px-3 text-right text-rose-600 font-bold text-[11px]">
                               ₹{filteredInvoices.reduce((sum, inv) => {
                                 const gTot = Number(inv.grandTotal) || 0;
                                 const pd = Number(inv.amountPaid) || 0;
@@ -505,8 +759,11 @@ const SupplierLedgerDetailPage = ({
                                 return sum + (inv.balanceDue !== undefined ? Number(inv.balanceDue) : Math.max(0, gTot - pd - ret));
                               }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
-                            <td colSpan={3} className="py-3.5 px-4 text-center text-[11px] text-slate-500 font-medium">
+                            <td colSpan={2} className="py-2.5 px-3 text-center text-[10px] text-slate-500 font-medium">
                               Net Outstanding
+                            </td>
+                            <td className="py-2.5 px-3 text-center sticky right-0 bg-slate-50 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] min-w-[165px] text-[10px] text-slate-400">
+                              —
                             </td>
                           </tr>
                         </tfoot>
@@ -663,33 +920,76 @@ const SupplierLedgerDetailPage = ({
                         No standalone payment records found for this party. Payments recorded during purchase bills appear directly in bills.
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
+                      <div className="overflow-x-auto relative">
+                        <table className="w-full min-w-[1000px] text-left text-xs border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 font-bold uppercase text-slate-500 text-[10px]">
-                              <th className="py-2.5 px-3">Payment No</th>
+                              <th className="py-2.5 px-3">Voucher / Pay No</th>
                               <th className="py-2.5 px-3">Date</th>
+                              <th className="py-2.5 px-3">Source / Type</th>
                               <th className="py-2.5 px-3">Mode</th>
                               <th className="py-2.5 px-3">Ref / Cheque</th>
+                              <th className="py-2.5 px-3">Against Invoice</th>
                               <th className="py-2.5 px-3 text-right">Amount</th>
                               <th className="py-2.5 px-3 text-center">Status</th>
+                              <th className="py-2.5 px-3 text-center sticky right-0 bg-slate-50 z-20 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] min-w-[120px]">Receipt Slip</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {supplierDetails?.payments?.map((pay) => (
-                              <tr key={pay._id}>
-                                <td className="py-2.5 px-3 font-mono font-bold">{pay.paymentNo || 'PAY-N/A'}</td>
-                                <td className="py-2.5 px-3">{pay.paymentDate}</td>
-                                <td className="py-2.5 px-3">{pay.paymentMethod || 'Bank'}</td>
-                                <td className="py-2.5 px-3 font-mono">{pay.transactionRef || pay.chequeNo || '—'}</td>
-                                <td className="py-2.5 px-3 text-right font-bold text-emerald-700">₹{(pay.paymentAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                <td className="py-2.5 px-3 text-center">
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                    {pay.status || 'Success'}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
+                            {supplierDetails?.payments?.map((pay) => {
+                              const payAmt = Number(pay.paymentAmount || pay.amount || 0);
+                              const isBankPay = pay.source === 'Bank Payment' || pay.paymentMethod === 'Bank' || pay.method;
+                              const invRef = pay.invoiceNo || (pay.invoices && pay.invoices.length > 0 && (pay.invoices[0].invoiceNo || pay.invoices[0].referenceNo));
+
+                              return (
+                                <tr key={pay._id || pay.paymentNo} className="hover:bg-slate-50/70 transition-colors">
+                                  <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{pay.paymentNo || 'PAY-N/A'}</td>
+                                  <td className="py-2.5 px-3 text-slate-600">{pay.paymentDate}</td>
+                                  <td className="py-2.5 px-3">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      pay.source === 'Bank Payment'
+                                        ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                    }`}>
+                                      {pay.source || (isBankPay ? 'Bank Payment' : 'Payment (Cash)')}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 font-medium text-slate-700">{pay.paymentMethod || pay.method || 'Cash'}</td>
+                                  <td className="py-2.5 px-3 font-mono text-slate-500">{pay.transactionRef || pay.chequeNo || pay.utrNo || '—'}</td>
+                                  <td className="py-2.5 px-3">
+                                    {invRef ? (
+                                      <span className="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-bold">
+                                        #{invRef}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 italic">Direct / On-Account</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-black text-emerald-700">
+                                    ₹{payAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center">
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                      {pay.status || 'Success'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center sticky right-0 bg-white group-hover:bg-slate-50 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] min-w-[120px]">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedReceipt(pay);
+                                        setShowReceiptModal(true);
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition-colors cursor-pointer shadow-sm active:scale-95"
+                                      title="View & Print Payment Receipt Voucher"
+                                    >
+                                      <Printer size={12} />
+                                      <span>Receipt Slip</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -948,6 +1248,476 @@ const SupplierLedgerDetailPage = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          PAYMENT MODAL (Invoice Specific OR Direct On-Account)
+      ───────────────────────────────────────────────────────────── */}
+      {showPayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 relative text-slate-800 animate-in fade-in zoom-in-95 duration-200 my-8">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-200">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {payingInvoice ? 'Record Payment for Invoice' : 'Direct / Advance Payment'}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {supplierDetails?.supplier?.companyName || 'Supplier'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPayModal(false)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Invoice Info Banner or Direct Balance Banner */}
+            {payingInvoice ? (
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 mb-5 text-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-slate-700">Invoice Reference:</span>
+                  <span className="font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded">
+                    {payingInvoice.referenceNo || payingInvoice.purchaseNo}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200 text-center">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Bill</span>
+                    <span className="font-bold text-slate-800">
+                      ₹{Number(payingInvoice.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Paid</span>
+                    <span className="font-bold text-emerald-600">
+                      ₹{Number(payingInvoice.amountPaid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Balance Due</span>
+                    <span className="font-black text-rose-600">
+                      ₹{(payingInvoice.balanceDue !== undefined
+                        ? Number(payingInvoice.balanceDue)
+                        : Math.max(0, Number(payingInvoice.grandTotal || 0) - Number(payingInvoice.amountPaid || 0) - Number(payingInvoice.returnedAmount || 0))
+                      ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5 mb-5 text-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-800 block">
+                      Net Supplier Outstanding Due
+                    </span>
+                    <span className="text-lg font-black text-emerald-900">
+                      ₹{(supplierDetails?.summary?.netBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <span className="text-[11px] bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md font-bold">
+                    On-Account / Direct
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-700 mt-1.5">
+                  Direct payment will automatically adjust against the supplier's balance and reflect in the ledger.
+                </p>
+              </div>
+            )}
+
+            {/* Payment Form */}
+            <form onSubmit={handleSubmitPayment} className="space-y-4">
+              {/* Payment Amount */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">Payment Amount (₹) *</label>
+                  {payingInvoice && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const due = payingInvoice.balanceDue !== undefined
+                          ? Number(payingInvoice.balanceDue)
+                          : Math.max(0, Number(payingInvoice.grandTotal || 0) - Number(payingInvoice.amountPaid || 0) - Number(payingInvoice.returnedAmount || 0));
+                        setPaymentForm(prev => ({ ...prev, paymentAmount: due > 0 ? due : '' }));
+                      }}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
+                    >
+                      Fill Full Due
+                    </button>
+                  )}
+                  {!payingInvoice && (supplierDetails?.summary?.netBalance || 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentForm(prev => ({ ...prev, paymentAmount: supplierDetails.summary.netBalance }));
+                      }}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
+                    >
+                      Fill Full Net Due
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="1"
+                    required
+                    value={paymentForm.paymentAmount}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentAmount: e.target.value }))}
+                    placeholder="Enter amount to pay"
+                    className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Mode / Method */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Payment Method / Mode *</label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {['Cash', 'Bank Transfer', 'UPI', 'Cheque', 'NEFT/RTGS'].map((method) => (
+                    <button
+                      type="button"
+                      key={method}
+                      onClick={() => setPaymentForm(prev => ({ ...prev, paymentMethod: method }))}
+                      className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
+                        paymentForm.paymentMethod === method
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                          : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Payment Date & Bank Name (if non-cash) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">Payment Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentForm.paymentDate}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentDate: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+
+                {paymentForm.paymentMethod !== 'Cash' ? (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">Bank / Account</label>
+                    <input
+                      type="text"
+                      value={paymentForm.bankName}
+                      onChange={(e) => setPaymentForm(prev => ({ ...prev, bankName: e.target.value }))}
+                      placeholder="e.g. HDFC, SBI, ICICI"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">Cash Voucher Ref</label>
+                    <input
+                      type="text"
+                      value={paymentForm.transactionRef}
+                      onChange={(e) => setPaymentForm(prev => ({ ...prev, transactionRef: e.target.value }))}
+                      placeholder="Optional receipt / voucher ref"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Transaction Ref / Cheque No (for bank/upi/cheque) */}
+              {paymentForm.paymentMethod !== 'Cash' && (
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                    {paymentForm.paymentMethod === 'Cheque' ? 'Cheque Number' : 'Transaction Ref / UTR No'}
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentForm.transactionRef}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, transactionRef: e.target.value, chequeNo: e.target.value }))}
+                    placeholder={paymentForm.paymentMethod === 'Cheque' ? 'e.g. CHQ-982142' : 'e.g. UTR / UPI Ref / Txn ID'}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                  />
+                </div>
+              )}
+
+              {/* Remarks / Narration */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Remarks / Note</label>
+                <input
+                  type="text"
+                  value={paymentForm.remarks}
+                  onChange={(e) => setPaymentForm(prev => ({ ...prev, remarks: e.target.value }))}
+                  placeholder="Optional payment notes or narration"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowPayModal(false)}
+                  disabled={submittingPayment}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingPayment}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-200 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  {submittingPayment ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Saving Payment...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={14} />
+                      <span>Confirm & Record Payment</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          PAYMENT RECEIPT VOUCHER MODAL (View, Print & WhatsApp Slip)
+      ───────────────────────────────────────────────────────────── */}
+      {showReceiptModal && selectedReceipt && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-4 sm:p-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 relative text-slate-800 animate-in fade-in zoom-in-95 duration-200 my-8">
+            
+            {/* Modal Controls Bar */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-6 print:hidden">
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full font-bold text-xs border border-emerald-200 flex items-center gap-1.5">
+                  <CheckCircle size={13} /> Official Payment Receipt
+                </span>
+                <span className="font-mono text-xs text-slate-400">
+                  #{selectedReceipt.paymentNo || selectedReceipt._id}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReceiptModal(false)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* PRINTABLE RECEIPT CONTENT */}
+            <div id="printable-payment-receipt" className="border-2 border-slate-800 rounded-2xl p-6 sm:p-8 bg-white text-slate-800">
+              {/* Receipt Header */}
+              <div className="flex items-start justify-between border-b-2 border-slate-800 pb-5 mb-5">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">
+                    GLOBAL ERP SERVICES
+                  </h2>
+                  <p className="text-xs text-slate-500 font-semibold tracking-wide uppercase mt-0.5">
+                    Disbursement & Supplier Payment Voucher
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    GSTIN: 07AAAAA0000A1Z5 • Email: accounts@globalerp.com
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="inline-block bg-slate-900 text-white font-mono font-black text-xs px-3 py-1.5 rounded-lg mb-1.5 uppercase tracking-wider">
+                    PAYMENT VOUCHER
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    <span className="font-bold">Voucher No: </span>
+                    <span className="font-mono font-bold text-slate-900">#{selectedReceipt.paymentNo || selectedReceipt._id}</span>
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    <span className="font-bold">Date: </span>
+                    <span>{selectedReceipt.paymentDate || new Date().toISOString().slice(0, 10)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Paid To & Payment Channel Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-5 mb-5 border-b border-dashed border-slate-200 text-xs">
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    PAID TO (SUPPLIER)
+                  </span>
+                  <div className="font-black text-slate-900 text-sm">
+                    {supplierDetails?.supplier?.companyName || selectedReceipt.supplierParty || 'Supplier'}
+                  </div>
+                  {supplierDetails?.supplier?.contactPerson && (
+                    <div className="text-slate-600 mt-0.5">Contact: {supplierDetails.supplier.contactPerson}</div>
+                  )}
+                  {supplierDetails?.supplier?.phone && (
+                    <div className="text-slate-600">Phone: {supplierDetails.supplier.phone}</div>
+                  )}
+                  <div className="text-slate-500 mt-0.5">
+                    GSTIN: <span className="font-mono font-semibold">{supplierDetails?.supplier?.gstin || 'Unregistered'}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    PAYMENT TRANSACTION INFO
+                  </span>
+                  <div>
+                    <span className="text-slate-500">Source Channel: </span>
+                    <strong className="text-slate-800">{selectedReceipt.source || 'Payment (Cash/General)'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Payment Mode: </span>
+                    <strong className="text-slate-800">{selectedReceipt.paymentMethod || selectedReceipt.method || 'Cash'}</strong>
+                  </div>
+                  {(selectedReceipt.transactionRef || selectedReceipt.chequeNo || selectedReceipt.utrNo) && (
+                    <div>
+                      <span className="text-slate-500">Ref / Cheque / UTR: </span>
+                      <strong className="font-mono text-slate-800">
+                        {selectedReceipt.transactionRef || selectedReceipt.chequeNo || selectedReceipt.utrNo}
+                      </strong>
+                    </div>
+                  )}
+                  {selectedReceipt.bankName && (
+                    <div>
+                      <span className="text-slate-500">Bank: </span>
+                      <strong className="text-slate-800">{selectedReceipt.bankName}</strong>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-slate-500">Settled Against: </span>
+                    <strong className="text-indigo-700">
+                      {selectedReceipt.invoiceNo || (selectedReceipt.invoices && selectedReceipt.invoices[0]?.invoiceNo) || 'Direct / On-Account Ledger'}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount Box */}
+              <div className="bg-emerald-50/70 border-2 border-emerald-500/40 rounded-xl p-5 mb-5 text-center sm:text-left sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider font-black text-emerald-800 block">
+                    AMOUNT PAID DISBURSED
+                  </span>
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-900 mt-0.5 font-mono">
+                    ₹{Number(selectedReceipt.paymentAmount || selectedReceipt.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="mt-3 sm:mt-0 sm:text-right">
+                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Amount In Words:</span>
+                  <span className="text-xs font-bold text-slate-800 italic block mt-0.5">
+                    {numberToWords(Number(selectedReceipt.paymentAmount || selectedReceipt.amount || 0))}
+                  </span>
+                </div>
+              </div>
+
+              {/* Remarks / Narration */}
+              <div className="mb-8 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                  Narration / Remarks:
+                </span>
+                <p className="text-slate-700 italic font-medium">
+                  {selectedReceipt.remarks || 'Amount successfully paid and debited against supplier account in purchase ledger.'}
+                </p>
+              </div>
+
+              {/* Signatures */}
+              <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-xs text-center">
+                <div>
+                  <div className="h-10"></div>
+                  <div className="border-t border-slate-400 pt-1.5 font-bold text-slate-700">
+                    Authorized Signatory
+                  </div>
+                  <div className="text-[10px] text-slate-400">For Global ERP Services</div>
+                </div>
+                <div>
+                  <div className="h-10"></div>
+                  <div className="border-t border-slate-400 pt-1.5 font-bold text-slate-700">
+                    Receiver's Signature / Stamp
+                  </div>
+                  <div className="text-[10px] text-slate-400">Received By Supplier</div>
+                </div>
+              </div>
+
+              {/* Computer generated disclaimer */}
+              <div className="text-[10px] text-slate-400 text-center mt-6 pt-3 border-t border-slate-100">
+                * This is a computer-generated payment voucher. No physical signature required for electronic verification.
+              </div>
+            </div>
+
+            {/* Print style */}
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-payment-receipt, #printable-payment-receipt * {
+                  visibility: visible !important;
+                }
+                #printable-payment-receipt {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  margin: 0 !important;
+                  padding: 24px !important;
+                  border: 2px solid #000 !important;
+                }
+              }
+            `}</style>
+
+            {/* Modal Footer Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 pt-4 border-t border-slate-200 print:hidden">
+              <button
+                type="button"
+                onClick={() => handleSendReceiptWhatsApp(selectedReceipt)}
+                className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-200 transition-all cursor-pointer"
+                title="Send Payment Receipt on WhatsApp"
+              >
+                <WhatsAppIcon size={16} />
+                <span>Share Receipt on WhatsApp</span>
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2.5 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer size={15} />
+                  <span>Print Receipt Slip</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReceiptModal(false)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

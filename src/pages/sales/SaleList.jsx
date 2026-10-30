@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2,
-  ChevronLeft, ChevronRight, AlertCircle, X, Calendar, Filter, DollarSign, FileDown
+  ChevronLeft, ChevronRight, AlertCircle, Calendar, Filter, FileDown
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../../api';
@@ -25,24 +25,37 @@ const SaleList = () => {
       setLoading(true);
       const res = await api.get('/sales');
       const data = res.data?.data || res.data || [];
-      const mapped = data.map(s => ({
-        ...s,
-        id: s._id,
-        reference: s.referenceNo || s.invoiceNo,
-        date: s.saleDate || new Date(s.createdAt).toLocaleDateString(),
-        createdBy: s.biller || 'Admin',
-        customer: s.customer?.name || s.customer?.customerName || s.customer || 'Unknown',
-        warehouse: s.warehouse?.name || s.warehouse || 'Unknown',
-        status: s.saleStatus || 'Completed',
-        paymentStatus: s.paymentStatus || 'Pending',
-        paymentMethod: s.paymentMode || 'Cash',
-        currencyRate: `${s.currency || 'INR'}/${s.exchangeRate || 1}`,
-        grandTotal: s.grandTotal || 0,
-        returnedAmount: 0,
-        paid: s.amountPaid || 0,
-        due: s.grandTotal - (s.amountPaid || 0),
-        items: s.items || s.orderItems || []
-      }));
+      const mapped = data.map(s => {
+        const orderItems = s.orderItems || s.items || [];
+        const totalItemsCount = orderItems.length;
+        const totalQty = orderItems.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0);
+        const grand = Number(s.grandTotal) || 0;
+        const paid = Number(s.amountPaid) || 0;
+        const due = Math.max(0, grand - paid);
+
+        return {
+          ...s,
+          id: s._id,
+          invoiceNo: s.invoiceNo || s.referenceNo || 'N/A',
+          date: s.saleDate || (s.createdAt ? new Date(s.createdAt).toISOString().split('T')[0] : 'N/A'),
+          biller: s.biller || 'Admin Biller',
+          customer: s.customer?.name || s.customer?.customerName || (typeof s.customer === 'string' ? s.customer : 'Walk-in Customer'),
+          warehouse: s.warehouse?.name || (typeof s.warehouse === 'string' ? s.warehouse : 'Main Warehouse'),
+          status: s.saleStatus || 'Completed',
+          paymentStatus: s.paymentStatus || (due === 0 && grand > 0 ? 'Paid' : 'Pending'),
+          paymentMethod: s.paymentMode || 'Cash',
+          itemsCount: totalItemsCount,
+          totalQty: totalQty,
+          subTotal: Number(s.subTotal) || 0,
+          taxTotal: Number(s.taxTotal) || 0,
+          discountTotal: Number(s.discountTotal) || 0,
+          grandTotal: grand,
+          paid: paid,
+          due: due,
+          items: orderItems,
+          orderItems: orderItems
+        };
+      });
       setSales(mapped);
     } catch (err) {
       console.error('Failed to load sales', err);
@@ -50,7 +63,6 @@ const SaleList = () => {
       setLoading(false);
     }
   };
-
 
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,9 +73,12 @@ const SaleList = () => {
 
   // Search Filter
   const filteredSales = sales.filter(s => {
-    const matchesSearch = s.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.createdBy.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      (s.invoiceNo && s.invoiceNo.toLowerCase().includes(term)) ||
+      (s.customer && s.customer.toLowerCase().includes(term)) ||
+      (s.biller && s.biller.toLowerCase().includes(term)) ||
+      (s.warehouse && s.warehouse.toLowerCase().includes(term));
     const matchesStatus = selectedStatus === 'All' || s.status === selectedStatus || s.paymentStatus === selectedStatus;
     return matchesSearch && matchesStatus;
   });
@@ -104,11 +119,11 @@ const SaleList = () => {
 
   const handleDownloadSample = () => {
     const headers = [
-      'Date', 'Reference', 'Created By', 'Customer', 'Warehouse', 'Biller', 
-      'Grand Total', 'Paid', 'Due', 'Status', 'Payment Status'
+      'Date', 'Invoice No', 'Customer', 'Warehouse', 'Biller', 
+      'Grand Total', 'Paid', 'Due', 'Sale Status', 'Payment Status'
     ];
     const dummyData = [
-      '2023-12-01', 'INV-1001', 'Admin', 'Rahul Traders', 'Main Warehouse', 'Admin',
+      '2026-10-29', 'INV-1001', 'Walk-in Customer', 'Main Warehouse', 'Admin Biller',
       '15000', '15000', '0', 'Completed', 'Paid'
     ];
     const csvContent = headers.join(',') + '\n' + dummyData.map(d => `"${d}"`).join(',');
@@ -124,27 +139,23 @@ const SaleList = () => {
 
   const handleExport = () => {
     const headers = [
-      'Date', 'Reference', 'Created By', 'Customer', 'Warehouse', 'Biller', 
-      'Grand Total', 'Paid', 'Due', 'Status', 'Payment Status'
+      'Date', 'Invoice No', 'Customer', 'Warehouse', 'Biller', 
+      'Items Count', 'Grand Total', 'Paid', 'Due', 'Sale Status', 'Payment Status'
     ];
     const rows = filteredSales.map(s => [
-      `"${s.date ? new Date(s.date).toISOString().split('T')[0] : ''}"`,
-      `"${s.referenceNo || ''}"`,
-      `"${s.createdBy || ''}"`,
+      `"${s.date || ''}"`,
+      `"${s.invoiceNo || ''}"`,
       `"${s.customer || ''}"`,
       `"${s.warehouse || ''}"`,
       `"${s.biller || ''}"`,
+      `"${s.itemsCount || 0}"`,
       `"${s.grandTotal || 0}"`,
       `"${s.paid || 0}"`,
       `"${s.due || 0}"`,
       `"${s.status || ''}"`,
       `"${s.paymentStatus || ''}"`
     ]);
-    const dummyData = [
-      '2023-12-01', 'INV-1001', 'Admin', 'Rahul Traders', 'Main Warehouse', 'Admin',
-      '15000', '15000', '0', 'Completed', 'Paid'
-    ];
-    const csvContent = [headers.join(','), dummyData.map(d => `"${d}"`).join(','), ...rows.map(row => row.join(','))].join('\n');
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -163,11 +174,10 @@ const SaleList = () => {
     e.target.value = '';
   };
 
-  // Sums calculations
-  const totalGrandAmount = filteredSales.reduce((sum, s) => sum + s.grandTotal, 0);
-  const totalReturnedAmount = filteredSales.reduce((sum, s) => sum + s.returnedAmount, 0);
-  const totalPaidAmount = filteredSales.reduce((sum, s) => sum + s.paid, 0);
-  const totalDueAmount = filteredSales.reduce((sum, s) => sum + s.due, 0);
+  // Calculations for total summary row
+  const totalGrandAmount = filteredSales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
+  const totalPaidAmount = filteredSales.reduce((sum, s) => sum + (Number(s.paid) || 0), 0);
+  const totalDueAmount = filteredSales.reduce((sum, s) => sum + (Number(s.due) || 0), 0);
 
   return (
     <div className="min-h-screen bg-white text-black p-6 rounded-lg shadow-md border border-blue-500">
@@ -175,8 +185,13 @@ const SaleList = () => {
       {/* Title Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-blue-500 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-black">Sales List</h1>
-          <p className="text-sm text-gray-600">Track and manage customer billing invoice transactions logs.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-black flex items-center gap-2">
+            <span>Sales Invoices</span>
+            <span className="text-xs font-semibold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded border border-indigo-200">
+              {sales.length} Invoices
+            </span>
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">Sabhi customer sale bills aur invoices ki complete report.</p>
         </div>
 
         {/* Global Toolbar buttons */}
@@ -198,7 +213,7 @@ const SaleList = () => {
           {can(['create_sales', 'manage_sales']) && (
             <button
               onClick={() => navigate('/sales/add-sale')}
-              className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
+              className="whitespace-nowrap flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow transition-colors"
             >
               <Plus size={14} /> Add Sale
             </button>
@@ -210,14 +225,14 @@ const SaleList = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-700">Records per page:</span>
+            <span className="text-sm text-gray-700 font-medium">Records per page:</span>
             <select
               value={recordsPerPage}
               onChange={(e) => {
                 setRecordsPerPage(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="border border-blue-500 rounded px-2.5 py-1 text-sm bg-white outline-none focus:border-blue-450"
+              className="border border-blue-500 rounded px-2.5 py-1 text-sm bg-white outline-none focus:border-indigo-600"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
@@ -238,143 +253,173 @@ const SaleList = () => {
           {/* Status filter dropdown */}
           {isFilterOpen && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-150">
-              <span className="text-sm text-gray-700">Status:</span>
+              <span className="text-sm text-gray-700 font-medium">Status:</span>
               <select
                 value={selectedStatus}
                 onChange={(e) => {
                   setSelectedStatus(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="border border-blue-500 rounded px-2.5 py-1 text-sm bg-white outline-none focus:border-blue-450"
+                className="border border-blue-500 rounded px-2.5 py-1 text-sm bg-white outline-none focus:border-indigo-600"
               >
                 <option value="All">All Invoices</option>
                 <option value="Completed">Completed</option>
                 <option value="Draft">Draft</option>
                 <option value="Paid">Paid</option>
-                <option value="Due">Due</option>
-                <option value="Pending">Pending</option>
+                <option value="Due">Due / Pending</option>
               </select>
             </div>
           )}
         </div>
 
         {/* Search Input */}
-        <div className="relative w-full md:w-72">
+        <div className="relative w-full md:w-80">
           <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search Reference/Customer..."
+            placeholder="Search by Invoice No, Customer, Godown..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full border border-blue-500 rounded pl-9 pr-3 py-1.5 text-sm bg-white text-black outline-none focus:border-blue-450 placeholder:text-gray-400"
+            className="w-full border border-blue-500 rounded pl-9 pr-3 py-1.5 text-sm bg-white text-black outline-none focus:border-indigo-600 placeholder:text-gray-400 font-medium"
           />
         </div>
       </div>
 
       {/* Table view log grid */}
-      <div className="overflow-x-auto border border-blue-500 rounded-lg">
-        <table className="w-full text-left border-collapse min-w-[1200px]">
+      <div className="overflow-x-auto border border-blue-500 rounded-lg shadow-sm">
+        <table className="w-full text-left border-collapse min-w-[1100px]">
           <thead>
-            <tr className="bg-gray-50 border-b border-blue-500">
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700 text-center w-16">Action</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Date</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Reference</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Created By</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Customer</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Warehouse</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Sale Status</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Payment Status</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Payment Method</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Currency/Rate</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700 text-center">Delivery Status</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Grand Total</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Returned Amount</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Paid</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-700">Due</th>
+            <tr className="bg-slate-100 border-b border-blue-500 text-gray-800">
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-center w-14">Action</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider w-28">Date</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-indigo-700 w-36">Invoice No</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider">Customer</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider">Warehouse / Godown</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-center">Items (Qty)</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-right">Grand Total</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-right text-emerald-700">Paid</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-right text-amber-700">Due</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-center">Sale Status</th>
+              <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-center">Payment Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-500 bg-white">
             {loading ? (
               <tr>
-                <td colSpan="15" className="px-4 py-10 text-center text-sm text-gray-500 bg-white">
+                <td colSpan="11" className="px-4 py-12 text-center text-sm text-gray-500 bg-white">
                   Loading sales records...
                 </td>
               </tr>
             ) : currentRecords.length > 0 ? (
               currentRecords.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
+                <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
 
                   {/* Actions Column */}
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                  <td className="px-3 py-3 whitespace-nowrap text-sm text-center">
                     <div className="inline-flex items-center gap-1.5">
                       <button
                         onClick={() => handleOpenViewModal(item)}
-                        className="p-1.5 text-indigo-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                        title="View Sale details"
+                        className="p-1.5 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded transition-colors"
+                        title="View Sale Invoice"
                       >
-                        <Eye size={15} />
+                        <Eye size={16} />
                       </button>
                       {can(['edit_sales', 'manage_sales']) && (
                         <button
                           onClick={() => {
-                            navigate('/sales/add-sale');
+                            navigate('/sales/add-sale', { state: { editSale: item } });
                           }}
-                          className="p-1.5 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded transition-colors"
+                          className="p-1.5 text-amber-600 hover:text-amber-900 hover:bg-amber-50 rounded transition-colors"
                           title="Edit Sale"
                         >
-                          <Edit size={15} />
+                          <Edit size={16} />
                         </button>
                       )}
                       {can(['delete_sales', 'manage_sales']) && (
                         <button
                           onClick={() => handleDeleteSale(item.id)}
-                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          className="p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
                           title="Delete Sale record"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>
                   </td>
 
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-700 font-medium">{item.date}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">{item.reference}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{item.createdBy}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 font-semibold">{item.customer}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.warehouse}</td>
+                  {/* Date */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 font-semibold">{item.date}</td>
+
+                  {/* Invoice No (Replacing Reference) */}
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-black text-indigo-700">
+                    <span className="bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                      {item.invoiceNo}
+                    </span>
+                  </td>
+
+                  {/* Customer */}
+                  <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 font-bold">
+                    {item.customer}
+                  </td>
+
+                  {/* Warehouse / Godown */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-700 font-medium">
+                    {item.warehouse}
+                  </td>
+
+                  {/* Items (Qty) */}
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-center font-bold text-gray-800">
+                    <span className="bg-gray-100 px-2 py-0.5 rounded border border-gray-300">
+                      {item.itemsCount} Items ({item.totalQty} Qty)
+                    </span>
+                  </td>
+
+                  {/* Grand Total */}
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-black text-gray-900 text-right">
+                    ₹{item.grandTotal.toFixed(2)}
+                  </td>
+
+                  {/* Paid */}
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-bold text-emerald-700 text-right">
+                    ₹{item.paid.toFixed(2)}
+                  </td>
+
+                  {/* Due */}
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-bold text-amber-700 text-right">
+                    ₹{item.due.toFixed(2)}
+                  </td>
 
                   {/* Sale Status */}
-                  <td className="px-4 py-3 whitespace-nowrap text-xs">
-                    <span className={`inline-flex px-2 py-0.5 rounded font-bold border ${item.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100'
-                      }`}>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-center">
+                    <span className={`inline-flex px-2 py-0.5 rounded font-bold border ${
+                      item.status === 'Completed'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
                       {item.status}
                     </span>
                   </td>
 
                   {/* Payment Status */}
-                  <td className="px-4 py-3 whitespace-nowrap text-xs">
-                    <span className={`inline-flex px-2 py-0.5 rounded font-extrabold ${item.paymentStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                  <td className="px-3 py-3 whitespace-nowrap text-xs text-center">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full font-black text-[11px] ${
+                      item.paymentStatus === 'Paid'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : item.paymentStatus === 'Partial'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
                       {item.paymentStatus}
                     </span>
                   </td>
-
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 font-semibold">{item.paymentMethod}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs font-mono text-gray-600">{item.currencyRate}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 text-center font-medium">{item.deliveryStatus}</td>
-
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">INR {item.grandTotal.toFixed(2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">INR {item.returnedAmount.toFixed(2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-bold">INR {item.paid.toFixed(2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-bold">INR {item.due.toFixed(2)}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="15" className="px-4 py-10 text-center text-sm text-gray-500 bg-white">
+                <td colSpan="11" className="px-4 py-12 text-center text-sm text-gray-500 bg-white">
                   <div className="flex flex-col items-center gap-2 justify-center">
                     <AlertCircle size={24} className="text-gray-400" />
                     <span>No sales records found.</span>
@@ -384,12 +429,12 @@ const SaleList = () => {
             )}
 
             {/* Calculations total sum row */}
-            <tr className="bg-gray-50/90 font-bold border-t border-blue-500 text-gray-900">
-              <td colSpan="11" className="px-4 py-3 text-sm text-gray-800">Total</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm font-extrabold">INR {totalGrandAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-red-700 font-semibold">INR {totalReturnedAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-700 font-extrabold">INR {totalPaidAmount.toFixed(2)}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-700 font-extrabold">INR {totalDueAmount.toFixed(2)}</td>
+            <tr className="bg-slate-100 font-bold border-t-2 border-blue-500 text-gray-900">
+              <td colSpan="6" className="px-4 py-3 text-sm text-gray-800 font-bold">Total ({filteredSales.length} Invoices):</td>
+              <td className="px-3 py-3 whitespace-nowrap text-sm font-black text-gray-900 text-right">₹{totalGrandAmount.toFixed(2)}</td>
+              <td className="px-3 py-3 whitespace-nowrap text-sm font-black text-emerald-700 text-right">₹{totalPaidAmount.toFixed(2)}</td>
+              <td className="px-3 py-3 whitespace-nowrap text-sm font-black text-amber-700 text-right">₹{totalDueAmount.toFixed(2)}</td>
+              <td colSpan="2"></td>
             </tr>
           </tbody>
         </table>
@@ -414,8 +459,7 @@ const SaleList = () => {
               <button
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`px-3.5 py-1.5 text-xs font-bold transition-colors ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-                  }`}
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
               >
                 {i + 1}
               </button>
@@ -430,6 +474,7 @@ const SaleList = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
