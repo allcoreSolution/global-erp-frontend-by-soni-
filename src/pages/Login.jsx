@@ -56,7 +56,16 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Login Error:", err);
-      setError(err.response?.data?.message || 'Invalid email or password');
+      const serverMsg = err.response?.data?.message;
+      if (serverMsg) {
+        setError(serverMsg);
+      } else if (err.code === 'ERR_NETWORK' || !err.response) {
+        setError('Server is spinning up (Render free tier) or waking up. Please wait 10 seconds and try again.');
+      } else if (err.response?.status >= 500) {
+        setError('Server error connecting to database. Please wait a moment and retry.');
+      } else {
+        setError('Invalid email or password');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -171,6 +180,39 @@ const Login = () => {
             )}
           </button>
         </form>
+
+        {/* Demo Credentials Helper */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center">Click to fill Demo Credentials</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setUsername('admin@apexpharma.com');
+                setPassword('ApexAdmin@123');
+                setError('');
+              }}
+              className="p-2 text-left bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-[10px] transition cursor-pointer"
+            >
+              <div className="font-bold text-slate-700 dark:text-slate-300">Apex Pharma Admin</div>
+              <div className="text-slate-400 font-mono text-[9px] truncate">admin@apexpharma.com</div>
+              <div className="text-indigo-600 font-mono text-[9px]">ApexAdmin@123</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUsername('superadmin@gmail.com');
+                setPassword('Super123');
+                setError('');
+              }}
+              className="p-2 text-left bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-[10px] transition cursor-pointer"
+            >
+              <div className="font-bold text-slate-700 dark:text-slate-300">Super Admin</div>
+              <div className="text-slate-400 font-mono text-[9px] truncate">superadmin@gmail.com</div>
+              <div className="text-indigo-600 font-mono text-[9px]">Super123</div>
+            </button>
+          </div>
+        </div>
 
       </div>
     </div>
