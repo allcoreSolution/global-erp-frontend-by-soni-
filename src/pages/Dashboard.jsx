@@ -12,6 +12,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
+        setLoading(true);
         const response = await api.get('/dashboard/summary');
         if (response.data && response.data.success) {
           setDashboardData(response.data.data);
@@ -23,6 +24,12 @@ const Dashboard = () => {
       }
     };
     fetchDashboard();
+
+    const handleCompanySwitched = () => {
+      fetchDashboard();
+    };
+    window.addEventListener('companySwitched', handleCompanySwitched);
+    return () => window.removeEventListener('companySwitched', handleCompanySwitched);
   }, []);
 
   return (
