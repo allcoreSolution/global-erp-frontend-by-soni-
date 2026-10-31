@@ -709,7 +709,6 @@ const Sidebar = ({ onClose, onToggleDesktop }) => {
               text="Pharma Compliance Hub"
               subItems={[
                 { text: 'Quarantine & Inspection', to: '/pharma/operations?tab=quarantine' },
-                { text: 'Batch Recall & Traceability', to: '/pharma/operations?tab=traceability' },
                 { text: 'Near-Expiry FEFO Alerts', to: '/pharma/operations?tab=near-expiry' },
                 { text: 'Damage & Expiry Write-Off', to: '/pharma/operations?tab=write-off' }
               ]}

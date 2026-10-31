@@ -577,7 +577,6 @@ function App() {
           <Route path="pharma/operations" element={<PharmaOperations />} />
           <Route path="pharma/hub" element={<PharmaOperations />} />
           <Route path="pharma/quarantine" element={<PharmaOperations />} />
-          <Route path="pharma/batch-recall" element={<PharmaOperations />} />
           <Route path="pharma/near-expiry" element={<PharmaOperations />} />
           <Route path="pharma/write-off" element={<PharmaOperations />} />
           <Route path="sales/add-sale" element={<AddSale />} />

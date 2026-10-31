@@ -29,7 +29,8 @@ import { toast } from 'react-toastify';
 const PharmaOperations = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'quarantine';
+  const rawTab = searchParams.get('tab');
+  const initialTab = (rawTab === 'traceability' || !rawTab) ? 'quarantine' : rawTab;
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Sync tab with URL
@@ -94,32 +95,6 @@ const PharmaOperations = () => {
     }
   };
 
-  // ==========================================
-  // TAB 2: BATCH RECALL & TRACEABILITY
-  // ==========================================
-  const [recallSearchBatch, setRecallSearchBatch] = useState('PTA-001');
-  const [recallData, setRecallData] = useState(null);
-  const [loadingRecall, setLoadingRecall] = useState(false);
-
-  const fetchBatchRecall = async (batchToSearch) => {
-    const b = batchToSearch || recallSearchBatch;
-    if (!b) return;
-    setLoadingRecall(true);
-    try {
-      const res = await api.get(`/pharma/batch-recall/${encodeURIComponent(b)}`);
-      if (res.data?.success) {
-        setRecallData(res.data.data);
-      } else {
-        setRecallData(null);
-        toast.info(`No movement records found for batch: ${b}`);
-      }
-    } catch (err) {
-      setRecallData(null);
-      toast.error(`Error tracing batch ${b}`);
-    } finally {
-      setLoadingRecall(false);
-    }
-  };
 
   // ==========================================
   // TAB 3: NEAR EXPIRY ALERTS
@@ -185,7 +160,6 @@ const PharmaOperations = () => {
       if (res.data?.success) {
         toast.success(`Write-off booked successfully (${writeOffForm.lossType}).`);
         fetchWriteOffs();
-        fetchBatchRecall(writeOffForm.batchNo);
         // Reset form to defaults
         setWriteOffForm(prev => ({ ...prev, quantity: 1, note: '' }));
       }
@@ -198,7 +172,6 @@ const PharmaOperations = () => {
   // Initial Load
   useEffect(() => {
     fetchQuarantine();
-    fetchBatchRecall('PTA-001');
     fetchNearExpiry();
     fetchWriteOffs();
   }, []);
@@ -229,7 +202,7 @@ const PharmaOperations = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1 pl-11">
-                FDA & Drug Controller Compliance: Batch Traceability, Quarantine Return Holds, FEFO Near-Expiry Alerts, and Stock Write-Offs.
+                FDA & Drug Controller Compliance: Quarantine Return Holds, FEFO Near-Expiry Alerts, and Stock Write-Offs.
               </p>
             </div>
           </div>
@@ -238,7 +211,6 @@ const PharmaOperations = () => {
             <button
               onClick={() => {
                 fetchQuarantine();
-                fetchBatchRecall(recallSearchBatch);
                 fetchNearExpiry();
                 fetchWriteOffs();
                 toast.info('Refreshed Pharma Operations data.');
@@ -318,18 +290,6 @@ const PharmaOperations = () => {
         </button>
 
         <button
-          onClick={() => handleTabChange('traceability')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'traceability'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <Search size={16} />
-          2. Batch Recall & Traceability Report
-        </button>
-
-        <button
           onClick={() => handleTabChange('near-expiry')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${
             activeTab === 'near-expiry'
@@ -338,7 +298,7 @@ const PharmaOperations = () => {
           }`}
         >
           <CalendarX size={16} />
-          3. Near-Expiry Alert Screen
+          2. Near-Expiry Alert Screen
         </button>
 
         <button
@@ -350,7 +310,7 @@ const PharmaOperations = () => {
           }`}
         >
           <Trash2 size={16} />
-          4. Damage & Expiry Stock Write-Off
+          3. Damage & Expiry Stock Write-Off
         </button>
       </div>
 
@@ -529,265 +489,7 @@ const PharmaOperations = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB 2: BATCH RECALL & TRACEABILITY REPORT */}
-      {/* ========================================================================= */}
-      {activeTab === 'traceability' && (
-        <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Search size={18} className="text-blue-600" />
-                Batch Recall, Genealogy & End-to-End Movement Traceability
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Search any batch number to audit its full inward origin (Supplier & DL), outward destinations (Chemist/Hospital & DL), customer returns, and current physical stock.
-              </p>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Enter Batch No (e.g. PTA-001)..."
-                value={recallSearchBatch}
-                onChange={(e) => setRecallSearchBatch(e.target.value.toUpperCase())}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold uppercase focus:ring-1 focus:ring-blue-500 w-48"
-              />
-              <button
-                onClick={() => fetchBatchRecall(recallSearchBatch)}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5"
-              >
-                <Search size={13} /> Trace Batch
-              </button>
-            </div>
-          </div>
-
-          {loadingRecall ? (
-            <div className="p-12 text-center text-slate-500 italic">
-              Tracing movements for batch {recallSearchBatch}...
-            </div>
-          ) : !recallData ? (
-            <div className="p-8 text-center text-slate-500">
-              Please enter a batch number above and click Trace Batch.
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Batch Dossier Card */}
-              <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-xl p-5 shadow-md">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-500/30 text-blue-200 border border-blue-400/40">
-                        BATCH: {recallData.batchNo}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        recallData.summary?.currentStock > 0 ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/30' : 'bg-slate-700 text-slate-300'
-                      }`}>
-                        {recallData.summary?.status}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-bold mt-1 text-white">
-                      {recallData.product?.name || 'Pharma Tablet A - Demo'}
-                    </h3>
-                    <div className="text-xs text-slate-300 flex flex-wrap gap-x-4 gap-y-1 mt-1 font-mono">
-                      <span>Code: {recallData.product?.code}</span>
-                      <span>Mfg Date: {recallData.batchDetails?.mfgDate || '2026-01-01'}</span>
-                      <span>Expiry Date: {recallData.batchDetails?.expDate || '2027-12-31'}</span>
-                      <span>Packaging: {recallData.product?.packing || '10 strips x 10 tablets'}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-                    <div className="bg-white/10 rounded-lg p-2.5">
-                      <div className="text-[10px] text-slate-300 font-semibold uppercase">Total Inward</div>
-                      <div className="text-base font-bold text-white mt-0.5">
-                        {recallData.summary?.totalInward} BOX
-                      </div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2.5">
-                      <div className="text-[10px] text-slate-300 font-semibold uppercase">Sold / Dispensed</div>
-                      <div className="text-base font-bold text-amber-300 mt-0.5">
-                        {recallData.summary?.totalOutward} BOX
-                      </div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2.5">
-                      <div className="text-[10px] text-slate-300 font-semibold uppercase">Customer Returns</div>
-                      <div className="text-base font-bold text-blue-300 mt-0.5">
-                        {recallData.summary?.totalReturned} BOX
-                      </div>
-                    </div>
-                    <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-lg p-2.5">
-                      <div className="text-[10px] text-emerald-300 font-semibold uppercase">Remaining Stock</div>
-                      <div className="text-base font-bold text-emerald-300 mt-0.5">
-                        {recallData.summary?.currentStock} BOX
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sub-Table 1: Inward Procurement from Supplier */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <Truck size={14} className="text-teal-600" />
-                  1. Inward Supply Receipt (Manufacturer / Supplier Origin)
-                </h4>
-                <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 border-b text-slate-600 font-bold">
-                      <tr>
-                        <th className="p-2.5">Purchase Bill #</th>
-                        <th className="p-2.5">Date</th>
-                        <th className="p-2.5">Supplier Name</th>
-                        <th className="p-2.5">Supplier DL No (20B/21B)</th>
-                        <th className="p-2.5">Supplier GSTIN</th>
-                        <th className="p-2.5 text-right">Inward Qty</th>
-                        <th className="p-2.5 text-right">Free Scheme Qty</th>
-                        <th className="p-2.5 text-right">Unit Rate (₹)</th>
-                        <th className="p-2.5 text-right">Total Amount (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {recallData.purchases?.length === 0 ? (
-                        <tr><td colSpan="9" className="p-3 text-center text-slate-400">No inward purchase entries logged.</td></tr>
-                      ) : (
-                        recallData.purchases.map((p, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/70">
-                            <td className="p-2.5 font-bold text-blue-600">{p.invoiceNo}</td>
-                            <td className="p-2.5 text-slate-600">{p.date}</td>
-                            <td className="p-2.5 font-semibold text-slate-800">{p.supplierName}</td>
-                            <td className="p-2.5 font-mono text-[11px] text-slate-600">{p.supplierDlNo}</td>
-                            <td className="p-2.5 font-mono text-[11px] text-slate-600">{p.supplierGstin}</td>
-                            <td className="p-2.5 text-right font-bold text-slate-900">{p.quantity} BOX</td>
-                            <td className="p-2.5 text-right font-semibold text-emerald-600">+{p.freeQty || 0} BOX</td>
-                            <td className="p-2.5 text-right">₹ {p.rate}</td>
-                            <td className="p-2.5 text-right font-bold text-slate-900">₹ {Number(p.amount).toLocaleString()}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Sub-Table 2: Outward Sales to Customers */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <User size={14} className="text-indigo-600" />
-                  2. Outward Distribution (Chemist / Hospital Recipients)
-                </h4>
-                <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 border-b text-slate-600 font-bold">
-                      <tr>
-                        <th className="p-2.5">Sale Invoice #</th>
-                        <th className="p-2.5">Invoice Date</th>
-                        <th className="p-2.5">Customer / Chemist Name</th>
-                        <th className="p-2.5">Customer DL No (20B/21B)</th>
-                        <th className="p-2.5">Contact Phone</th>
-                        <th className="p-2.5 text-right">Dispatched Qty</th>
-                        <th className="p-2.5 text-right">Rate (₹)</th>
-                        <th className="p-2.5 text-right">Invoice Total (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {recallData.sales?.length === 0 ? (
-                        <tr><td colSpan="8" className="p-3 text-center text-slate-400">No sale dispatch records found.</td></tr>
-                      ) : (
-                        recallData.sales.map((s, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/70">
-                            <td className="p-2.5 font-bold text-blue-600">{s.invoiceNo}</td>
-                            <td className="p-2.5 text-slate-600">{s.date}</td>
-                            <td className="p-2.5 font-semibold text-slate-800">{s.customerName}</td>
-                            <td className="p-2.5 font-mono text-[11px] text-slate-600">{s.customerDlNo}</td>
-                            <td className="p-2.5 text-slate-600">{s.customerPhone}</td>
-                            <td className="p-2.5 text-right font-bold text-slate-900">{s.quantity} BOX</td>
-                            <td className="p-2.5 text-right">₹ {s.rate}</td>
-                            <td className="p-2.5 text-right font-bold text-slate-900">₹ {Number(s.amount).toLocaleString()}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Sub-Table 3: Returns & Write-offs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <RotateCcw size={14} className="text-amber-600" />
-                    3. Customer Returns for this Batch
-                  </h4>
-                  <div className="border border-slate-200 rounded-lg overflow-hidden text-xs">
-                    {recallData.returns?.length === 0 ? (
-                      <div className="p-3 text-center text-slate-400">No customer returns logged.</div>
-                    ) : (
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b font-bold text-slate-600">
-                          <tr>
-                            <th className="p-2">CN #</th>
-                            <th className="p-2">Customer</th>
-                            <th className="p-2 text-right">Qty</th>
-                            <th className="p-2">Quarantine Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {recallData.returns.map((r, i) => (
-                            <tr key={i}>
-                              <td className="p-2 font-semibold text-blue-600">{r.creditNoteNo}</td>
-                              <td className="p-2 font-medium">{r.customerName}</td>
-                              <td className="p-2 text-right font-bold">{r.quantity} BOX</td>
-                              <td className="p-2">
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                                  {r.quarantineStatus}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <Trash2 size={14} className="text-rose-600" />
-                    4. Damaged Stock / Quarantined Loss
-                  </h4>
-                  <div className="border border-slate-200 rounded-lg overflow-hidden text-xs">
-                    {recallData.writeOffs?.length === 0 ? (
-                      <div className="p-3 text-center text-slate-400">No damaged stock write-offs logged.</div>
-                    ) : (
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b font-bold text-slate-600">
-                          <tr>
-                            <th className="p-2">Doc #</th>
-                            <th className="p-2">Warehouse</th>
-                            <th className="p-2 text-right">Qty</th>
-                            <th className="p-2">Reason</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {recallData.writeOffs.map((w, i) => (
-                            <tr key={i}>
-                              <td className="p-2 font-semibold text-rose-600">{w.docNo}</td>
-                              <td className="p-2">{w.warehouse}</td>
-                              <td className="p-2 text-right font-bold text-rose-700">-{w.quantity} BOX</td>
-                              <td className="p-2 text-slate-600 truncate max-w-[120px]">{w.reason}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* TAB 3: NEAR-EXPIRY ALERT SCREEN */}
