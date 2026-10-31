@@ -44,25 +44,17 @@ export const DashboardCharts = ({ data, loading }) => {
     return null;
   }
 
-  // Dynamic column layout so cards ALWAYS fit in 12 columns on a single line
-  const overviewColSpan = showExpenses && showOutstanding
-    ? 'md:col-span-5 lg:col-span-5'
+  // Dynamic column layout so cards ALWAYS fit in 12 columns on a single line (50% - 50% half-half)
+  const overviewColSpan = showExpenses
+    ? 'col-span-12 md:col-span-6 lg:col-span-6'
     : showOutstanding
-    ? 'md:col-span-8 lg:col-span-8'
-    : showExpenses
-    ? 'md:col-span-7 lg:col-span-7'
+    ? 'col-span-12 md:col-span-6 lg:col-span-6'
     : 'col-span-12';
 
-  const expensesColSpan = showOverview && showOutstanding
-    ? 'md:col-span-4 lg:col-span-4'
-    : showOverview
-    ? 'md:col-span-5 lg:col-span-5'
-    : 'md:col-span-6 lg:col-span-6';
+  const expensesColSpan = 'col-span-12 md:col-span-6 lg:col-span-6';
 
-  const outstandingColSpan = showOverview && showExpenses
-    ? 'md:col-span-3 lg:col-span-3'
-    : showOverview
-    ? 'md:col-span-4 lg:col-span-4'
+  const outstandingColSpan = showOverview
+    ? 'col-span-12 md:col-span-6 lg:col-span-6'
     : 'col-span-12';
 
   return (
@@ -115,7 +107,7 @@ export const DashboardCharts = ({ data, loading }) => {
         </div>
       )}
 
-      {/* Top Expenses Doughnut Chart */}
+      {/* Top Expenses Doughnut Chart (Circle Wala on Right Side) */}
       {showExpenses && (
         <div
           onClick={() => navigate('/reports/mis/kpi-reports')}
@@ -129,11 +121,11 @@ export const DashboardCharts = ({ data, loading }) => {
               This Year <ChevronDown size={14} />
             </div>
           </div>
-          <div className="flex-1 flex items-center">
-            <div className="w-1/2 h-full relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={200}>
+          <div className="flex-1 flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-full sm:w-1/2 h-56 relative flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} innerRadius={45} outerRadius={70} paddingAngle={0} dataKey="value" stroke="none">
+                  <Pie data={pieData} innerRadius={48} outerRadius={75} paddingAngle={2} dataKey="value" stroke="none">
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -145,19 +137,19 @@ export const DashboardCharts = ({ data, loading }) => {
                 <span className="text-[9px] text-gray-500 dark:text-gray-400">Total Expenses</span>
               </div>
             </div>
-            <div className="w-1/2 pl-4">
-              <ul className="space-y-3">
+            <div className="w-full sm:w-1/2 max-h-56 overflow-y-auto pr-2">
+              <ul className="space-y-2.5">
                 {pieData.map((item, idx) => (
                   <li key={idx} className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                      <span className="font-medium text-gray-700 dark:text-slate-300">{item.name}</span>
+                    <div className="flex items-center gap-2 truncate">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="font-medium text-gray-700 dark:text-slate-300 truncate">{item.name}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-gray-500 dark:text-gray-400 w-6 text-right">
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className="text-gray-500 dark:text-gray-400 text-[10px] w-7 text-right">
                         {totalExpenses > 0 ? ((item.value / totalExpenses) * 100).toFixed(0) : 0}%
                       </span>
-                      <span className="font-medium text-gray-600 dark:text-slate-400 w-14 text-right">
+                      <span className="font-medium text-gray-600 dark:text-slate-400 text-[10px] w-12 text-right">
                         (₹ {(item.value / 1000).toFixed(1).replace('.0', '')}k)
                       </span>
                     </div>
@@ -169,8 +161,8 @@ export const DashboardCharts = ({ data, loading }) => {
         </div>
       )}
 
-      {/* Outstanding Details */}
-      {showOutstanding && (
+      {/* Fallback Outstanding Details (Only shown in this row if Expenses are not present) */}
+      {!showExpenses && showOutstanding && (
         <div className={`${outstandingColSpan} h-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-lg shadow-sm p-4 flex flex-col justify-between transition-colors`}>
           <div>
             <div className="text-sm font-bold text-blue-900 dark:text-slate-100 tracking-wide uppercase mb-6">

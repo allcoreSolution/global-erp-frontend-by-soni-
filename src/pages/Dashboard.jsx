@@ -37,7 +37,7 @@ const Dashboard = () => {
       <QuickLinks />
       <SummaryCards data={dashboardData?.summaryCards} loading={loading} />
       <DashboardCharts data={dashboardData} loading={loading} />
-      <DashboardTables data={dashboardData?.tables} loading={loading} />
+      <DashboardTables data={dashboardData?.tables} outstandingData={dashboardData?.outstanding} loading={loading} />
       
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-10 flex flex-col gap-4">
