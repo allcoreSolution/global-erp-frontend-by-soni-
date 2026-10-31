@@ -44,13 +44,34 @@ export const DashboardCharts = ({ data, loading }) => {
     return null;
   }
 
+  // Dynamic column layout so cards ALWAYS fit in 12 columns on a single line
+  const overviewColSpan = showExpenses && showOutstanding
+    ? 'md:col-span-5 lg:col-span-5'
+    : showOutstanding
+    ? 'md:col-span-8 lg:col-span-8'
+    : showExpenses
+    ? 'md:col-span-7 lg:col-span-7'
+    : 'col-span-12';
+
+  const expensesColSpan = showOverview && showOutstanding
+    ? 'md:col-span-4 lg:col-span-4'
+    : showOverview
+    ? 'md:col-span-5 lg:col-span-5'
+    : 'md:col-span-6 lg:col-span-6';
+
+  const outstandingColSpan = showOverview && showExpenses
+    ? 'md:col-span-3 lg:col-span-3'
+    : showOverview
+    ? 'md:col-span-4 lg:col-span-4'
+    : 'col-span-12';
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
       {/* Business Overview Line Chart */}
       {showOverview && (
         <div
           onClick={() => navigate('/reports/mis/performance-analysis')}
-          className={`${showExpenses && showOutstanding ? 'lg:col-span-5' : showExpenses || showOutstanding ? 'lg:col-span-7' : 'lg:col-span-12'} bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-lg shadow-sm p-4 transition-colors cursor-pointer hover:shadow-md`}
+          className={`${overviewColSpan} h-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-lg shadow-sm p-4 transition-colors cursor-pointer hover:shadow-md flex flex-col justify-between`}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="text-sm font-bold text-blue-900 dark:text-slate-100 tracking-wide uppercase">
@@ -98,7 +119,7 @@ export const DashboardCharts = ({ data, loading }) => {
       {showExpenses && (
         <div
           onClick={() => navigate('/reports/mis/kpi-reports')}
-          className={`${showOverview && showOutstanding ? 'lg:col-span-4' : showOverview ? 'lg:col-span-5' : 'lg:col-span-6'} bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-lg shadow-sm p-4 flex flex-col transition-colors cursor-pointer hover:shadow-md`}
+          className={`${expensesColSpan} h-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-lg shadow-sm p-4 flex flex-col justify-between transition-colors cursor-pointer hover:shadow-md`}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="text-sm font-bold text-blue-900 dark:text-slate-100 tracking-wide uppercase">
@@ -150,7 +171,7 @@ export const DashboardCharts = ({ data, loading }) => {
 
       {/* Outstanding Details */}
       {showOutstanding && (
-        <div className={`${showOverview && showExpenses ? 'lg:col-span-3' : 'lg:col-span-6'} bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-lg shadow-sm p-4 flex flex-col justify-between transition-colors`}>
+        <div className={`${outstandingColSpan} h-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-lg shadow-sm p-4 flex flex-col justify-between transition-colors`}>
           <div>
             <div className="text-sm font-bold text-blue-900 dark:text-slate-100 tracking-wide uppercase mb-6">
               Outstanding Details
