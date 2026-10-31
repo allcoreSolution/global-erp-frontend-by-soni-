@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Download, Upload, FileText, Eye, Edit, Trash2,
   Check, X, ChevronLeft, ChevronRight, Printer, User, Phone,
-  Mail, MapPin, Building, CreditCard, DollarSign, History
+  Mail, MapPin, Building, CreditCard, DollarSign, History, Receipt
 } from 'lucide-react';
 import api from '../../api';
 import Swal from 'sweetalert2';
@@ -11,6 +12,7 @@ import 'jspdf-autotable';
 import { usePermissions } from '../../utils/permissionUtils';
 
 const CustomerMaster = () => {
+  const navigate = useNavigate();
   const { can } = usePermissions();
   const [customers, setCustomers] = useState([]);
   
@@ -635,6 +637,13 @@ const CustomerMaster = () => {
                         >
                           <Eye size={14} />
                         </button>
+                        <button
+                          onClick={() => navigate(`/sales/customer-ledger/${cust._id}`)}
+                          className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                          title="View Invoices & Payments (खाता व बिल)"
+                        >
+                          <Receipt size={14} />
+                        </button>
                         {can(['edit_contacts', 'manage_contacts']) && (
                           <button
                             onClick={() => handleOpenEdit(cust)}
@@ -953,6 +962,17 @@ const CustomerMaster = () => {
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-sm ${viewCustomer.status ? 'bg-green-500/20 border-green-500 text-green-100' : 'bg-red-500/20 border-red-500 text-red-100'}`}>
                     {viewCustomer.status ? 'ACTIVE' : 'INACTIVE'}
                   </span>
+                  <button
+                    onClick={() => {
+                      setIsViewOpen(false);
+                      navigate(`/sales/customer-ledger/${viewCustomer._id}`);
+                    }}
+                    className="px-3.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ml-1"
+                    title="Open Customer Ledger to View Invoices & Record Payments"
+                  >
+                    <Receipt size={13} />
+                    <span>View Invoices & Payments</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1021,6 +1041,19 @@ const CustomerMaster = () => {
                         <span className={`text-base sm:text-lg font-black ${calculateDue(viewCustomer) >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                           ₹ {Math.abs(calculateDue(viewCustomer)).toLocaleString()} {calculateDue(viewCustomer) >= 0 ? 'Dr' : 'Cr'}
                         </span>
+                      </div>
+                      <div className="pt-3 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsViewOpen(false);
+                            navigate(`/sales/customer-ledger/${viewCustomer._id}`);
+                          }}
+                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                        >
+                          <Receipt size={15} />
+                          <span>View Invoices & Make Payments (बिल और भुगतान)</span>
+                        </button>
                       </div>
                     </div>
                   </div>
