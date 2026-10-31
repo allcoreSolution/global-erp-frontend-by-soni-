@@ -151,49 +151,6 @@ export const DashboardTables = ({ data, outstandingData, loading }) => {
     );
   }
 
-  if (canOutstanding && outstandingData && outstandingData.net !== undefined) {
-    widgets.push(
-      <div key="outstandingDetails" className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-xl shadow-md p-4 flex flex-col justify-between hover:shadow-lg transition-shadow duration-300">
-        <div>
-          <div className="text-sm font-bold text-blue-900 dark:text-slate-200 tracking-wide uppercase mb-3">
-            Outstanding Details
-          </div>
-          <div className="space-y-2 text-xs font-medium">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 dark:text-slate-400">Sundry Debtors</span>
-              <span className="text-green-600 dark:text-green-400 font-bold">₹ {outstandingData.debtors} L Dr</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 dark:text-slate-400">Sundry Creditors</span>
-              <span className="text-red-500 dark:text-red-400 font-bold">₹ {outstandingData.creditors} L Cr</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 dark:text-slate-400">Others Receivable</span>
-              <span className="text-green-600 dark:text-green-400">₹ {outstandingData.othersReceivable || 0} L Dr</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 dark:text-slate-400">Others Payable</span>
-              <span className="text-red-500 dark:text-red-400">₹ {outstandingData.othersPayable || 0} L Cr</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-2 border-t border-gray-100 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-blue-900 dark:text-slate-200">Net Outstanding</span>
-            <span className="text-sm font-bold text-blue-900 dark:text-blue-400">₹ {outstandingData.net} L</span>
-          </div>
-          <button
-            onClick={() => navigate('/reports/recent-outstanding-details')}
-            className="w-full bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[11px] font-semibold py-1.5 rounded border border-blue-200 dark:border-blue-900/40 transition-all text-center"
-          >
-            View All Outstanding
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (widgets.length === 0) return null;
 
   return (
